@@ -260,7 +260,10 @@
   var cardGeo = new THREE.PlaneGeometry(1.5, 2.25);
   var texCache = {};
   var cardMeshes = [];
-  var hoverCard = -1;
+  var hoverCard = -1, inspectIdx = -1;       // inspectIdx: 크게 확대해서 보는 중인 카드
+  // 확대 보기 때 나머지 화면을 어둡게 (일반 카드보다 앞, 확대 카드보다 뒤)
+  var dimMesh = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false }));
+  dimMesh.position.z = 0.5; dimMesh.visible = false; handGroup.add(dimMesh);
 
   function wrapText(g, text, maxW) {
     var out = [];
@@ -473,18 +476,20 @@
     return 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
   }
   function cardTarget(i, n) {
-    var spacing = Math.min(1.2, (visibleWidth() * 0.92 - 1.5) / Math.max(1, n - 1));
-    var mid = (n - 1) / 2, d = i - mid;
-    var sel = (S.mode && S.pendingIdx === i);
-    var hov = hoverCard === i;
-    var lift = (hov ? 0.85 : 0) + (sel ? 0.7 : 0);
+    var vh = 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), vw = vh * camera.aspect;
+    var sel = (S.mode && S.pendingIdx === i), hov = hoverCard === i;
+    if (inspectIdx === i) return { x: 0, y: 0.0, z: 0.9, rz: 0, s: 1.75, tint: 1 };   // 자세히 보기: 화면 중앙에 크게
+    // 왼쪽 아래에 한 줄로 전부 보이게 (겹치지 않음)
+    var sc = 0.52, cw = 1.5 * sc, ch = 2.25 * sc, gap = 0.07;
+    var x0 = -vw / 2 + 0.45 + cw / 2;
+    var lift = (hov ? 0.22 : 0) + (sel ? 0.3 : 0);
     return {
-      x: d * spacing,
-      y: -2.2 + lift - Math.abs(d) * 0.02,
-      z: (hov || sel ? 0.5 : 0) + i * 0.01,
-      rz: -d * 0.035,
-      s: hov || sel ? 1.12 : 1,
-      tint: hov || sel ? 1.0 : 0.72
+      x: x0 + i * (cw + gap),
+      y: -vh / 2 + ch / 2 + 0.2 + lift,
+      z: (hov || sel ? 0.3 : 0) + i * 0.01,
+      rz: i % 2 ? 0.012 : -0.012,
+      s: sc * (hov || sel ? 1.1 : 1),
+      tint: (hov || sel) ? 1.0 : 0.82
     };
   }
   function rebuildHand() {
@@ -498,10 +503,12 @@
       m.position.set(0, -4.2, 0.2); // 아래에서 올라오는 등장 연출
       handGroup.add(m); cardMeshes.push(m);
     });
-    hoverCard = -1;
+    hoverCard = -1; inspectIdx = -1;
   }
   function stepCards(dt) {
     var k = 1 - Math.pow(0.0006, dt), n = cardMeshes.length;
+    var op = dimMesh.material.opacity + ((inspectIdx >= 0 ? 0.68 : 0) - dimMesh.material.opacity) * k;
+    dimMesh.material.opacity = op; dimMesh.visible = op > 0.01;
     cardMeshes.forEach(function (m, i) {
       var t = cardTarget(i, n);
       m.position.x += (t.x - m.position.x) * k;
@@ -600,12 +607,13 @@
     if (S.over) return;
     S.turn = opp(S.turn); S.placed = 0; S.maxStones = 1; S.cardUsed = false;
     S.mode = null; S.pendingIdx = -1; S.turnCells = [];
+    setTopView(false);
     rebuildHand(); updateHUD();
-    setMsg(cellName(S.turn) + ' 차례 — 판을 클릭해 돌을 두거나, 카드를 골라보세요');
+    setMsg(cellName(S.turn) + ' 차례 — 카드를 확인하거나, 판을 눌러 돌을 두세요');
   }
 
   function onCell(x, y) {
-    if (S.over || busy > 0) return;
+    if (S.over || busy > 0 || topGoal < 0.5 || topT < 0.85) return;   // 돌은 직부감 시점에서만 둘 수 있음
     if (S.mode === 'bomb') {
       if (board[y][x] !== opp(S.turn)) { setMsg('제거할 상대 돌을 고르세요'); return; }
       var p = cellPos(x, y); removeStone(x, y); burst(p.clone(), 0xff8a2a, 22); sfx('boom');
@@ -689,6 +697,34 @@
     }
   }
 
+  // 카드가 실제로 쓰였는지(소모됨/대상 선택 대기) 알려주는 래퍼
+  function activateCard(i) {
+    var turn = S.turn, before = hands[turn].length;
+    useCard(i);
+    return hands[turn].length < before || (S.mode && S.pendingIdx === i);
+  }
+  // 발동 연출: 확대된 카드가 커지며 사라짐
+  function flourish(snap) {
+    var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(snap.id), transparent: true, alphaTest: 0.02 }));
+    m.position.set(snap.x, snap.y, 1.2); m.scale.set(snap.s, snap.s, 1); handGroup.add(m);
+    sfx('magic');
+    tween(0.55, function (t) {
+      var e = 1 - Math.pow(1 - t, 3);
+      m.scale.set(snap.s * (1 + 0.45 * e), snap.s * (1 + 0.45 * e), 1);
+      m.position.y = snap.y + 0.5 * e; m.material.opacity = 1 - t;
+    }, function () { handGroup.remove(m); m.material.dispose(); });
+  }
+  function onCardClick(i) {
+    if (S.over || busy > 0) return;
+    if (inspectIdx !== i) { inspectIdx = i; sfx('card'); return; }        // 1번: 자세히 보기
+    var mesh = cardMeshes[i];
+    var snap = { id: hands[S.turn][i], x: mesh.position.x, y: mesh.position.y, s: mesh.scale.x };
+    if (!activateCard(i)) return;                                          // 못 쓰는 경우: 메시지 표시, 확대 유지
+    inspectIdx = -1;                                                       // 2번: 능력 발동 → 직부감으로 이동
+    setTopView(true, true);                                                // 카드 효과 메시지는 그대로 둠
+    if (!S.mode) flourish(snap);
+  }
+
   /* ---------------- 입력 ---------------- */
   var pointer = new THREE.Vector2(0, 0), raycaster = new THREE.Raycaster();
   var groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -696,9 +732,10 @@
   // 시점: 0 = 앉은 시점(시네마틱), 1 = 직부감(판 전체). 테이블/버튼/V키로 전환
   var topT = 0, topGoal = 0, topH = 30, topDz = 2, parX = 0, parY = 0;
   var elViewBtn = document.getElementById('viewbtn');
-  function setTopView(on) {
+  function setTopView(on, quiet) {
     topGoal = on ? 1 : 0;
-    elViewBtn.textContent = on ? '🎥 시점 복귀' : '🔍 전체 보기';
+    elViewBtn.textContent = on ? '🎴 카드 보기' : '🔍 판 보기';
+    if (!quiet && !S.mode && !S.over) setMsg(on ? '판을 눌러 돌을 두세요 (테이블을 누르면 카드 화면으로 돌아가요)' : '카드를 눌러 확인 · 한 번 더 누르면 발동 · 판을 누르면 돌을 둘 수 있어요');
   }
   var mouseN = { x: 0, y: 0 };
 
@@ -726,14 +763,18 @@
   dom.addEventListener('click', function (e) {
     ac(); if (actx && actx.state === 'suspended') actx.resume();
     setPointer(e); updateHover();
-    if (hoverCard >= 0) useCard(hoverCard);
-    else if (hoverCell) onCell(hoverCell[0], hoverCell[1]);
-    else if (hoverTable) setTopView(topGoal < 0.5);
+    if (hoverCard >= 0) onCardClick(hoverCard);
+    else if (inspectIdx >= 0) inspectIdx = -1;                              // 확대 중 다른 곳을 누르면 닫기
+    else if (hoverCell || hoverTable) {
+      if (topGoal < 0.5) setTopView(true);                                  // 뒤 시점에서 판/테이블을 누르면 직부감으로
+      else if (hoverCell) onCell(hoverCell[0], hoverCell[1]);               // 직부감에서만 돌을 둠
+      else setTopView(false);                                               // 직부감에서 테이블을 누르면 카드 화면으로
+    }
     // 터치는 '호버'가 없으므로 탭이 끝나면 호버 효과(카드 빛·미리보기)를 지움
     if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; }
   });
   window.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && S.mode) cancelMode();
+    if (e.key === 'Escape') { if (inspectIdx >= 0) inspectIdx = -1; else if (S.mode) cancelMode(); }
     else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
   });
   elViewBtn.addEventListener('click', function () { setTopView(topGoal < 0.5); });
@@ -839,8 +880,9 @@
     sixth = false;
     S = { turn: BLACK, placed: 0, maxStones: 1, cardUsed: false, mode: null, pendingIdx: -1, over: false, turnCells: [] };
     elBanner.style.display = 'none';
+    setTopView(false);
     rebuildHand(); updateHUD();
-    setMsg('흑 선공 — 판을 클릭해 돌을 두세요. 아래 카드를 눌러 증강을 쓸 수 있어요 (턴당 1장)');
+    setMsg('흑 선공 — 카드를 눌러 확인(한 번 더 누르면 발동), 판을 누르면 위에서 보며 돌을 둘 수 있어요');
   }
 
   /* ---------------- 루프 ---------------- */
@@ -886,7 +928,7 @@
 
     // 고스트 / 링 표시
     ghost.visible = false; ring.visible = false;
-    if (!S.over && hoverCell && hoverCard < 0) {
+    if (!S.over && hoverCell && hoverCard < 0 && topT > 0.85 && inspectIdx < 0) {
       var x = hoverCell[0], y = hoverCell[1], v = board[y][x], p = cellPos(x, y);
       if (!S.mode && v === EMPTY) {
         ghost.visible = true; ghost.position.copy(p);
@@ -902,7 +944,7 @@
   }
 
   // 테스트/디버그용 접근
-  window.__game = { cardCanvas: function (id) { return cardTexture(id).image; }, get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
+  window.__game = { setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, cardCanvas: function (id) { return cardTexture(id).image; }, get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
 
   resize(); frame();
   buildMapSelect();
