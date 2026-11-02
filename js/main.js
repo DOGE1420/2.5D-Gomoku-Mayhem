@@ -475,8 +475,23 @@
   function visibleWidth() {
     return 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
   }
+  function viewSize() { var vh = 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)); return { vw: vh * camera.aspect, vh: vh }; }
+
+  // 직부감에서 왼쪽 아래에 떠 있는 '사용하기로 한 카드' 한 장
+  var playedMesh = null;
+  function showPlayed(snap) {
+    clearPlayed();
+    var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(snap.id), transparent: true, alphaTest: 0.02 }));
+    m.position.set(snap.x, snap.y, 1.2); m.scale.set(snap.s, snap.s, 1);
+    m.userData.id = snap.id; handGroup.add(m); playedMesh = m; sfx('magic');
+  }
+  function clearPlayed() {
+    if (!playedMesh) return;
+    handGroup.remove(playedMesh); playedMesh.material.dispose(); playedMesh = null;
+  }
+
   function cardTarget(i, n) {
-    var vh = 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), vw = vh * camera.aspect;
+    var vs = viewSize(), vh = vs.vh, vw = vs.vw;
     var sel = (S.mode && S.pendingIdx === i), hov = hoverCard === i;
     if (inspectIdx === i) return { x: 0, y: 0.0, z: 0.9, rz: 0, s: 1.75, tint: 1 };   // 자세히 보기: 화면 중앙에 크게
     // 인스크립션 패: 큰 카드를 겹쳐서 부채꼴로, 평소엔 윗부분만 보이다가 패 쪽을 보면 위로 올라옴
@@ -485,6 +500,7 @@
     var step = up ? 0.82 : 0.62;
     var mid = (n - 1) / 2, d = i - mid;
     var y = -vh / 2 + 0.1 + (up ? 1.1 : 0) + (hov ? 0.3 : 0) + (sel ? 0.3 : 0) - d * d * 0.012;
+    if (topGoal > 0.5) y = -vh / 2 - 3.2;      // 직부감: 패는 전부 화면 아래로 숨김
     return {
       x: d * step,                         // 화면 아래 중앙
       y: y,
@@ -511,6 +527,15 @@
     var k = 1 - Math.pow(0.0006, dt), n = cardMeshes.length;
     var op = dimMesh.material.opacity + ((inspectIdx >= 0 ? 0.68 : 0) - dimMesh.material.opacity) * k;
     dimMesh.material.opacity = op; dimMesh.visible = op > 0.01;
+    if (playedMesh) {                       // 사용한 카드: 직부감일 때만 왼쪽 아래에 표시
+      var vs = viewSize(), sc = 0.62, ch = 2.25 * sc, cwp = 1.5 * sc, show = topGoal > 0.5;
+      var px = -vs.vw / 2 + 0.4 + cwp / 2, py = show ? -vs.vh / 2 + 0.35 + ch / 2 : -vs.vh / 2 - ch;
+      playedMesh.position.x += (px - playedMesh.position.x) * k;
+      playedMesh.position.y += (py - playedMesh.position.y) * k;
+      playedMesh.position.z += (0.4 - playedMesh.position.z) * k;
+      playedMesh.rotation.z += (0.05 - playedMesh.rotation.z) * k;
+      var ps = playedMesh.scale.x + (sc - playedMesh.scale.x) * k; playedMesh.scale.set(ps, ps, 1);
+    }
     cardMeshes.forEach(function (m, i) {
       var t = cardTarget(i, n);
       m.position.x += (t.x - m.position.x) * k;
@@ -599,7 +624,7 @@
     S.cardUsed = true; S.mode = null; S.pendingIdx = -1;
     rebuildHand(); updateHUD();
   }
-  function cancelMode() { S.mode = null; S.pendingIdx = -1; setMsg(''); }
+  function cancelMode() { S.mode = null; S.pendingIdx = -1; clearPlayed(); setMsg(''); }
 
   function afterAction() {
     if (checkWin()) return;
@@ -609,7 +634,7 @@
     if (S.over) return;
     S.turn = opp(S.turn); S.placed = 0; S.maxStones = 1; S.cardUsed = false;
     S.mode = null; S.pendingIdx = -1; S.turnCells = [];
-    setTopView(false);
+    setTopView(false); clearPlayed();
     rebuildHand(); updateHUD();
     setMsg(cellName(S.turn) + ' 차례 — 카드를 확인하거나, 판을 눌러 돌을 두세요');
   }
@@ -705,17 +730,6 @@
     useCard(i);
     return hands[turn].length < before || (S.mode && S.pendingIdx === i);
   }
-  // 발동 연출: 확대된 카드가 커지며 사라짐
-  function flourish(snap) {
-    var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(snap.id), transparent: true, alphaTest: 0.02 }));
-    m.position.set(snap.x, snap.y, 1.2); m.scale.set(snap.s, snap.s, 1); handGroup.add(m);
-    sfx('magic');
-    tween(0.55, function (t) {
-      var e = 1 - Math.pow(1 - t, 3);
-      m.scale.set(snap.s * (1 + 0.45 * e), snap.s * (1 + 0.45 * e), 1);
-      m.position.y = snap.y + 0.5 * e; m.material.opacity = 1 - t;
-    }, function () { handGroup.remove(m); m.material.dispose(); });
-  }
   function onCardClick(i) {
     if (S.over || busy > 0) return;
     if (inspectIdx !== i) { inspectIdx = i; sfx('card'); return; }        // 1번: 자세히 보기
@@ -724,7 +738,7 @@
     if (!activateCard(i)) return;                                          // 못 쓰는 경우: 메시지 표시, 확대 유지
     inspectIdx = -1;                                                       // 2번: 능력 발동 → 직부감으로 이동
     setTopView(true, true);                                                // 카드 효과 메시지는 그대로 둠
-    if (!S.mode) flourish(snap);
+    showPlayed(snap);                                                      // 확대된 카드가 왼쪽 아래로 날아가 자리잡음
   }
 
   /* ---------------- 입력 ---------------- */
@@ -751,9 +765,9 @@
   function updateHover() {
     camera.updateMatrixWorld();
     raycaster.setFromCamera(pointer, camera);
-    var hits = raycaster.intersectObjects(cardMeshes, false);
+    var hits = topGoal > 0.5 ? [] : raycaster.intersectObjects(cardMeshes, false);
     hoverCard = hits.length ? hits[0].object.userData.i : -1;
-    handUp = hoverCard >= 0 || (Math.abs(pointer.x) < 0.42 && pointer.y < -0.3);
+    handUp = topGoal < 0.5 && (hoverCard >= 0 || (Math.abs(pointer.x) < 0.42 && pointer.y < -0.3));
     hoverCell = null; hoverTable = false;
     if (hoverCard < 0 && raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
       var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
@@ -883,7 +897,7 @@
     sixth = false;
     S = { turn: BLACK, placed: 0, maxStones: 1, cardUsed: false, mode: null, pendingIdx: -1, over: false, turnCells: [] };
     elBanner.style.display = 'none';
-    setTopView(false);
+    setTopView(false); clearPlayed();
     rebuildHand(); updateHUD();
     setMsg('흑 선공 — 카드를 눌러 확인(한 번 더 누르면 발동), 판을 누르면 위에서 보며 돌을 둘 수 있어요');
   }
@@ -896,10 +910,10 @@
     camDist = camera.aspect < 1.5 ? Math.min(1.9, 1.5 / camera.aspect) : 1;
     camera.fov = camera.aspect < 1.2 ? 62 : 45;
     camera.updateProjectionMatrix();
-    // 직부감: 위쪽 HUD와 아래쪽 손패를 피해 판(17칸 폭)이 화면 66% 높이·94% 폭 안에 들어오는 높이
+    // 직부감: 패는 숨기므로 판(17칸 폭)이 화면 86% 높이·94% 폭 안에 들어오는 높이
     var th = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    topH = Math.max((17 / 0.66) / (2 * th), (17 / 0.94) / (2 * th * camera.aspect));
-    topDz = 0.09 * 2 * topH * th;      // 판을 살짝 위로 올려 손패 자리를 확보
+    topH = Math.max((17 / 0.86) / (2 * th), (17 / 0.94) / (2 * th * camera.aspect));
+    topDz = -0.025 * 2 * topH * th;     // 위쪽 안내 문구를 피해 살짝 아래로
   }
   window.addEventListener('resize', resize);
 
@@ -947,7 +961,7 @@
   }
 
   // 테스트/디버그용 접근
-  window.__game = { setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, cardCanvas: function (id) { return cardTexture(id).image; }, get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
+  window.__game = { onCardClick: onCardClick, played: function () { return playedMesh ? playedMesh.userData.id : null; }, setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, cardCanvas: function (id) { return cardTexture(id).image; }, get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
 
   resize(); frame();
   buildMapSelect();
