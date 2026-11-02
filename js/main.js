@@ -493,7 +493,7 @@
     h.forEach(function (id, i) {
       var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
       m.userData.i = i;
-      var gl = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ map: glowTexture(CARDS[id].glow), transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }));
+      var gl = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ map: glowTexture(CARDS[id].glow), transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
       gl.position.z = -0.004; m.add(gl); m.userData.glow = gl;
       m.position.set(0, -4.2, 0.2); // 아래에서 올라오는 등장 연출
       handGroup.add(m); cardMeshes.push(m);
@@ -512,7 +512,7 @@
       var c = m.material.color.r + (t.tint - m.material.color.r) * k;
       m.material.color.setRGB(c, c, c);
       var gl = m.userData.glow;
-      if (gl) gl.material.opacity += ((t.tint > 0.9 ? 0.95 : 0.32) + Math.sin(performance.now() / 420 + i) * 0.05 - gl.material.opacity) * k;
+      if (gl) gl.material.opacity += ((t.tint > 0.9 ? 0.8 : 0.24) + Math.sin(performance.now() / 420 + i) * 0.05 - gl.material.opacity) * k;
     });
   }
 
@@ -701,7 +701,8 @@
     var r = dom.getBoundingClientRect();
     pointer.x = ((e.clientX - r.left) / r.width) * 2 - 1;
     pointer.y = -((e.clientY - r.top) / r.height) * 2 + 1;
-    mouseN.x = pointer.x; mouseN.y = pointer.y;
+    // 카메라 시차는 마우스일 때만 (터치하면 화면이 흔들리지 않게)
+    if (e.pointerType !== 'touch') { mouseN.x = pointer.x; mouseN.y = pointer.y; }
   }
   function updateHover() {
     camera.updateMatrixWorld();
@@ -715,12 +716,14 @@
     }
     dom.style.cursor = (hoverCard >= 0 || hoverCell) ? 'pointer' : 'default';
   }
-  dom.addEventListener('pointermove', function (e) { setPointer(e); updateHover(); });
+  dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch') return; setPointer(e); updateHover(); });
   dom.addEventListener('click', function (e) {
     ac(); if (actx && actx.state === 'suspended') actx.resume();
     setPointer(e); updateHover();
     if (hoverCard >= 0) useCard(hoverCard);
     else if (hoverCell) onCell(hoverCell[0], hoverCell[1]);
+    // 터치는 '호버'가 없으므로 탭이 끝나면 호버 효과(카드 빛·미리보기)를 지움
+    if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; }
   });
   window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S.mode) cancelMode(); });
   elEnd.addEventListener('click', function () { if (busy === 0) endTurn(); });
