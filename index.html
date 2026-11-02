@@ -6,8 +6,11 @@
 <title>증강 오목 3D 프로토타입</title>
 <style>
   html, body { margin: 0; height: 100%; background: #07050a; overflow: hidden; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; }
-  #game { position: fixed; inset: 0; }
-  canvas { display: block; }
+  /* 터치 시 파란 하이라이트·선택·길게 누르기 메뉴·더블탭 확대 방지 */
+  * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+  body { -webkit-user-select: none; user-select: none; }
+  #game { position: fixed; inset: 0; touch-action: manipulation; }
+  canvas { display: block; outline: none; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
   #hud { position: fixed; top: 12px; left: 0; right: 0; padding: 0 190px; box-sizing: border-box; text-align: center; color: #e8d9b5; pointer-events: none; text-shadow: 0 2px 6px #000; }
   #turn { font-size: 20px; letter-spacing: 1px; }
   @media (max-width: 600px) { #turn { font-size: 15px; } #msg { font-size: 12px; } .btn { padding: 6px 10px; } #hud { padding: 0 92px; } #mapSel { top: 52px; right: 12px; } }
