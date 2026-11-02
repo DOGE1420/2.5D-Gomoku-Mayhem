@@ -10,7 +10,8 @@ var TEXT_FONT = '"GameFont","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo"
 var Rules = window.Rules;
 var CARDS = {};
 Rules.CARDS.forEach(function (c) { CARDS[c.id] = { name: c.name, cat: c.cat, desc: c.desc, endsTurn: !!c.ends }; });
-var CARD_IDS = Rules.CARDS.map(function (c) { return c.id; });
+Rules.LEGENDS.forEach(function (c) { CARDS[c.id] = { name: c.name, cat: c.cat, desc: c.desc, endsTurn: false, legend: true, react: !!c.react }; });
+var CARD_IDS = Rules.CARDS.map(function (c) { return c.id; }).concat(Rules.LEGENDS.map(function (c) { return c.id; }));   // 일러스트를 지정할 수 있는 모든 카드
 
 /* ---------------- 설정(js/config.js) · 이미지 로더 ---------------- */
 var CFG = window.GAME_CONFIG || {};

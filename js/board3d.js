@@ -12,7 +12,7 @@ function updateHUD() {
   var t = G.alk ? ('🪀 ' + who(G.alk.order[G.alk.idx]) + ' 알까기') : (who(G.current) + ' 차례');
   var b = [];                                   // 작은 상태 표시만
   if (G.next.giant === G.current) b.push('🪨');
-  if (G.next.ghost === G.current) b.push('👻');
+  if (G.winOver[G.current]) b.push('🐢4목');
   if (G.lock[G.current]) b.push('🚫');
   if (G.winLength === 6) b.push('6목');
   elTurn.textContent = t + (b.length ? '  ' + b.join(' ') : '');
@@ -36,6 +36,28 @@ function clearMarkers() {
 function addBox(parent, w, h, d, color, x, y, z, ry) {
   var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: color, roughness: 0.9 }));
   m.position.set(x, y, z); if (ry) m.rotation.y = ry; m.castShadow = true; parent.add(m); return m;
+}
+var darkMesh = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshBasicMaterial({ color: 0x03030a, transparent: true, opacity: 0.55, depthWrite: false }));
+darkMesh.rotation.x = -Math.PI / 2; darkMesh.position.y = 0.5; darkMesh.visible = false; scene.add(darkMesh);
+function crownSprite() {
+  var cv = document.createElement('canvas'); cv.width = cv.height = 128; var g = cv.getContext('2d');
+  g.font = '92px ' + EMOJI_FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('👑', 64, 70);
+  var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
+  sp.scale.set(0.8, 0.8, 1); return sp;
+}
+function syncMarkersExtra() {
+  [BLACK, WHITE].forEach(function (p) {                                  // 왕으로 지정된 돌: 👑 + 금빛 고리 (양쪽에 보임)
+    var k = G.lg.king[p];
+    if (!k || G.board[k.r][k.c] !== p || Rules.isDark(G)) return;
+    var q = cellAt(k.r, k.c);
+    var rg = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.56, 28), new THREE.MeshBasicMaterial({ color: 0xe8b923, side: THREE.DoubleSide }));
+    rg.rotation.x = -Math.PI / 2; rg.position.set(q.x, 0.05, q.z); markerGroup.add(rg);
+    var sp = crownSprite(); sp.position.set(q.x, 0.85, q.z); markerGroup.add(sp);
+  });
+  if (G.pending && G.pending.picks) G.pending.picks.forEach(function (q) {   // 거신병·올인: 고른 돌 표시
+    var c = cellAt(q.r, q.c), rg = new THREE.Mesh(new THREE.RingGeometry(0.46, 0.58, 28), new THREE.MeshBasicMaterial({ color: 0xff5a36, side: THREE.DoubleSide }));
+    rg.rotation.x = -Math.PI / 2; rg.position.set(c.x, 0.06, c.z); markerGroup.add(rg);
+  });
 }
 function syncMarkers() {
   clearMarkers();
@@ -61,7 +83,7 @@ function syncMarkers() {
     rg.rotation.x = -Math.PI / 2; grp.add(rg); markerGroup.add(grp);
   });
   G.windmills.forEach(function (w) {                                  // 풍차: 돌 위의 작은 풍차
-    if (!Rules.isStone(G.board[w.r][w.c]) || Rules.isHiddenFor(G, w.r, w.c, G.current)) return;
+    if (!Rules.isStone(G.board[w.r][w.c]) || Rules.isDark(G)) return;
     var p = cellAt(w.r, w.c), grp = new THREE.Group(); grp.position.set(p.x, 0.36, p.z);
     addBox(grp, 0.05, 0.4, 0.05, 0xcdbd95, 0, 0.15, 0);
     var blades = new THREE.Group(); blades.position.y = 0.36;
@@ -105,8 +127,9 @@ function syncBoard() {
     if (!m || m.userData.kind !== 'stone') { dropMesh(r, c); m = addStoneMesh(r, c, want, false); }
     else if (m.userData.color !== want) { m.userData.color = want; m.material = want === BLACK ? matBlack : matWhite; }
     m.scale.y = 0.45; m.position.copy(cellAt(r, c));
-    m.visible = !Rules.isHiddenFor(G, r, c, G.current);              // 투명한 돌은 상대에게 안 보임
+    m.visible = !Rules.isDark(G);                                     // 눈 감고 두기: 판이 어두운 동안 돌이 안 보임
   }
+  darkMesh.visible = Rules.isDark(G);
 }
 function highlightLine(line) {
   if (!line) return;
@@ -170,9 +193,26 @@ function handleEvent(e) {
     case 'gain': case 'overflow': case 'spend': handDirty = true; if (e.t === 'gain') sfx('card'); return 0;
     case 'tradeFirst': tradeFirst = { r: e.r, c: e.c }; sfx('card'); return 0;
     case 'cancel': tradeFirst = null; return 0;
-    case 'reveal': sfx('magic'); return 0.2;
+    case 'spawn': addStoneMesh(e.r, e.c, e.p, true); sfx('place'); burst(cellAt(e.r, e.c), 0xffe08a, 8); return 0.25;
+    case 'legend': {
+      var lc = Rules.LEGEND_BY_ID[e.id]; handDirty = true; sfx('magic');
+      toast((lc ? lc.name : '전설 카드') + ' 발동!', 2400); return 0.2;
+    }
+    case 'legendPick': sfx('card'); return 0;
+    case 'dark': toast('🙈 3턴 동안 판이 어두워져 돌이 보이지 않습니다', 3000); sfx('magic'); return 0.3;
+    case 'coin': toast(e.win ? '🪙 동전: 앞면! 상대의 가장 긴 줄이 사라집니다' : '🪙 동전: 뒷면… 내 가장 긴 줄이 사라집니다', 2800); sfx('card'); return 0.6;
+    case 'slot': return playSlot(e.reels, e.win);
+    case 'handLost': handDirty = true; return 0;
+    case 'counter': toast('🧘 무소유! 카드가 무효가 되었고 패 ' + e.n + '장을 버렸습니다', 3000); handDirty = true; sfx('boom'); return 0.4;
+    case 'counterAsk': showCounterBox(e.holder, e.user, e.id, answerCounterUI); return 0;
+    case 'king': sfx('magic'); toast('👑 왕으로 지정! 20턴 살아남으면 귀환합니다', 2600); return 0.3;
+    case 'kingLost': toast('👑 왕이 쓰러졌습니다…', 2400); return 0.2;
+    case 'kingReturn': handDirty = true; sfx('win'); toast('👑 왕의 귀환! 패가 가득 차고 새 전설 카드를 받았습니다', 3200); return 0.5;
+    case 'rule': if (e.turtle) toast('🐢 이제 한쪽은 4목으로도 승리합니다', 2600); else toast('👁️ 이제 6목이 되어야 승리합니다', 2600); return 0.2;
+    case 'slothDone': return 0;
+    case 'legendPicked': case 'start': case 'ability': handDirty = true; return 0;
     case 'turn': onTurnChanged(); return 0.15;
-    case 'draft': openDraftUI(e.picks); return 0.3;
+    case 'draft': openDraftUI(e.picks, e.kind, e.refresh, e.p); return 0.3;
     case 'alkTurn': startAlkUI(); return 0;
     case 'alkSnap': finishAlkUI(e.stones); return 0.4;
     case 'win': highlightLine(e.line); sfx('win'); tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = (e.p === BLACK ? '⚫ 흑' : '⚪ 백') + ' 승리!'; elBanner.style.display = 'flex'; }); return 0;
@@ -184,7 +224,7 @@ function onTurnChanged() {
   tradeFirst = null; inspectIdx = -1; clearPlayed(); handDirty = true; setTopView(false, true);
 }
 function syncAll() {
-  syncBoard(); syncMarkers(); syncPeek(); syncS(); updateHUD();
+  syncBoard(); syncMarkers(); syncMarkersExtra(); syncPeek(); syncS(); updateHUD(); updateTrait();
   if (handDirty) { rebuildHand(); handDirty = false; }
 }
 function runEvents(evs, after) {

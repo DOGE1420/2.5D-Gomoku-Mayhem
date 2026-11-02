@@ -7,7 +7,7 @@
 window.GAME_CONFIG = {
 
   /* ---------- 카드 ---------- */
-  cards: {                      // 카드 일러스트 (권장 584x428 PNG, 투명/흰 배경 모두 가능). 21장 전부 지정 가능
+  cards: {                      // 카드 일러스트 (권장 584x428 PNG, 투명/흰 배경 모두 가능). 일반 카드 20장 + 전설 카드 11장
     chain: null,
     windmill: null,
     alkkagi: null,
@@ -25,11 +25,23 @@ window.GAME_CONFIG = {
     double: null,
     peek: null,
     giant: null,
-    ghost: null,
     weather: null,
     shield: null,
-    blockade: null
+    blockade: null,
+    // 전설 카드
+    obelisk: null,
+    nothing: null,
+    latebloom: null,
+    blind: null,
+    clown: null,
+    chicken: null,
+    sloth: null,
+    mirror: null,
+    allin: null,
+    turtle: null,
+    king: null
   },
+
 
   cardPaper: null,              // 카드 바탕 이미지 (권장 768x1152 PNG). 예: 'assets/cards/paper.png'
   artBlend: 'normal',           // 'normal' | 'multiply' (흰 배경 선화를 양피지에 스며들게 하려면 multiply)

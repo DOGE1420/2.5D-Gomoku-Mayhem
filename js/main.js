@@ -5,13 +5,17 @@
 'use strict';
 
 /* ---------------- 초기화 ---------------- */
-function reset() {
+// opts 가 없으면 기본 시작: 전설 카드 고르기 + 무작위 시작 능력 (테스트는 reset({}) 로 바로 시작)
+function reset(opts) {
   for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) { if (meshes[r][c]) scene.remove(meshes[r][c]); meshes[r][c] = null; }
   if (alkUI) alkUI.meshes.forEach(function (m) { if (m) scene.remove(m); });
-  G = Rules.create(); anims.length = 0; busy = 0; tradeFirst = null; alkUI = null; alkAcc = 0;
+  G = Rules.create(opts === undefined || (opts && opts.type) ? { legends: true, ability: 'random' } : opts); anims.length = 0; busy = 0; tradeFirst = null; alkUI = null; alkAcc = 0;
   closeDraftUI(); aimBand.visible = aimDir.visible = false;
   elBanner.style.display = 'none'; setTopView(false, true); clearPlayed(); clearBurns();
+  hideLegendHint(); hideDraftCaption(); pendingCounterSnap = null; inspectLegend = false;
+  ['counterBox', 'choiceBox', 'slotBox'].forEach(function (id) { document.getElementById(id).classList.remove('show'); });
   handDirty = false; inspectIdx = -1; syncAll(); rebuildHand();
+  runEvents(Rules.drain(G));                                // 시작: 전설 카드 고르기 · 시작 능력 표시
 }
 
 /* ---------------- 루프 ---------------- */
@@ -78,7 +82,7 @@ function frame() {
 }
 
 // 테스트/디버그용 접근
-window.__game = { get G() { return G; }, get S() { return S; }, Rules: Rules, onCardClick: onCardClick, onCell: onCell, onDraftClick: onDraftClick, cancelMode: cancelMode, sync: function () { syncAll(); rebuildHand(); }, runEvents: runEvents, setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, played: function () { return playedMesh ? playedMesh.userData.id : null; }, cardCanvas: function (id) { return cardTexture(id).image; }, reset: reset, busy: function () { return busy; }, draftOpen: function () { return draftMeshes.length; }, meshGrid: function () { return meshes.map(function (row) { return row.map(function (m) { return !m ? 0 : m.userData.kind === 'wall' ? 3 : m.userData.color; }); }); }, markers: function () { return markerGroup.children.length; }, alkUI: function () { return alkUI; } };
+window.__game = { onLegendClick: onLegendClick, answerCounter: answerCounterUI, onReroll: onRerollClick, get G() { return G; }, get S() { return S; }, Rules: Rules, onCardClick: onCardClick, onCell: onCell, onDraftClick: onDraftClick, cancelMode: cancelMode, sync: function () { syncAll(); rebuildHand(); }, runEvents: runEvents, setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, played: function () { return playedMesh ? playedMesh.userData.id : null; }, cardCanvas: function (id) { return cardTexture(id).image; }, reset: reset, busy: function () { return busy; }, draftOpen: function () { return draftMeshes.length; }, meshGrid: function () { return meshes.map(function (row) { return row.map(function (m) { return !m ? 0 : m.userData.kind === 'wall' ? 3 : m.userData.color; }); }); }, markers: function () { return markerGroup.children.length; }, alkUI: function () { return alkUI; } };
 
 resize(); frame();
 buildMapSelect();

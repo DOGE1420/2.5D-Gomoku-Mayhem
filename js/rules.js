@@ -1,10 +1,11 @@
 /* 증강 오목 규칙 엔진 — 화면(DOM·3D)과 완전히 분리된 순수 로직.
  * 원본(Gomoku-ARAM)의 기본 규칙과 일반 카드 21장을 옮긴 것입니다.
  *   포함: 정확히 N목 승리, 3수마다 카드 뽑기(3장 중 1장), 패 4장, 턴당 카드 1장,
- *         카드 21장(알까기 포함), 풍차·함정·폭파 구멍·보호막·봉쇄·투명한 돌·거대한 돌·엿보기
- *   제외(다음 단계): 전설 카드, 맵·자기장, 시작 능력, 봇, 멀티플레이
- * 사용: Rules.create() → G, 이후 Rules.place / useCard / target / pickDraft ... 호출하고
- *       Rules.drain(G) 로 화면이 연출할 이벤트를 받아 감.
+ *         카드 20장(알까기 포함), 풍차·함정·폭파 구멍·보호막·봉쇄·거대한 돌·엿보기,
+ *         전설 카드 11장 · 시작 능력 5종 · 다시 뽑기 (전설 카드 효과는 js/rules-legend.js)
+ *   제외(다음 단계): 맵·자기장, 봇, 멀티플레이
+ * 사용: Rules.create({ legends: true, ability: 'random' }) → G, 이후 Rules.place / useCard / target / pickDraft ...
+ *       호출하고 Rules.drain(G) 로 화면이 연출할 이벤트를 받아 감.
  */
 (function (root) {
   'use strict';
@@ -31,13 +32,37 @@
     { id: 'double',     name: '1+1',       cat: '보급',   weight: 6,  desc: '무작위 카드\n2장 받기' },
     { id: 'peek',       name: '엿보기',    cat: '정보',   weight: 6,  desc: '이번 턴 동안\n상대 패를 봄' },
     { id: 'giant',      name: '거대한 돌', cat: '희귀',   weight: 3,  desc: '다음 착수 자리에\n3×3 중립 바위\n(그 9칸의 돌은 깨짐)' },
-    { id: 'ghost',      name: '투명한 돌', cat: '정보',   weight: 5,  desc: '다음 착수가\n상대에게 3라운드\n동안 안 보임' },
     { id: 'weather',    name: '기상 이변', cat: '지형',   weight: 4,  desc: '맵을 다른\n무작위 맵으로 바꿈' },
     { id: 'shield',     name: '보호막',    cat: '수비',   weight: 7,  target: true, desc: '내 돌 주변 3×3 보호\n(상대의 다음 2턴)' },
     { id: 'blockade',   name: '봉쇄',      cat: '수비',   weight: 3,  desc: '상대가 다음에\n쓰는 카드 1장 무효' }
   ];
   var CARD_BY_ID = {};
   CARDS.forEach(function (c) { CARD_BY_ID[c.id] = c; });
+  // 전설 카드 11장: 게임 시작 때 3장 중 1장을 고르는 카드 (상대에게는 쓰기 전까지 비공개). react = 상대 카드에 대응
+  var LEGENDS = [
+    { id: 'obelisk',   name: '오목의 거신병',  cat: '전설', desc: '내 돌 3개를 바치면\n상대 돌이 가장 많은\n한 줄을 분쇄', cond: '내 돌 3개 이상' },
+    { id: 'nothing',   name: '무소유',         cat: '대응', react: true, desc: '상대가 카드를 쓸 때\n그 카드를 무효로\n(내 패 전부 버림)', cond: '상대 카드에 대응 · 내 패 1장 이상' },
+    { id: 'latebloom', name: '대기만성',       cat: '전설', desc: '이번 턴에 5번 착수\n거리 제한 없음\n(이번 턴 승리 불가)', cond: '판에 둔 수 40수 이상' },
+    { id: 'blind',     name: '눈 감고 두기',   cat: '전설', desc: '3턴 동안 양쪽 판이\n어두워져 돌이\n보이지 않음', cond: '상대 돌과 3칸 이상 떨어진 착수 3번' },
+    { id: 'clown',     name: '광대의 한 수',   cat: '전설', desc: '잃은 내 돌이\n모두 제자리로 귀환\n(상대 돌은 밀려남)', cond: '카드로 내 돌 3개 이상 잃음' },
+    { id: 'chicken',   name: '치킨 게임',      cat: '전설', desc: '동전 던지기 — 진 쪽의\n가장 긴 줄이\n사라짐', cond: '양쪽 모두 3개 이상 이어진 줄' },
+    { id: 'sloth',     name: '나무늘보',       cat: '전설', desc: '패의 카드를\n모두 즉시 발동\n(대상은 무작위)', cond: '카드 없이 6턴 (쥐고 있는 동안 카드 선택은 무작위)' },
+    { id: 'mirror',    name: '따라쟁이',       cat: '전설', desc: '상대가 가장 최근에\n쓴 카드를\n내 패로 복사', cond: '상대가 카드를 1장 이상 씀' },
+    { id: 'allin',     name: '올인',           cat: '전설', desc: '패 전부 또는 돌 3개를\n걸고 슬롯머신\n같은 그림 3개면 2배', cond: '패 1장 이상 또는 내 돌 3개 이상' },
+    { id: 'turtle',    name: '토끼와 거북이',  cat: '전설', desc: '이후 나만 4목으로도\n승리 (턴 종료)', cond: '내 돌이 상대보다 5개 이상 적음' },
+    { id: 'king',      name: '왕의 귀환',      cat: '전설', desc: '내 돌 하나를 왕으로\n20턴 살아남으면\n패 가득 + 새 전설', cond: '내 돌이 1개 이상' }
+  ];
+  var LEGEND_BY_ID = {}; LEGENDS.forEach(function (c) { c.legend = true; LEGEND_BY_ID[c.id] = c; });
+  // 시작 능력 5종: 판마다 무작위 1개가 양쪽에 똑같이 적용
+  var ABILITIES = [
+    { id: 'umbrella', icon: '☂️', name: '자연재해 면역',  desc: '맵 자연재해가 일어나지 않음 (맵은 다음 단계)' },
+    { id: 'pouch',    icon: '🎒', name: '넉넉한 주머니',  desc: '패를 5장까지 쥘 수 있음' },
+    { id: 'clover',   icon: '🍀', name: '행운',           desc: '카드를 4장 중에서 고름' },
+    { id: 'sturdy',   icon: '🏰', name: '단단한 시작',    desc: '처음 둔 돌 3개는 카드 효과로부터 영구 보호' },
+    { id: 'retry',    icon: '🔁', name: '재도전',         desc: '다시 뽑기를 3번 쓸 수 있음' }
+  ];
+  var ABILITY_BY_ID = {}; ABILITIES.forEach(function (c) { ABILITY_BY_ID[c.id] = c; });
+  var H = {};   // rules-legend.js 가 채우는 훅
   var MAPS = ['candle', 'moon'];   // 기상 이변으로 바뀌는 (임시) 맵 — 맵 효과는 다음 단계
 
   /* ---------------- 유틸 ---------------- */
@@ -60,6 +85,11 @@
   function drain(G) { var e = G.ev; G.ev = []; return e; }
 
   /* ---------------- 상태 ---------------- */
+  function lgPair(v) { return { 1: v, 2: v }; }
+  function lgFresh() {
+    return { card: lgPair(null), done: lgPair(false), plies: 0, last: lgPair(null), lastCard: lgPair(null),
+      lost: lgPair(0), lostPos: { 1: [], 2: [] }, far: lgPair(0), edge: lgPair(0), big: 0, turnNo: 0, darkUntil: 0, king: lgPair(null) };
+  }
   function create(opts) {
     opts = opts || {};
     var G = {
@@ -72,11 +102,23 @@
       draftAfterTurn: null,
       windmills: [], traps: [], craters: [], shields: [],
       lock: { 1: false, 2: false }, skip: { 1: false, 2: false },
-      next: { giant: 0, ghost: 0 }, hidden: [], giants: [], peek: null,
+      next: { giant: 0 }, giants: [], peek: null,
+      lg: lgFresh(), winOver: {}, immune: [], sturdy: { 1: 0, 2: 0 }, ab: { 1: null, 2: null }, refresh: { 1: 1, 2: 1 },
+      startQueue: null, counter: null, sloth: null, lgUsedThisTurn: false,
       round: 0, noMoveStreak: 0, map: 'candle',
       alk: null, ev: [], log: []
     };
     for (var r = 0; r < SIZE; r++) { G.board.push([]); for (var c = 0; c < SIZE; c++) G.board[r].push(EMPTY); }
+    if (opts.ability) {                                    // 시작 능력: 판마다 무작위 1개가 양쪽에 똑같이
+      var ab = opts.ability === 'random' ? ABILITIES[Math.floor(rnd(G) * ABILITIES.length)].id : opts.ability;
+      G.ab = { 1: ab, 2: ab };
+      if (ab === 'retry') G.refresh = { 1: 3, 2: 3 };
+      ev(G, { t: 'ability', id: ab });
+    }
+    if (opts.legends) {                                    // 시작: 흑 → 백 순서로 전설 카드 3장 중 1장
+      G.startQueue = [BLACK, WHITE];
+      openDraft(G, BLACK, 'legend');
+    }
     return G;
   }
 
@@ -96,11 +138,8 @@
   function isProtected(G, r, c) {
     var v = G.board[r][c];
     if (!isStone(v)) return false;
-    return G.shields.some(function (s) { return s.owner === v && Math.abs(s.r - r) <= 1 && Math.abs(s.c - c) <= 1; });
-  }
-  // 투명한 돌: viewer 에게 숨겨진 돌인지
-  function isHiddenFor(G, r, c, viewer) {
-    return G.hidden.some(function (h) { return h.r === r && h.c === c && h.owner !== viewer && G.board[r][c] === h.owner; });
+    if (G.shields.some(function (s) { return s.owner === v && Math.abs(s.r - r) <= 1 && Math.abs(s.c - c) <= 1; })) return true;
+    return G.immune.some(function (s) { return s.owner === v && s.r === r && s.c === c; });   // 단단한 시작
   }
   function isBlockedForPlayer(G, r, c, player) {
     if (isCrater(G, r, c)) return true;
@@ -117,6 +156,34 @@
   function removeStoneAt(G, r, c) {
     G.board[r][c] = EMPTY;
     G.windmills = G.windmills.filter(function (w) { return !(w.r === r && w.c === c); });
+    G.immune = G.immune.filter(function (s) { return !(s.r === r && s.c === c); });
+  }
+  // 돌이 (r,c) → (nr,nc) 로 옮겨질 때 풍차·보호·왕 표시도 함께 이동
+  function moveMeta(G, r, c, nr, nc) {
+    G.windmills.forEach(function (w) { if (w.r === r && w.c === c) { w.r = nr; w.c = nc; } });
+    G.immune.forEach(function (s) { if (s.r === r && s.c === c) { s.r = nr; s.c = nc; } });
+    [1, 2].forEach(function (p) { var k = G.lg.king[p]; if (k && k.r === r && k.c === c) G.lg.king[p] = { r: nr, c: nc, start: k.start }; });
+  }
+  // 카드 효과로 p의 돌이 사라짐 (광대의 한 수가 기록)
+  function lgLose(G, p, r, c) {
+    if (p !== BLACK && p !== WHITE) return;
+    var lg = G.lg; lg.lost[p]++;
+    if (!lg.lostPos[p].some(function (q) { return q.r === r && q.c === c; })) lg.lostPos[p].push({ r: r, c: c });
+  }
+  // 착수 기록 (판의 수 · 상대 돌과 떨어진 거리 · 마지막 자리)
+  function lgOnPlace(G, r, c, p) {
+    var lg = G.lg, opp = other(p), near = SIZE;
+    lg.plies++;
+    for (var rr = 0; rr < SIZE; rr++) for (var cc = 0; cc < SIZE; cc++) if (G.board[rr][cc] === opp) near = Math.min(near, Math.max(Math.abs(rr - r), Math.abs(cc - c)));
+    lg.far[p] = near >= 3 ? lg.far[p] + 1 : 0;
+    lg.last[p] = { r: r, c: c };
+  }
+  function handLimit(G, p) { return HAND_LIMIT + (G.ab[p] === 'pouch' ? 1 : 0); }
+  function draftSize(G, p) { return G.ab[p] === 'clover' ? 4 : 3; }
+  function isDark(G) { return G.lg.turnNo < G.lg.darkUntil; }          // 눈 감고 두기: 판이 어두운 중
+  function lgWouldWin(G, r, c, p) {
+    var keep = G.board[r][c]; G.board[r][c] = p;
+    var w = checkWin(G, r, c, p); G.board[r][c] = keep; return !!w;
   }
 
   /* ---------------- 승리 판정 ---------------- */
@@ -128,7 +195,7 @@
       while (inb(rr, cc) && G.board[rr][cc] === player && count < SIZE) { end = { r: rr, c: cc }; count++; rr += dr; cc += dc; }
       rr = r - dr; cc = c - dc;
       while (inb(rr, cc) && G.board[rr][cc] === player && count < SIZE) { start = { r: rr, c: cc }; count++; rr -= dr; cc -= dc; }
-      if (count === G.winLength) return { start: start, end: end, n: count };   // 정확히 N개만 승리 (장목은 승리 아님)
+      if (count === G.winLength || (G.winOver[player] && count === G.winOver[player])) return { start: start, end: end, n: count };   // 정확히 N개만 승리 (장목은 승리 아님), 토끼와 거북이는 4개도
     }
     return null;
   }
@@ -156,10 +223,11 @@
     G.shields = G.shields.filter(function (s) { if (s.fresh) { s.fresh = false; return true; } s.turns--; return s.turns > 0; });
   }
   function canPlaceAnywhere(G, player) {
-    var chain = G.done > 0 && G.placed.length > 0;
+    var big = G.lg.big === player, chain = !big && G.done > 0 && G.placed.length > 0;
     for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
       if (G.board[r][c] !== EMPTY || isBlockedForPlayer(G, r, c, player)) continue;
       if (chain && G.placed.some(function (q) { return Math.max(Math.abs(r - q.r), Math.abs(c - q.c)) <= 2; })) continue;
+      if (big && lgWouldWin(G, r, c, player)) continue;      // 대기만성 턴: 승리 줄을 만드는 칸은 못 둠
       return true;
     }
     return false;
@@ -170,19 +238,16 @@
     return true;
   }
   function passTurn(G) {
+    if (G.sloth) { G.sloth.passPending = true; return; }   // 나무늘보 연속 발동 중 턴 종료 카드는 다 끝난 뒤 한 번만
     var prev = G.current;
-    G.next = { giant: 0, ghost: 0 };                      // 다음 착수에 붙는 효과는 이번 턴에만
+    if (H.turnEnd) H.turnEnd(G, prev);                    // 전설 카드: 턴 수 · 나무늘보 · 왕의 귀환
+    G.next = { giant: 0 };                                // 다음 착수에 붙는 효과는 이번 턴에만
     if (G.peek && G.peek.by === prev) { G.peek = null; ev(G, { t: 'peek', by: 0 }); }
     G.draftAfterTurn = null;
     tickCraters(G); tickShields(G);
     G.current = other(prev);
     if (G.current === BLACK) {                            // 백 턴이 끝나 흑 차례 = 1라운드
       G.round++;
-      G.hidden = G.hidden.filter(function (h) {           // 투명한 돌은 3라운드 뒤 드러남
-        if (G.board[h.r][h.c] !== h.owner) return false;
-        if (--h.rounds > 0) return true;
-        ev(G, { t: 'hidden' }); return false;
-      });
       pruneTraps(G);
       if (endIfBoardWin(G)) return;
     }
@@ -201,7 +266,7 @@
 
   /* ---------------- 카드 획득 ---------------- */
   function trimHand(G, p) {
-    while (G.hand[p].length > HAND_LIMIT) { var d = G.hand[p].shift(); ev(G, { t: 'overflow', p: p, id: d }); }
+    while (G.hand[p].length > handLimit(G, p)) { var d = G.hand[p].shift(); ev(G, { t: 'overflow', p: p, id: d }); }
   }
   function grantRandomCard(G, p) {
     var id = weightedSample(G, 1)[0];
@@ -209,49 +274,74 @@
     ev(G, { t: 'gain', p: p, id: id });
     return id;
   }
-  function openDraft(G, p) {
-    G.draft = { player: p, picks: weightedSample(G, 3) };
-    ev(G, { t: 'draft', p: p, picks: G.draft.picks.slice() });
+  function draftPicks(G, p, kind) {
+    if (kind === 'legend') return shuffle(G, LEGENDS.map(function (c) { return c.id; })).slice(0, 3);
+    return weightedSample(G, draftSize(G, p));
+  }
+  function openDraft(G, p, kind) {
+    kind = kind || 'card';
+    var picks = draftPicks(G, p, kind);
+    if (kind === 'card' && G.lg.card[p] === 'sloth' && !G.lg.done[p]) {   // 나무늘보를 쥐면 카드를 고를 수 없고 무작위로 받음
+      G.draft = { player: p, picks: picks, kind: kind };
+      pickDraft(G, picks[Math.floor(rnd(G) * picks.length)]);
+      return;
+    }
+    G.draft = { player: p, picks: picks, kind: kind };
+    ev(G, { t: 'draft', p: p, picks: picks.slice(), kind: kind, refresh: G.refresh[p] });
+  }
+  function startNext(G) {
+    G.startQueue.shift();
+    if (G.startQueue.length) openDraft(G, G.startQueue[0], 'legend');
+    else { G.startQueue = null; ev(G, { t: 'start' }); }
   }
   function pickDraft(G, id) {
     if (!G.draft || G.draft.picks.indexOf(id) < 0) return { ok: false };
-    var p = G.draft.player;
+    var d = G.draft, p = d.player;
+    G.draft = null;
+    if (d.kind === 'legend') {                              // 전설 카드: 패가 아니라 전설 칸에 (상대에게는 비공개)
+      G.lg.card[p] = id; ev(G, { t: 'legendPicked', p: p });
+      startNext(G);
+      return { ok: true };
+    }
     G.hand[p].push(id); trimHand(G, p);
     ev(G, { t: 'gain', p: p, id: id });
-    G.draft = null;
     if (G.done >= G.needed) passTurn(G);
+    return { ok: true };
+  }
+  // 다시 뽑기 (판마다 1번, 재도전 능력이면 3번)
+  function reroll(G) {
+    var d = G.draft;
+    if (!d || G.refresh[d.player] <= 0) return { ok: false };
+    G.refresh[d.player]--;
+    d.picks = draftPicks(G, d.player, d.kind);
+    ev(G, { t: 'draft', p: d.player, picks: d.picks.slice(), kind: d.kind, refresh: G.refresh[d.player], rerolled: true });
     return { ok: true };
   }
 
   /* ---------------- 착수 ---------------- */
-  // 투명한 돌을 눌러 찾아냄 (차례는 그대로) — 화면에서는 현재 차례 사람이 상대 투명 돌을 누르는 경우
-  function revealHidden(G, r, c) {
-    var before = G.hidden.length;
-    G.hidden = G.hidden.filter(function (h) { return !(h.r === r && h.c === c); });
-    if (G.hidden.length !== before) { ev(G, { t: 'reveal', r: r, c: c }); ev(G, { t: 'hidden' }); return true; }
-    return false;
-  }
   function canPlace(G, r, c) {
-    if (G.gameOver || G.draft || G.alk || G.pending) return false;
+    if (G.gameOver || G.draft || G.alk || G.pending || G.counter || G.startQueue) return false;
     if (!inb(r, c) || G.board[r][c] !== EMPTY) return false;
     if (isBlockedForPlayer(G, r, c, G.current)) return false;
-    if (G.done > 0 && G.placed.length > 0 && G.placed.some(function (p) { return Math.max(Math.abs(r - p.r), Math.abs(c - p.c)) <= 2; })) return false;
+    var big = G.lg.big === G.current;                       // 대기만성 턴: 거리 제한 없음, 승리 줄 완성 불가
+    if (big && lgWouldWin(G, r, c, G.current)) return false;
+    if (!big && G.done > 0 && G.placed.length > 0 && G.placed.some(function (p) { return Math.max(Math.abs(r - p.r), Math.abs(c - p.c)) <= 2; })) return false;
     return true;
   }
   function place(G, r, c) {
-    if (G.gameOver || G.draft || G.alk || G.pending) return { ok: false };
-    if (inb(r, c) && isHiddenFor(G, r, c, G.current)) { revealHidden(G, r, c); return { ok: true, found: true }; }
     if (!canPlace(G, r, c)) return { ok: false };
     var cur = G.current, countsForDraft = G.done === 0;
     G.board[r][c] = cur; G.lastMove = { r: r, c: c };
     G.placed.push({ r: r, c: c });
     ev(G, { t: 'place', r: r, c: c, p: cur });
+    lgOnPlace(G, r, c, cur);
 
     var trap = G.traps.filter(function (t) { return t.r === r && t.c === c && t.owner !== cur; })[0];
     if (trap) {                                             // 함정: 돌이 사라지고 함정 주인은 카드 1장
       G.board[r][c] = EMPTY;
       G.traps = G.traps.filter(function (t) { return t !== trap; });
       ev(G, { t: 'trapHit', r: r, c: c, p: cur, owner: trap.owner });
+      lgLose(G, cur, r, c);
       grantRandomCard(G, trap.owner);
       G.done++;
       endTurnIfStuck(G);
@@ -275,9 +365,9 @@
     else if (G.done >= G.needed) passTurn(G);
     return { ok: true };
   }
-  // 투명한 돌 · 거대한 돌 (착수 직후에 붙는 효과)
+  // 단단한 시작 · 거대한 돌 (착수 직후에 붙는 효과)
   function onPlaceEffects(G, r, c, p) {
-    if (G.next.ghost === p) { G.next.ghost = 0; G.hidden.push({ r: r, c: c, owner: p, rounds: 3 }); ev(G, { t: 'hidden' }); }
+    if (G.ab[p] === 'sturdy' && G.sturdy[p] < 3) { G.sturdy[p]++; G.immune.push({ r: r, c: c, owner: p }); }
     if (G.next.giant === p) {
       G.next.giant = 0;
       var broken = [];
@@ -285,7 +375,7 @@
         var rr = r + dr, cc = c + dc;
         if (!inb(rr, cc)) continue;
         var v = G.board[rr][cc];
-        if (isStone(v)) { removeStoneAt(G, rr, cc); broken.push({ r: rr, c: cc, p: v }); }
+        if (isStone(v)) { removeStoneAt(G, rr, cc); broken.push({ r: rr, c: cc, p: v }); if (dr || dc) lgLose(G, v, rr, cc); }
         G.board[rr][cc] = WALL;
       }
       G.giants.push({ r: r, c: c });
@@ -373,9 +463,9 @@
       if (s.mill) G.windmills.push({ r: np[i].r, c: np[i].c });
       moves.push({ from: { r: s.r, c: s.c }, to: np[i], p: s.color });
     });
-    G.lastMove = null; G.hidden = [];                      // 흔들린 돌은 모두 드러남
+    G.lastMove = null;
     pruneTraps(G);
-    ev(G, { t: 'quake', moves: moves }); ev(G, { t: 'hidden' });
+    ev(G, { t: 'quake', moves: moves });
   }
   function spend(G, idx) {
     var p = G.current, id = G.hand[p].splice(idx, 1)[0];
@@ -384,11 +474,23 @@
     return id;
   }
   // 이번 턴 카드를 쓸 수 있는 상태인지
-  function canUseCard(G) { return !G.gameOver && !G.draft && !G.pending && !G.alk && !G.used[G.current]; }
+  function canUseCard(G) { return !G.gameOver && !G.draft && !G.pending && !G.alk && !G.counter && !G.startQueue && !G.used[G.current]; }
 
-  /* 카드 사용: { ok, pending?, blocked? } — 대상을 고르는 카드는 pending 이 되고 target() 으로 마무리 */
+  /* 카드 사용: { ok, pending?, blocked?, counter? } — 대상을 고르는 카드는 pending 이 되고 target() 으로 마무리.
+     상대가 무소유를 쥐고 있으면 counter: answerCounter() 로 대응 여부를 정함 */
   function useCard(G, idx) {
     if (!canUseCard(G)) return { ok: false };
+    var p = G.current, id = G.hand[p][idx], holder = other(p);
+    if (!id) return { ok: false };
+    G.lg.lastCard[p] = id;                                  // 따라쟁이가 베낄 카드
+    if (G.lg.card[holder] === 'nothing' && !G.lg.done[holder] && G.hand[holder].length > 0) {
+      G.counter = { user: p, idx: idx, id: id };
+      ev(G, { t: 'counterAsk', holder: holder, user: p, id: id });
+      return { ok: true, counter: true };
+    }
+    return execCard(G, idx);
+  }
+  function execCard(G, idx) {
     var p = G.current, opp = other(p), id = G.hand[p][idx];
     if (!id) return { ok: false };
 
@@ -446,7 +548,7 @@
         if (!dest) return { ok: false, reason: 'noTarget' };
         var mill = isWindmill(G, hit.r, hit.c);
         G.board[hit.r][hit.c] = EMPTY; G.board[dest.r][dest.c] = victim;
-        G.windmills.forEach(function (w) { if (w.r === hit.r && w.c === hit.c) { w.r = dest.r; w.c = dest.c; } });
+        moveMeta(G, hit.r, hit.c, dest.r, dest.c);
         G.lastMove = { r: dest.r, c: dest.c };
         pruneTraps(G); pruneCraters(G);
         spend(G, idx);
@@ -464,7 +566,7 @@
         });
         if (!conv.length) return { ok: false, reason: 'noTarget' };
         spend(G, idx);
-        conv.forEach(function (q) { ev(G, { t: 'convert', r: q.r, c: q.c, from: opp, to: p, why: 'infection' }); });
+        conv.forEach(function (q) { lgLose(G, opp, q.r, q.c); ev(G, { t: 'convert', r: q.r, c: q.c, from: opp, to: p, why: 'infection' }); });
         passTurn(G);
         return { ok: true };
       }
@@ -472,7 +574,7 @@
         var cand = shuffle(G, listStones(G, opp).filter(function (q) { return !isProtected(G, q.r, q.c); }));
         if (!cand.length) return { ok: false, reason: 'noTarget' };
         spend(G, idx);
-        cand.slice(0, 2).forEach(function (q) { removeStoneAt(G, q.r, q.c); ev(G, { t: 'remove', r: q.r, c: q.c, p: opp, why: 'snipe' }); });
+        cand.slice(0, 2).forEach(function (q) { removeStoneAt(G, q.r, q.c); lgLose(G, opp, q.r, q.c); ev(G, { t: 'remove', r: q.r, c: q.c, p: opp, why: 'snipe' }); });
         pruneTraps(G);
         if (!endIfBoardWin(G)) passTurn(G);
         return { ok: true };
@@ -485,9 +587,6 @@
         return { ok: true };
       case 'giant':
         spend(G, idx); G.next.giant = p; ev(G, { t: 'next', what: 'giant', p: p });
-        return { ok: true };
-      case 'ghost':
-        spend(G, idx); G.next.ghost = p; ev(G, { t: 'next', what: 'ghost', p: p });
         return { ok: true };
       case 'weather': {
         spend(G, idx);
@@ -508,6 +607,7 @@
     if (!t || !inb(r, c)) return false;
     var v = G.board[r][c];
     switch (t.type) {
+      case 'sacrifice': case 'wager': case 'kingPick': return v === t.forPlayer;       // 전설 카드: 내 돌 고르기
       case 'windmill': return v === t.forPlayer && !isWindmill(G, r, c);
       case 'remove': return v === t.opponent && !isProtected(G, r, c);
       case 'teleport': case 'shield': return v === t.forPlayer;
@@ -524,7 +624,7 @@
     return false;
   }
   function finishPending(G, t) {
-    spend2(G, t);
+    if (!t.legend) spend2(G, t);
     G.pending = null;
   }
   function spend2(G, t) { G.hand[t.forPlayer].splice(t.handIndex, 1); G.used[t.forPlayer] = true; ev(G, { t: 'spend', p: t.forPlayer, id: t.cardId }); }
@@ -532,6 +632,7 @@
   function target(G, r, c) {
     var t = G.pending;
     if (!t || !inb(r, c)) return { ok: false };
+    if (t.legend) return H.legendTarget(G, t, r, c);          // 전설 카드의 대상 고르기 (rules-legend.js)
     t.cardId = G.hand[t.forPlayer][t.handIndex];
     var v = G.board[r][c], p = t.forPlayer;
     if ((t.type === 'remove' || t.type === 'trade') && isStone(v) && v !== p && isProtected(G, r, c)) return { ok: false, reason: 'shielded' };
@@ -547,6 +648,7 @@
         return { ok: false };
       }
       if (swapMakesLine(G, a.r, a.c, r, c)) return { ok: false, reason: 'line' };
+      lgLose(G, other(p), a.color === other(p) ? a.r : r, a.color === other(p) ? a.c : c);
       G.board[a.r][a.c] = v; G.board[r][c] = a.color;
       ev(G, { t: 'convert', r: a.r, c: a.c, from: a.color, to: v, why: 'trade' });
       ev(G, { t: 'convert', r: r, c: c, from: v, to: a.color, why: 'trade' });
@@ -558,6 +660,7 @@
 
     switch (t.type) {
       case 'remove':
+        lgLose(G, t.opponent, r, c);
         removeStoneAt(G, r, c);
         G.traps = G.traps.filter(function (x) { return !(x.r === r && x.c === c); });
         G.craters.push({ r: r, c: c, turns: 2, fresh: true });
@@ -569,7 +672,7 @@
         if (!dest) return { ok: false };
         var mill = isWindmill(G, r, c);
         G.board[r][c] = EMPTY; G.board[dest.r][dest.c] = p;
-        G.windmills.forEach(function (w) { if (w.r === r && w.c === c) { w.r = dest.r; w.c = dest.c; } });
+        moveMeta(G, r, c, dest.r, dest.c);
         G.lastMove = dest; pruneTraps(G);
         ev(G, { t: 'move', from: { r: r, c: c }, to: dest, p: p, why: 'teleport', mill: mill });
         break;
@@ -704,12 +807,18 @@
     }
   }
 
+  var core = { ev: ev, rnd: rnd, shuffle: shuffle, weightedSample: weightedSample, removeStoneAt: removeStoneAt, moveMeta: moveMeta,
+    pruneTraps: pruneTraps, pruneCraters: pruneCraters, isCrater: isCrater, listStones: listStones, hasEmptyCell: hasEmptyCell,
+    grantRandomCard: grantRandomCard, trimHand: trimHand, endIfBoardWin: endIfBoardWin, finish: finish, checkWin: checkWin,
+    passTurn: passTurn, execCard: execCard, lgLose: lgLose, lgWouldWin: lgWouldWin, handLimit: handLimit, draftPicks: draftPicks,
+    isProtected: isProtected, isWindmill: isWindmill, pickRandomEmptyCell: pickRandomEmptyCell, isDark: isDark };
   root.Rules = {
     SIZE: SIZE, EMPTY: EMPTY, BLACK: BLACK, WHITE: WHITE, WALL: WALL, HAND_LIMIT: HAND_LIMIT, INTERVAL: INTERVAL,
     CARDS: CARDS, CARD_BY_ID: CARD_BY_ID, ALK: ALK, other: other, isStone: isStone, inb: inb,
     create: create, drain: drain, place: place, canPlace: canPlace, useCard: useCard, canUseCard: canUseCard,
     target: target, isValidTarget: isValidTarget, cancel: cancel, pickDraft: pickDraft,
-    isHiddenFor: isHiddenFor, isProtected: isProtected, isWindmill: isWindmill, isBlockedForPlayer: isBlockedForPlayer,
+    isProtected: isProtected, core: core, H: H, LEGENDS: LEGENDS, LEGEND_BY_ID: LEGEND_BY_ID, ABILITIES: ABILITIES, ABILITY_BY_ID: ABILITY_BY_ID,
+    reroll: reroll, isDark: isDark, handLimit: handLimit, isWindmill: isWindmill, isBlockedForPlayer: isBlockedForPlayer,
     listStones: listStones, alkLaunch: alkLaunch, alkTick: alkTick, alkStep: alkStep, hasEmptyCell: hasEmptyCell,
     weightedSample: weightedSample, grantRandomCard: grantRandomCard
   };

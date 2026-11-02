@@ -4,24 +4,59 @@
 /* ---------------- 게임 흐름 ---------------- */
 function cancelMode() {
   if (!G.pending) return;
-  Rules.cancel(G); Rules.drain(G); tradeFirst = null; clearPlayed(); syncS(); updateHUD();
+  Rules.cancel(G); Rules.drain(G); tradeFirst = null; clearPlayed(); syncS(); updateHUD(); syncMarkers(); syncMarkersExtra();
+}
+// 카드/전설 카드를 쓴 결과를 화면에 반영
+var pendingCounterSnap = null;
+function afterUse(res, evs, snap) {
+  if (res.counter) { pendingCounterSnap = snap; runEvents(evs); return; }          // 'counterAsk' 이벤트가 대응 창을 엶
+  if (res.pending) { showPlayed(snap); syncS(); runEvents(evs); return; }          // 대상을 고르는 카드는 왼쪽 아래에서 기다림
+  burnSnap(snap); runEvents(evs);                                                  // 바로 발동: 가운데서 불타며 효과 실행
+}
+// 🧘 무소유 대응 창의 답: 막으면 카드가 무효, 넘기면 그대로 발동
+function answerCounterUI(yes) {
+  var snap = pendingCounterSnap; pendingCounterSnap = null;
+  var res = Rules.answerCounter(G, yes), evs = Rules.drain(G);
+  setTopView(true, true);
+  if (res.ok && snap) afterUse(res, evs, snap); else runEvents(evs);
 }
 // 카드: 1번 누르면 크게 확대, 확대된 카드를 한 번 더 누르면 발동
 function onCardClick(i) {
-  if (G.gameOver || busy > 0 || G.draft || G.alk) return;
-  if (inspectIdx !== i) { inspectIdx = i; sfx('card'); return; }
+  if (G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
+  if (inspectIdx !== i) { inspectIdx = i; inspectLegend = false; hideLegendHint(); sfx('card'); return; }
   var mesh = cardMeshes[i], id = G.hand[G.current][i];
   var snap = { id: id, x: mesh.position.x, y: mesh.position.y, s: mesh.scale.x };
-  if (G.pending && G.pending.handIndex === i) { cancelMode(); inspectIdx = -1; return; }   // 대기 중인 카드를 다시 누르면 취소
+  if (G.pending && !G.pending.legend && G.pending.handIndex === i) { cancelMode(); inspectIdx = -1; return; }   // 대기 중인 카드를 다시 누르면 취소
   var res = Rules.useCard(G, i), evs = Rules.drain(G);
   if (!res.ok) return;
   inspectIdx = -1; setTopView(true, true);
-  if (res.pending) { showPlayed(snap); syncS(); return; }          // 대상을 고르는 카드는 왼쪽 아래에서 기다림
-  burnSnap(snap); runEvents(evs);                                  // 바로 발동: 가운데서 불타며 효과 실행
+  afterUse(res, evs, snap);
+}
+// 전설 칸(오른쪽 아래): 누르면 확대(조건 표시), 한 번 더 누르면 사용
+function onLegendClick() {
+  if (G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
+  if (!inspectLegend) { inspectLegend = true; inspectIdx = -1; sfx('card'); showLegendHint(); return; }
+  var o = legendMeshes.filter(function (x) { return x.own; })[0]; if (!o) return;
+  var snap = { id: G.lg.card[G.current], x: o.m.position.x, y: o.m.position.y, s: o.m.scale.x };
+  if (G.pending && G.pending.legend) { cancelMode(); inspectLegend = false; hideLegendHint(); return; }
+  if (!Rules.canUseLegend(G)) return;
+  var res = Rules.useLegend(G), evs = Rules.drain(G);
+  if (!res.ok) return;
+  inspectLegend = false; hideLegendHint();
+  if (res.choice) {                                                                  // 올인: 패 또는 돌 중 무엇을 걸지
+    askAllin(function (c) {
+      if (!c) return;
+      var r2 = Rules.useLegend(G, c), e2 = Rules.drain(G);
+      if (!r2.ok) return;
+      setTopView(true, true); afterUse(r2, e2, snap);
+    });
+    return;
+  }
+  setTopView(true, true); afterUse(res, evs, snap);
 }
 // 판의 칸 (r=행, c=열): 직부감에서만 동작
 function onCell(r, c) {
-  if (G.gameOver || busy > 0 || G.draft || G.alk || topGoal < 0.5 || topT < 0.85) return;
+  if (G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue || topGoal < 0.5 || topT < 0.85) return;
   if (G.pending) {
     var res = Rules.target(G, r, c), evs = Rules.drain(G);
     if (!res.ok) return;
@@ -61,15 +96,19 @@ function updateHover() {
   hoverDraft = dh.length ? dh[0].object.userData.draftIdx : -1;
   var hits = (topGoal > 0.5 || draftMeshes.length) ? [] : raycaster.intersectObjects(cardMeshes, false);
   hoverCard = hits.length ? hits[0].object.userData.i : -1;
+  var own = legendMeshes.filter(function (o) { return o.own; }).map(function (o) { return o.m; });
+  var lh = (topGoal > 0.5 || draftMeshes.length || !own.length) ? [] : raycaster.intersectObjects(own, false);
+  hoverLegend = lh.length > 0;
+  if (hoverLegend) hoverCard = -1;
   handUp = topGoal < 0.5 && !draftMeshes.length && (hoverCard >= 0 || (Math.abs(pointer.x) < 0.5 && pointer.y < -0.3));
   hoverCell = null; hoverTable = false;
-  var hasGround = hoverCard < 0 && hoverDraft < 0 && !draftMeshes.length && raycaster.ray.intersectPlane(groundPlane, hitPoint);
+  var hasGround = hoverCard < 0 && !hoverLegend && hoverDraft < 0 && !draftMeshes.length && raycaster.ray.intersectPlane(groundPlane, hitPoint);
   if (hasGround) {
     var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
     if (inb(x, y) && Math.abs(hitPoint.x + HALF - x) < 0.5 && Math.abs(hitPoint.z + HALF - y) < 0.5) hoverCell = [x, y];
     else hoverTable = true;                 // 격자 밖(판 테두리·테이블) = 시점 전환 영역
   }
-  dom.style.cursor = (hoverCard >= 0 || hoverDraft >= 0 || hoverCell || hoverTable) ? 'pointer' : 'default';
+  dom.style.cursor = (hoverCard >= 0 || hoverLegend || hoverDraft >= 0 || hoverCell || hoverTable) ? 'pointer' : 'default';
   if (alkUI && alkUI.dragging && raycaster.ray.intersectPlane(groundPlane, hitPoint)) aimUpdate(hitPoint);
 }
 dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch' && !(alkUI && alkUI.dragging)) return; setPointer(e); updateHover(); });
@@ -95,7 +134,9 @@ dom.addEventListener('click', function (e) {
   if (G.alk) return;                                                       // 알까기 중에는 클릭 대신 당기기
   setPointer(e); updateHover();
   if (draftMeshes.length) { if (hoverDraft >= 0) onDraftClick(hoverDraft); return; }
-  if (hoverCard >= 0) onCardClick(hoverCard);
+  if (hoverLegend) onLegendClick();
+  else if (hoverCard >= 0) onCardClick(hoverCard);
+  else if (inspectLegend) { inspectLegend = false; hideLegendHint(); }
   else if (inspectIdx >= 0) inspectIdx = -1;                              // 확대 중 다른 곳을 누르면 닫기
   else if (hoverCell || hoverTable) {
     if (topGoal < 0.5) setTopView(true);                                  // 뒤 시점에서 판/테이블을 누르면 직부감으로
@@ -106,7 +147,7 @@ dom.addEventListener('click', function (e) {
   if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; handUp = false; }
 });
 window.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') { if (inspectIdx >= 0) inspectIdx = -1; else if (G.pending) cancelMode(); }
+  if (e.key === 'Escape') { if (inspectLegend) { inspectLegend = false; hideLegendHint(); } else if (inspectIdx >= 0) inspectIdx = -1; else if (G.pending) cancelMode(); }
   else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
 });
 elViewBtn.addEventListener('click', function () { setTopView(topGoal < 0.5); });

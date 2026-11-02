@@ -13,7 +13,7 @@
 | 파일 | PNG(투명 배경 권장) 또는 JPG |
 | 크기 | **584 × 428 px** (비율 약 1.36 : 1, 이보다 크면 자동으로 축소) |
 | 위치 | 카드 이름 아래 그림 칸. 가장자리는 잉크 테두리가 덮이므로 중요한 그림은 안쪽 90%에 |
-| 설정 | `config.js`의 `cards.<카드 id>` (카드 21장 모두 지정 가능: chain, windmill, alkkagi, bomb, trade, infection, reversal, teleport, earthquake, meteor, sixsense, wall, trap, snipe, double, peek, giant, ghost, weather, shield, blockade) |
+| 설정 | `config.js`의 `cards.<카드 id>` (일반 카드 20장: chain, windmill, alkkagi, bomb, trade, infection, reversal, teleport, earthquake, meteor, sixsense, wall, trap, snipe, double, peek, giant, weather, shield, blockade / 전설 카드 11장: obelisk, nothing, latebloom, blind, clown, chicken, sloth, mirror, allin, turtle, king) |
 
 예) `assets/cards/bomb.png` 를 넣고 `bomb: 'assets/cards/bomb.png'`
 

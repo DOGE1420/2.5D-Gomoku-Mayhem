@@ -23,6 +23,18 @@
   #mapSel { right: 92px; display: none; }
   #notice { position: fixed; left: 12px; bottom: 10px; max-width: 70%; padding: 6px 10px; background: rgba(40,20,10,.85); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 12px; display: none; pointer-events: none; }
   #endturn { left: 12px; display: none; }
+  /* 보조 화면 */
+  #trait { position: fixed; left: 12px; top: 12px; padding: 7px 12px; background: rgba(42,29,18,.85); color: #e8d9b5; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 13px; display: none; cursor: help; }
+  #toast { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); padding: 9px 18px; background: rgba(20,12,4,.9); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 6px; font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .3s; text-shadow: 0 1px 4px #000; max-width: 80%; text-align: center; }
+  #toast.show { opacity: 1; }
+  #legendHint { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 8px 16px; background: rgba(20,12,4,.92); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 6px; font-size: 14px; display: none; pointer-events: none; max-width: 86%; text-align: center; }
+  #legendHint.show { display: block; } #legendHint.ok { color: #ffe08a; border-color: #d6aa32; }
+  #draftCap { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); display: none; text-align: center; color: #f1e2b8; text-shadow: 0 2px 8px #000; }
+  #draftCap.show { display: block; } #draftCapText { font-size: 20px; margin-bottom: 8px; }
+  .box { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 18px 22px; background: rgba(24,15,6,.96); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 8px; display: none; text-align: center; max-width: 80%; box-shadow: 0 10px 40px #000; }
+  .box.show { display: block; } .box .btn, #draftCap .btn { position: static; margin: 10px 6px 0; }
+  #slotBox .reels { display: flex; gap: 10px; justify-content: center; } #slotBox .reel { width: 74px; height: 86px; line-height: 86px; font-size: 46px; background: #f1e2b8; border: 3px solid #6b4f2e; border-radius: 8px; color: #000; }
+  #slotBox .reel.spin { filter: blur(1.5px); } #slotResult { margin-top: 12px; font-size: 20px; min-height: 26px; } #slotResult.win { color: #ffe08a; } #slotResult.lose { color: #c98a7a; }
   #banner { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.6); color: #f1e2b8; font-size: 40px; text-shadow: 0 3px 10px #000; }
   #banner button { margin-top: 20px; position: static; font-size: 16px; padding: 10px 22px; }
 </style>
@@ -36,15 +48,24 @@
 <button id="viewbtn" class="btn">🔍 판 보기</button>
 <select id="mapSel" class="btn"></select>
 <div id="notice"></div>
+<div id="trait"></div>
+<div id="toast"></div>
+<div id="legendHint"></div>
+<div id="draftCap"><div id="draftCapText"></div><button id="reroll" class="btn">🔄 다시 뽑기</button></div>
+<div id="counterBox" class="box"><div id="counterText"></div><div><button id="counterYes" class="btn">🧘 막기</button><button id="counterNo" class="btn">넘기기</button></div></div>
+<div id="choiceBox" class="box"><div id="choiceText"></div><div id="choiceActions"></div></div>
+<div id="slotBox" class="box"><div class="reels"><span class="reel">🍒</span><span class="reel">🍋</span><span class="reel">🔔</span></div><div id="slotResult"></div></div>
 <div id="banner"><div id="bannerText"></div><button class="btn" id="again">다시 하기</button></div>
 <script src="js/three.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/rules.js"></script>
+<script src="js/rules-legend.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/stones.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/overlays.js"></script>
 <script src="js/card-art.js"></script>
 <script src="js/hand.js"></script>
 <script src="js/board3d.js"></script>

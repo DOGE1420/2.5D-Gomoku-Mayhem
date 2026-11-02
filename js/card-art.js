@@ -251,6 +251,102 @@ var ART = {
     inkPath(g, circlePts(cx, cy + 6, 84, 32), 6, { closed: true });
     inkPath(g, [[cx - 60, cy - 54], [cx + 60, cy + 66]], 6);
   }
+    ,
+    obelisk: function (g, cx, cy) {          // 오목의 거신병: 갈라진 거석 + 바친 돌 3개
+      inkPath(g, [[cx - 34, cy + 86], [cx - 24, cy - 56], [cx, cy - 92], [cx + 24, cy - 56], [cx + 34, cy + 86]], 3.8, { closed: true });
+      inkPath(g, [[cx - 24, cy - 56], [cx + 24, cy - 56]], 2.6); inkPath(g, [[cx, cy - 92], [cx, cy - 56]], 2.2);
+      inkPath(g, [[cx - 6, cy - 30], [cx + 8, cy + 0], [cx - 4, cy + 22], [cx + 6, cy + 54]], 2.8);
+      inkPath(g, [[cx + 14, cy + 10], [cx + 26, cy + 30]], 2.2);
+      [[-78, 90], [66, 94], [100, 86]].forEach(function (d) { inkPath(g, circlePts(cx + d[0], cy + d[1], 15, 12), 3, { closed: true, fill: d[0] > 0 }); });
+      inkPath(g, [[cx - 100, cy + 96], [cx + 124, cy + 96]], 3);
+    },
+    nothing: function (g, cx, cy) {          // 무소유: 텅 빈 원(엔소) + 빈 손
+      var pts = [];
+      for (var i = 0; i <= 26; i++) { var a = -2.2 + i / 26 * 5.4; pts.push([cx + Math.cos(a) * 66, cy + 4 + Math.sin(a) * 66]); }
+      inkPath(g, pts, 7, { jit: 1.6 });
+      inkPath(g, [[cx - 22, cy + 96], [cx - 30, cy + 70], [cx - 24, cy + 52]], 3); inkPath(g, [[cx + 22, cy + 96], [cx + 30, cy + 70], [cx + 24, cy + 52]], 3);
+      inkPath(g, [[cx - 12, cy + 54], [cx - 12, cy + 32]], 2.6); inkPath(g, [[cx, cy + 52], [cx, cy + 28]], 2.6); inkPath(g, [[cx + 12, cy + 54], [cx + 12, cy + 32]], 2.6);
+      sparkle(g, cx + 96, cy - 62, 12);
+    },
+    latebloom: function (g, cx, cy) {        // 대기만성: 느릿한 달팽이와 늦게 핀 꽃
+      var sp = [];
+      for (var i = 0; i <= 30; i++) { var a = i / 30 * Math.PI * 5, r = 6 + i * 1.6; sp.push([cx - 10 + Math.cos(a) * r, cy + 8 + Math.sin(a) * r]); }
+      inkPath(g, sp, 3.2); inkPath(g, circlePts(cx - 10, cy + 8, 54, 26), 3.6, { closed: true });
+      inkPath(g, [[cx - 76, cy + 64], [cx + 30, cy + 64], [cx + 84, cy + 56], [cx + 100, cy + 30], [cx + 98, cy + 14]], 4);
+      inkPath(g, [[cx + 98, cy + 14], [cx + 92, cy - 14]], 3); inkPath(g, [[cx + 108, cy + 18], [cx + 118, cy - 8]], 3);
+      inkPath(g, circlePts(cx + 92, cy - 18, 5, 8), 2.4, { closed: true, fill: true }); inkPath(g, circlePts(cx + 118, cy - 12, 5, 8), 2.4, { closed: true, fill: true });
+      inkPath(g, [[cx - 108, cy + 86], [cx - 108, cy + 52]], 3);
+      [[-1, 0], [1, 0], [0, -1]].forEach(function (d) { inkPath(g, circlePts(cx - 108 + d[0] * 10, cy + 46 + d[1] * 10, 8, 10), 2.4, { closed: true }); });
+    },
+    blind: function (g, cx, cy) {            // 눈 감고 두기: 눈가리개
+      inkPath(g, circlePts(cx, cy + 6, 82, 30, 0.82), 3.8, { closed: true });
+      inkPath(g, [[cx - 80, cy - 16], [cx + 80, cy - 36], [cx + 82, cy + 4], [cx - 78, cy + 24]], 3.6, { closed: true, fill: true });
+      g.save(); g.fillStyle = '#d9c79a'; g.globalAlpha = 0.5; g.fillRect(cx - 40, cy - 14, 20, 4); g.fillRect(cx + 14, cy - 22, 20, 4); g.restore();
+      inkPath(g, [[cx + 82, cy - 16], [cx + 112, cy - 40]], 3.4); inkPath(g, [[cx + 82, cy - 8], [cx + 114, cy + 4]], 3.4);
+      inkPath(g, [[cx - 26, cy + 56], [cx, cy + 66], [cx + 26, cy + 56]], 3.2);
+    },
+    clown: function (g, cx, cy) {            // 광대의 한 수: 광대 모자와 얼굴
+      inkPath(g, [[cx - 46, cy - 24], [cx, cy - 98], [cx + 46, cy - 24]], 3.6, { closed: true });
+      inkPath(g, circlePts(cx, cy - 102, 9, 10), 3, { closed: true, fill: true });
+      inkPath(g, [[cx - 32, cy - 46], [cx + 32, cy - 46]], 2.4);
+      inkPath(g, circlePts(cx, cy + 22, 58, 26), 3.8, { closed: true });
+      inkPath(g, circlePts(cx - 22, cy + 8, 7, 10), 2.8, { closed: true, fill: true }); inkPath(g, circlePts(cx + 22, cy + 8, 7, 10), 2.8, { closed: true, fill: true });
+      inkPath(g, circlePts(cx, cy + 26, 13, 12), 3, { closed: true, fill: true });
+      inkPath(g, [[cx - 34, cy + 46], [cx - 12, cy + 66], [cx + 12, cy + 66], [cx + 34, cy + 46]], 3.4);
+    },
+    chicken: function (g, cx, cy) {          // 치킨 게임: 닭
+      inkPath(g, circlePts(cx - 8, cy + 24, 58, 26, 1.1), 3.8, { closed: true });
+      inkPath(g, circlePts(cx + 52, cy - 34, 30, 18), 3.6, { closed: true });
+      inkPath(g, [[cx + 44, cy - 62], [cx + 52, cy - 80], [cx + 60, cy - 62], [cx + 68, cy - 78], [cx + 70, cy - 58]], 3, { closed: true, fill: true });
+      inkPath(g, [[cx + 78, cy - 36], [cx + 104, cy - 28], [cx + 78, cy - 20]], 3, { closed: true, fill: true });
+      inkPath(g, circlePts(cx + 56, cy - 40, 4, 8), 2.4, { closed: true, fill: true });
+      inkPath(g, [[cx - 66, cy + 4], [cx - 100, cy - 24]], 3.4); inkPath(g, [[cx - 66, cy + 20], [cx - 106, cy + 4]], 3.4); inkPath(g, [[cx - 64, cy + 34], [cx - 98, cy + 30]], 3.4);
+      inkPath(g, [[cx - 24, cy + 82], [cx - 24, cy + 104]], 3.2); inkPath(g, [[cx + 14, cy + 82], [cx + 14, cy + 104]], 3.2);
+      inkPath(g, [[cx - 40, cy + 106], [cx - 24, cy + 104], [cx - 8, cy + 106]], 2.6); inkPath(g, [[cx, cy + 106], [cx + 14, cy + 104], [cx + 30, cy + 106]], 2.6);
+    },
+    sloth: function (g, cx, cy) {            // 나무늘보: 나뭇가지에 매달린 모습
+      inkPath(g, [[cx - 124, cy - 70], [cx + 124, cy - 74]], 6);
+      inkPath(g, [[cx - 60, cy - 70], [cx - 70, cy - 90], [cx - 50, cy - 100]], 2.6); inkPath(g, [[cx + 70, cy - 72], [cx + 86, cy - 94]], 2.6);
+      inkPath(g, circlePts(cx, cy + 20, 50, 24, 0.9), 3.8, { closed: true });
+      inkPath(g, [[cx - 38, cy - 8], [cx - 56, cy - 40], [cx - 40, cy - 68]], 4); inkPath(g, [[cx + 38, cy - 8], [cx + 56, cy - 40], [cx + 40, cy - 68]], 4);
+      inkPath(g, circlePts(cx, cy + 4, 24, 16), 3, { closed: true });
+      inkPath(g, circlePts(cx - 9, cy + 0, 5, 8), 2.4, { closed: true, fill: true }); inkPath(g, circlePts(cx + 9, cy + 0, 5, 8), 2.4, { closed: true, fill: true });
+      inkPath(g, [[cx - 8, cy + 14], [cx, cy + 20], [cx + 8, cy + 14]], 2.4);
+      inkPath(g, [[cx - 22, cy + 66], [cx - 30, cy + 96]], 3.6); inkPath(g, [[cx + 22, cy + 66], [cx + 30, cy + 96]], 3.6);
+    },
+    mirror: function (g, cx, cy) {           // 따라쟁이: 거울과 비친 돌
+      inkPath(g, circlePts(cx, cy - 6, 70, 30, 0.8), 4.4, { closed: true });
+      inkPath(g, circlePts(cx, cy - 6, 56, 28, 0.78), 2.4, { closed: true });
+      inkPath(g, [[cx, cy + 66], [cx, cy + 100]], 7); inkPath(g, [[cx - 20, cy + 104], [cx + 20, cy + 104]], 5);
+      inkPath(g, circlePts(cx - 16, cy - 8, 22, 14), 3.2, { closed: true, fill: true });
+      inkPath(g, circlePts(cx + 20, cy + 4, 22, 14), 3.2, { closed: true });
+      inkPath(g, [[cx - 30, cy - 36], [cx - 8, cy - 52]], 2.4); sparkle(g, cx + 78, cy - 54, 12);
+    },
+    allin: function (g, cx, cy) {            // 올인: 슬롯머신
+      inkPath(g, [[cx - 84, cy - 72], [cx + 84, cy - 72], [cx + 84, cy + 88], [cx - 84, cy + 88]], 4.2, { closed: true });
+      inkPath(g, [[cx - 66, cy - 40], [cx + 66, cy - 40], [cx + 66, cy + 30], [cx - 66, cy + 30]], 3, { closed: true });
+      [-44, 0, 44].forEach(function (x) { inkPath(g, [[cx + x - 18, cy - 28], [cx + x + 18, cy - 28], [cx + x - 6, cy + 20]], 3.4); });
+      inkPath(g, [[cx - 22, cy - 40], [cx - 22, cy + 30]], 2); inkPath(g, [[cx + 22, cy - 40], [cx + 22, cy + 30]], 2);
+      inkPath(g, circlePts(cx - 30, cy + 58, 9, 10), 3, { closed: true, fill: true }); inkPath(g, circlePts(cx, cy + 58, 9, 10), 3, { closed: true }); inkPath(g, circlePts(cx + 30, cy + 58, 9, 10), 3, { closed: true, fill: true });
+      inkPath(g, [[cx + 84, cy - 20], [cx + 112, cy - 56]], 4.4); inkPath(g, circlePts(cx + 114, cy - 62, 10, 10), 3, { closed: true, fill: true });
+    },
+    turtle: function (g, cx, cy) {           // 토끼와 거북이: 느린 거북
+      var dome = [[cx - 84, cy + 50]];
+      for (var i = 0; i <= 14; i++) { var a = Math.PI + i / 14 * Math.PI; dome.push([cx + Math.cos(a) * 84, cy + 50 + Math.sin(a) * 74]); }
+      inkPath(g, dome, 4, { closed: true });
+      inkPath(g, [[cx - 40, cy - 8], [cx - 20, cy - 36], [cx + 20, cy - 36], [cx + 40, cy - 8], [cx + 20, cy + 20], [cx - 20, cy + 20]], 2.8, { closed: true });
+      inkPath(g, [[cx - 20, cy - 36], [cx - 30, cy - 66]], 2.4); inkPath(g, [[cx + 20, cy - 36], [cx + 30, cy - 66]], 2.4); inkPath(g, [[cx - 40, cy - 8], [cx - 74, cy + 8]], 2.4); inkPath(g, [[cx + 40, cy - 8], [cx + 74, cy + 8]], 2.4);
+      inkPath(g, circlePts(cx + 108, cy + 28, 22, 14), 3.6, { closed: true }); inkPath(g, circlePts(cx + 114, cy + 24, 3.5, 8), 2.2, { closed: true, fill: true });
+      inkPath(g, [[cx - 50, cy + 52], [cx - 56, cy + 80], [cx - 28, cy + 80], [cx - 22, cy + 52]], 3, { closed: true }); inkPath(g, [[cx + 22, cy + 52], [cx + 28, cy + 80], [cx + 56, cy + 80], [cx + 50, cy + 52]], 3, { closed: true });
+      inkPath(g, [[cx - 118, cy + 92], [cx + 130, cy + 92]], 2.6);
+    },
+    king: function (g, cx, cy) {             // 왕의 귀환: 왕관
+      inkPath(g, [[cx - 92, cy + 62], [cx - 100, cy - 36], [cx - 48, cy + 6], [cx, cy - 66], [cx + 48, cy + 6], [cx + 100, cy - 36], [cx + 92, cy + 62]], 4.2, { closed: true });
+      inkPath(g, [[cx - 92, cy + 42], [cx + 92, cy + 42]], 3);
+      [[-100, -36], [0, -66], [100, -36]].forEach(function (d) { inkPath(g, circlePts(cx + d[0], cy + d[1] - 10, 11, 12), 3.2, { closed: true, fill: true }); });
+      [-52, 0, 52].forEach(function (x) { inkPath(g, [[cx + x, cy + 14], [cx + x + 12, cy + 28], [cx + x, cy + 40], [cx + x - 12, cy + 28]], 2.6, { closed: true }); });
+      sparkle(g, cx - 120, cy - 70, 12); sparkle(g, cx + 122, cy - 74, 10);
+    }
 };
 
 function roughRectPts(x, y, w, h, jit, step) {
@@ -306,6 +402,14 @@ function cardTexture(id) {
   // 잉크 테두리
   inkPath(g, roughRectPts(26, 26, W - 52, H - 52, 1.5, 14), 3.2, { closed: true, jit: 1 });
   g.globalAlpha = 0.4; inkPath(g, roughRectPts(36, 36, W - 72, H - 72, 1.2, 14), 1.6, { closed: true, jit: 0.8 }); g.globalAlpha = 1;
+  if (c.legend) {                                  // 전설 카드: 금박 테두리와 모서리 장식
+    g.save(); g.strokeStyle = '#c99a1c'; g.lineWidth = 5; g.globalAlpha = 0.9;
+    var gr = roughRectPts(18, 18, W - 36, H - 36, 1.2, 14); g.beginPath(); gr.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.stroke();
+    g.fillStyle = 'rgba(214,170,50,0.13)'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#c99a1c'; g.globalAlpha = 0.95;
+    [[40, 40], [W - 40, 40], [40, H - 40], [W - 40, H - 40]].forEach(function (q) { g.beginPath(); g.moveTo(q[0], q[1] - 9); g.lineTo(q[0] + 9, q[1]); g.lineTo(q[0], q[1] + 9); g.lineTo(q[0] - 9, q[1]); g.closePath(); g.fill(); });
+    g.restore();
+  }
 
   // 상단 룬 + 이름
   runeGlyph(g, W / 2, 70, 20);
@@ -335,10 +439,24 @@ function cardTexture(id) {
   inkPath(g, [[56, 500], [W - 56, 500]], 2, { jit: 1 });
   g.font = '21px ' + TEXT_FONT; g.fillStyle = INK;
   g.textAlign = 'left'; g.fillText(c.cat, 60, 521);
-  g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.endsTurn ? '턴 종료' : '턴 유지', W - 60, 521); g.globalAlpha = 1;
+  g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.legend ? (c.react ? '상대 카드에 대응' : '판마다 1번') : (c.endsTurn ? '턴 종료' : '턴 유지'), W - 60, 521); g.globalAlpha = 1;
   g.restore();
   // 가장자리 잉크 윤곽
   g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath();
   g.strokeStyle = 'rgba(40,24,8,0.75)'; g.lineWidth = 2.5; g.stroke();
   return (texCache[id] = toTex(cv));
+}
+
+// 전설 카드 뒷면 (상대가 쥔 전설 카드: 무엇인지 모름)
+function cardBackTexture() {
+  if (texCache.__back) return texCache.__back;
+  var W = 384, H = 576, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  var g = cv.getContext('2d'), edge = roughRectPts(6, 6, W - 12, H - 12, 2.4, 12);
+  g.save(); g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
+  var gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#5a4210'); gr.addColorStop(1, '#2e2108'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#d6aa32'; g.lineWidth = 6; g.strokeRect(22, 22, W - 44, H - 44); g.lineWidth = 2; g.strokeRect(36, 36, W - 72, H - 72);
+  g.fillStyle = '#d6aa32'; g.font = '150px ' + EMOJI_FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.globalAlpha = 0.9; g.fillText('?', W / 2, H / 2);
+  g.restore();
+  g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.strokeStyle = 'rgba(20,12,2,0.85)'; g.lineWidth = 2.5; g.stroke();
+  return (texCache.__back = toTex(cv));
 }

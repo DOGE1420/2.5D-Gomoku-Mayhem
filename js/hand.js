@@ -141,12 +141,13 @@ function rebuildHand() {
     m.position.set(0, -4.2, 0.2); // 아래에서 올라오는 등장 연출
     handGroup.add(m); cardMeshes.push(m);
   });
-  hoverCard = -1; inspectIdx = -1;
+  hoverCard = -1; inspectIdx = -1; inspectLegend = false; hoverLegend = false;
+  rebuildLegend();
 }
 function stepCards(dt) {
   var k = 1 - Math.pow(0.0006, dt), n = cardMeshes.length;
-  stepDraft(k);
-  var op = dimMesh.material.opacity + (((inspectIdx >= 0 || draftMeshes.length) ? 0.68 : 0) - dimMesh.material.opacity) * k;
+  stepDraft(k); stepLegend(k);
+  var op = dimMesh.material.opacity + (((inspectIdx >= 0 || inspectLegend || draftMeshes.length) ? 0.68 : 0) - dimMesh.material.opacity) * k;
   dimMesh.material.opacity = op; dimMesh.visible = op > 0.01;
   if (playedMesh) {                       // 사용한 카드: 직부감일 때만 왼쪽 아래에 표시
     var vs = viewSize(), sc = 0.62, ch = 2.25 * sc, cwp = 1.5 * sc, show = topGoal > 0.5;
@@ -166,5 +167,40 @@ function stepCards(dt) {
     var s = m.scale.x + (t.s - m.scale.x) * k; m.scale.set(s, s, 1);
     var c = m.material.color.r + (t.tint - m.material.color.r) * k;
     m.material.color.setRGB(c, c, c);
+  });
+}
+
+/* ---------------- 전설 칸: 패와 따로 오른쪽 아래에 놓이는 전설 카드 ---------------- */
+// 내 전설 카드는 앞면(눌러서 확대·사용), 상대 전설 카드는 쓰기 전까지 뒷면
+var legendMeshes = [], hoverLegend = false, inspectLegend = false;
+function rebuildLegend() {
+  legendMeshes.forEach(function (o) { handGroup.remove(o.m); o.m.material.dispose(); });
+  legendMeshes = [];
+  var lg = G.lg, cur = G.current, opp = Rules.other(cur);
+  [cur, opp].forEach(function (p) {
+    var id = lg.card[p]; if (!id) return;
+    var own = p === cur, face = own || lg.done[p];
+    var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: face ? cardTexture(id) : cardBackTexture(), transparent: true, alphaTest: 0.02 }));
+    var vs = viewSize();
+    m.position.set(vs.vw / 2 - 0.8, -vs.vh / 2 - 3, 0.2); m.scale.set(own ? 0.6 : 0.42, own ? 0.6 : 0.42, 1);
+    m.userData.legendOwn = own; handGroup.add(m);
+    legendMeshes.push({ m: m, own: own, done: !!lg.done[p], p: p });
+  });
+}
+function legendSlotTarget(o) {
+  var vs = viewSize(), hov = o.own && hoverLegend;
+  if (o.own && inspectLegend) return { x: 0, y: 0, z: 0.9, rz: 0, s: 1.75, tint: 1 };            // 자세히 보기: 화면 중앙에 크게
+  var sc = o.own ? 0.6 : 0.42, ch = 2.25 * sc;
+  var y = o.own ? -vs.vh / 2 + ch / 2 + 0.25 + (hov ? 0.25 : 0) : -vs.vh / 2 + 1.75 + ch / 2;
+  if (topGoal > 0.5) y = -vs.vh / 2 - 3.2;                                                         // 직부감: 패와 함께 숨김
+  return { x: vs.vw / 2 - 0.8, y: y, z: hov ? 0.3 : 0.05, rz: o.own ? -0.04 : 0.05, s: sc * (hov ? 1.08 : 1), tint: o.done ? 0.5 : (o.own ? (hov ? 1 : 0.9) : 0.75) };
+}
+function stepLegend(k) {
+  legendMeshes.forEach(function (o) {
+    var t = legendSlotTarget(o), m = o.m;
+    m.position.x += (t.x - m.position.x) * k; m.position.y += (t.y - m.position.y) * k; m.position.z += (t.z - m.position.z) * k;
+    m.rotation.z += (t.rz - m.rotation.z) * k;
+    var sc = m.scale.x + (t.s - m.scale.x) * k; m.scale.set(sc, sc, 1);
+    var c = m.material.color.r + (t.tint - m.material.color.r) * k; m.material.color.setRGB(c, c, c);
   });
 }

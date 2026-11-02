@@ -16,8 +16,10 @@ function syncPeek() {
 
 /* ---------------- 카드 뽑기 (3장 중 1장) ---------------- */
 var draftMeshes = [], draftIds = [], hoverDraft = -1;
-function openDraftUI(picks) {
-  closeDraftUI(); draftIds = picks.slice(); inspectIdx = -1;
+function openDraftUI(picks, kind, refresh, player) {
+  closeDraftUI(); draftIds = picks.slice(); inspectIdx = -1; inspectLegend = false; hideLegendHint();
+  var who = player === BLACK ? '⚫ 흑' : '⚪ 백';
+  showDraftCaption(who + ' — ' + (kind === 'legend' ? '전설 카드를 고르세요 (상대에게는 비공개)' : '카드를 고르세요'), refresh || 0, onRerollClick);
   picks.forEach(function (id, i) {
     var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
     m.userData.draftIdx = i; m.position.set((i - 1) * 2.4, -4.6, 1.0); m.scale.set(1.5, 1.5, 1);
@@ -25,7 +27,13 @@ function openDraftUI(picks) {
   });
   sfx('card');
 }
+function onRerollClick() {
+  if (busy > 0 || !G.draft) return;
+  var r = Rules.reroll(G); if (!r.ok) return;
+  runEvents(Rules.drain(G));                                // 새 후보로 다시 열림
+}
 function closeDraftUI() {
+  hideDraftCaption();
   draftMeshes.forEach(function (m) { handGroup.remove(m); m.material.dispose(); });
   draftMeshes = []; draftIds = []; hoverDraft = -1;
 }
