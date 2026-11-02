@@ -11,10 +11,10 @@
 
   /* ---------------- 카드 정의 (CARDS.md 의 21장 중 6장) ---------------- */
   var CARDS = {
-    chain:    { icon: '⚡', name: '연속 착수', cat: '공격',  color: '#8a5a1c', desc: '이번 턴에 3수까지 둠\n(같은 턴에 둔 돌의 2칸 이내 금지)' },
+    chain:    { icon: '⚡', name: '연속 착수', cat: '공격',  color: '#8a5a1c', desc: '이번 턴에 3수까지 둠\n(같은 턴 돌의 2칸 이내 금지)' },
     bomb:     { icon: '💥', name: '폭파',     cat: '방해',  color: '#8a2a1c', desc: '상대 돌 1개를 제거' },
     teleport: { icon: '✨', name: '순간이동', cat: '무작위', color: '#3d5a8a', desc: '내 돌 1개를\n무작위 빈 칸으로 이동' },
-    wall:     { icon: '🧱', name: '장벽',     cat: '지형',  color: '#5a4a3a', desc: '빈 칸에 영구 장벽\n아무도 못 두고 줄도 끊김' },
+    wall:     { icon: '🧱', name: '장벽',     cat: '지형',  color: '#5a4a3a', desc: '빈 칸에 영구 장벽\n(아무도 못 두고 줄도 끊김)' },
     sixth:    { icon: '👁️', name: '식스센스', cat: '규칙',  color: '#5a2a6a', desc: '승리 조건이\n영구히 6목으로' },
     reversal: { icon: '☯️', name: '전세 역전', cat: '희귀',  endsTurn: true, color: '#b8901c', desc: '판의 흑·백 돌을\n통째로 뒤바꿈' }
   };
@@ -454,17 +454,23 @@
     for (var s = 0; s < 14; s++) { g.fillStyle = INK; g.globalAlpha = rnd(0.25, 0.7); g.beginPath(); g.arc(rnd(50, W - 50), rnd(170, 360), rnd(0.8, 3.4), 0, 7); g.fill(); }   // 잉크 튄 자국
     g.globalAlpha = 1;
 
-    // 설명
-    g.fillStyle = INK; g.font = '25px ' + TEXT_FONT; g.globalAlpha = 0.9;
-    var lines = wrapText(g, c.desc, W - 112);
-    var y0 = 410 + (4 - Math.min(4, lines.length)) * 10;
-    lines.forEach(function (l, i) { g.fillText(l, W / 2, y0 + i * 32); });
+    // 설명: 칸(가로 284 · 세로 100)에 맞게 글자 크기를 줄이고, 한 글자만 남는 줄은 만들지 않음
+    g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle';
+    var size = 25, lines = [], nExplicit = c.desc.split('\n').length;
+    [25, 23, 21, 19, 17, 15].some(function (sz) {           // 줄바꿈 없이 의도한 줄 그대로 들어가는 가장 큰 글자 크기
+      size = sz; g.font = sz + 'px ' + TEXT_FONT; lines = wrapText(g, c.desc, W - 100);
+      return lines.length === nExplicit && lines.length * sz * 1.3 <= 100;
+    });
+    var lh = size * 1.3, y0 = 438 - (lines.length - 1) * lh / 2;
+    g.globalAlpha = 0.9;
+    lines.forEach(function (l, i) { g.fillText(l, W / 2, y0 + i * lh); });
     g.globalAlpha = 1;
 
-    // 하단: 분류 + 턴 종료 표시
-    inkPath(g, [[56, 512], [W - 56, 512]], 2, { jit: 1 });
-    g.font = 'bold 22px ' + TEXT_FONT; g.textAlign = 'left'; g.fillStyle = INK; g.fillText(c.cat, 58, 540);
-    g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.endsTurn ? '턴 종료' : '턴 유지', W - 58, 540); g.globalAlpha = 1;
+    // 하단: 분류 + 턴 종료 표시 (테두리 선보다 위에 둠)
+    inkPath(g, [[56, 500], [W - 56, 500]], 2, { jit: 1 });
+    g.font = 'bold 21px ' + TEXT_FONT; g.fillStyle = INK;
+    g.textAlign = 'left'; g.fillText(c.cat, 60, 521);
+    g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.endsTurn ? '턴 종료' : '턴 유지', W - 60, 521); g.globalAlpha = 1;
     g.restore();
     // 가장자리 잉크 윤곽
     g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath();
@@ -640,11 +646,9 @@
   var elMsg = document.getElementById('msg');
   var elEnd = document.getElementById('endturn');
   var elBanner = document.getElementById('banner');
-  function setMsg(t) { elMsg.textContent = t || ''; }
+  function setMsg() { /* 상단 안내 문구는 표시하지 않음 (차례만 보여줌) */ }
   function updateHUD() {
-    var left = S.maxStones - S.placed;
-    elTurn.textContent = (S.turn === BLACK ? '⚫ 흑' : '⚪ 백') + ' 차례 · 착수 ' + left + '회 남음' +
-      (sixth ? ' · 6목 규칙' : '') + (S.cardUsed ? ' · 카드 사용함' : '');
+    elTurn.textContent = (S.turn === BLACK ? '⚫ 흑' : '⚪ 백') + ' 차례';
     elEnd.style.display = (!S.over && S.maxStones > 1 && S.placed >= 1) ? 'block' : 'none';
   }
 
