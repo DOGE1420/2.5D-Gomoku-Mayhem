@@ -8,7 +8,7 @@
   var N = 15, HALF = 7;
   var EMPTY = 0, BLACK = 1, WHITE = 2, WALL = 3;
   var EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-  var TEXT_FONT = '"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif';
+  var TEXT_FONT = '"GameFont","Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif';   // GameFont = assets/fonts/HeoSangGothicB.ttf (index.html 의 @font-face)
 
   /* ---------------- 카드 데이터: 엔진(js/rules.js)에서 가져옴 ---------------- */
   var Rules = window.Rules;
@@ -558,7 +558,7 @@
     // 상단 룬 + 이름
     runeGlyph(g, W / 2, 70, 20);
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK;
-    g.font = 'bold 40px ' + TEXT_FONT; g.globalAlpha = 0.93; g.fillText(c.name, W / 2, 124); g.globalAlpha = 1;
+    g.font = '40px ' + TEXT_FONT; g.globalAlpha = 0.93; g.fillText(c.name, W / 2, 124); g.globalAlpha = 1;
     inkPath(g, [[W / 2 - 92, 150], [W / 2 + 92, 150]], 2.2, { jit: 1 });
 
     // 그림 영역
@@ -581,7 +581,7 @@
 
     // 하단: 분류 + 턴 종료 표시 (테두리 선보다 위에 둠)
     inkPath(g, [[56, 500], [W - 56, 500]], 2, { jit: 1 });
-    g.font = 'bold 21px ' + TEXT_FONT; g.fillStyle = INK;
+    g.font = '21px ' + TEXT_FONT; g.fillStyle = INK;
     g.textAlign = 'left'; g.fillText(c.cat, 60, 521);
     g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.endsTurn ? '턴 종료' : '턴 유지', W - 60, 521); g.globalAlpha = 1;
     g.restore();
@@ -1314,7 +1314,8 @@ window.__game = { get G() { return G; }, get S() { return S; }, Rules: Rules, on
 
   resize(); frame();
   buildMapSelect();
-  Promise.all([loadCardAssets(), applyMap(getMaps()[curMapIdx])]).then(function () {
+  var fontReady = (document.fonts && document.fonts.load) ? Promise.all([document.fonts.load('40px GameFont', '가나다 연속 착수'), document.fonts.load('21px GameFont', '공격 턴 유지')]).catch(function () {}) : Promise.resolve();
+  Promise.all([loadCardAssets(), applyMap(getMaps()[curMapIdx]), fontReady]).then(function () {
     texCache = {}; reset(); showAssetNotice();
   });
 })();
