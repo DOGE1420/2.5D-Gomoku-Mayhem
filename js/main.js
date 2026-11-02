@@ -11,12 +11,12 @@
 
   /* ---------------- 카드 정의 (CARDS.md 의 21장 중 6장) ---------------- */
   var CARDS = {
-    chain:    { icon: '⚡', name: '연속 착수', cat: '공격',  color: '#8a5a1c', desc: '이번 턴에 3수까지 둠\n(같은 턴에 둔 돌의 2칸 이내 금지)' },
-    bomb:     { icon: '💥', name: '폭파',     cat: '방해',  color: '#8a2a1c', desc: '상대 돌 1개를 제거' },
-    teleport: { icon: '✨', name: '순간이동', cat: '무작위', color: '#3d5a8a', desc: '내 돌 1개를\n무작위 빈 칸으로 이동' },
-    wall:     { icon: '🧱', name: '장벽',     cat: '지형',  color: '#5a4a3a', desc: '빈 칸에 영구 장벽\n아무도 못 두고 줄도 끊김' },
-    sixth:    { icon: '👁️', name: '식스센스', cat: '규칙',  color: '#5a2a6a', desc: '승리 조건이\n영구히 6목으로' },
-    reversal: { icon: '☯️', name: '전세 역전', cat: '희귀',  color: '#b8901c', desc: '판의 흑·백 돌을\n통째로 뒤바꿈\n(턴 종료)' }
+    chain:    { icon: '⚡', name: '연속 착수', cat: '공격',  glow: '#ffb347', color: '#8a5a1c', desc: '이번 턴에 3수까지 둠\n(같은 턴에 둔 돌의 2칸 이내 금지)' },
+    bomb:     { icon: '💥', name: '폭파',     cat: '방해',  glow: '#ff5a3a', color: '#8a2a1c', desc: '상대 돌 1개를 제거' },
+    teleport: { icon: '✨', name: '순간이동', cat: '무작위', glow: '#6aa8ff', color: '#3d5a8a', desc: '내 돌 1개를\n무작위 빈 칸으로 이동' },
+    wall:     { icon: '🧱', name: '장벽',     cat: '지형',  glow: '#b8a58a', color: '#5a4a3a', desc: '빈 칸에 영구 장벽\n아무도 못 두고 줄도 끊김' },
+    sixth:    { icon: '👁️', name: '식스센스', cat: '규칙',  glow: '#b36aff', color: '#5a2a6a', desc: '승리 조건이\n영구히 6목으로' },
+    reversal: { icon: '☯️', name: '전세 역전', cat: '희귀',  glow: '#ffd24a', endsTurn: true, color: '#b8901c', desc: '판의 흑·백 돌을\n통째로 뒤바꿈' }
   };
   var CARD_IDS = Object.keys(CARDS);
 
@@ -233,32 +233,195 @@
     });
     return out;
   }
+  /* ---------- 카드 아트: 손그림 잉크 + 낡은 양피지 (인스크립션 풍) ---------- */
+  var INK = '#1b1209';
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  // 선분을 잘게 나눠 손으로 그은 듯 흔들리게
+  function roughen(pts, step, jit, closed) {
+    var out = [], n = pts.length, last = closed ? n : n - 1;
+    for (var i = 0; i < last; i++) {
+      var a = pts[i], b = pts[(i + 1) % n];
+      var len = Math.hypot(b[0] - a[0], b[1] - a[1]), k = Math.max(1, Math.round(len / step));
+      for (var j = 0; j < k; j++) {
+        var t = j / k;
+        out.push([a[0] + (b[0] - a[0]) * t + rnd(-jit, jit), a[1] + (b[1] - a[1]) * t + rnd(-jit, jit)]);
+      }
+    }
+    if (!closed) out.push([pts[n - 1][0], pts[n - 1][1]]);
+    return out;
+  }
+  function inkPath(g, pts, w, o) {
+    o = o || {};
+    var p = roughen(pts, 9, o.jit == null ? 1.3 : o.jit, o.closed);
+    for (var pass = 0; pass < 2; pass++) {           // 두 번 덧그어 잉크 번짐 느낌
+      g.lineWidth = pass ? w * 0.55 : w; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.strokeStyle = INK; g.globalAlpha = pass ? 0.55 : 0.92;
+      g.beginPath();
+      p.forEach(function (q, i) { var x = q[0] + (pass ? rnd(-0.9, 0.9) : 0), y = q[1] + (pass ? rnd(-0.9, 0.9) : 0); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
+      if (o.closed) g.closePath();
+      if (o.fill && !pass) { g.fillStyle = INK; g.globalAlpha = 0.9; g.fill(); g.globalAlpha = 0.92; }
+      g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
+  function circlePts(cx, cy, r, n, squish) {
+    var p = []; for (var i = 0; i < n; i++) { var a = i / n * Math.PI * 2; p.push([cx + Math.cos(a) * r * (squish || 1) + rnd(-1, 1), cy + Math.sin(a) * r + rnd(-1, 1)]); }
+    return p;
+  }
+  function sparkle(g, x, y, r) {
+    inkPath(g, [[x, y - r], [x + r * 0.22, y - r * 0.22], [x + r, y], [x + r * 0.22, y + r * 0.22], [x, y + r], [x - r * 0.22, y + r * 0.22], [x - r, y], [x - r * 0.22, y - r * 0.22]], 2.2, { closed: true, fill: true, jit: 0.5 });
+  }
+  function runeGlyph(g, cx, cy, s) {
+    var n = 3 + Math.floor(Math.random() * 3), pts = [];
+    inkPath(g, [[cx, cy - s], [cx, cy + s]], 3.2, { jit: 0.8 });
+    for (var i = 0; i < n; i++) {
+      var y = cy + rnd(-s, s * 0.6), d = Math.random() < 0.5 ? -1 : 1;
+      inkPath(g, [[cx, y], [cx + d * rnd(s * 0.4, s * 0.9), y + rnd(-s * 0.5, s * 0.5)]], 3, { jit: 0.8 });
+    }
+  }
+  var ART = {
+    chain: function (g, cx, cy) {           // 번개 3줄
+      function bolt(ox, oy, k) {
+        inkPath(g, [[ox + 18 * k, oy - 90 * k], [ox - 28 * k, oy + 8 * k], [ox + 4 * k, oy + 8 * k], [ox - 22 * k, oy + 92 * k], [ox + 38 * k, oy - 18 * k], [ox + 6 * k, oy - 18 * k], [ox + 34 * k, oy - 90 * k]], 3.2, { closed: true, fill: true });
+      }
+      bolt(cx, cy, 1); bolt(cx - 78, cy + 22, 0.55); bolt(cx + 80, cy + 22, 0.55);
+      [[-100, -58], [100, -58], [-62, 78], [62, 78]].forEach(function (d) { inkPath(g, [[cx + d[0], cy + d[1]], [cx + d[0] * 0.8, cy + d[1] * 0.8 + 14]], 2.4); });
+    },
+    bomb: function (g, cx, cy) {            // 폭발 + 폭탄
+      var burst = [], n = 16;
+      for (var i = 0; i < n; i++) { var a = i / n * Math.PI * 2, r = i % 2 ? 66 : 108; burst.push([cx + Math.cos(a) * r, cy + 8 + Math.sin(a) * r]); }
+      inkPath(g, burst, 2.6, { closed: true, jit: 1.6 });
+      inkPath(g, circlePts(cx, cy + 14, 50, 22), 3.4, { closed: true, fill: true });
+      inkPath(g, [[cx + 22, cy - 28], [cx + 40, cy - 52], [cx + 62, cy - 52]], 3.6);
+      sparkle(g, cx + 70, cy - 56, 15);
+      g.save(); g.fillStyle = '#d9c79a'; g.globalAlpha = 0.85; g.beginPath(); g.ellipse(cx - 18, cy + 2, 14, 8, -0.7, 0, 7); g.fill(); g.restore();
+    },
+    teleport: function (g, cx, cy) {        // 소용돌이 포탈 + 돌 두 개
+      for (var r = 70, k = 0; k < 4; r -= 17, k++) inkPath(g, circlePts(cx, cy, r, 26, 1.2), 3.2 - k * 0.5, { closed: true, jit: 1.5 });
+      inkPath(g, circlePts(cx, cy, 8, 10), 3, { closed: true, fill: true });
+      inkPath(g, circlePts(cx - 98, cy + 60, 17, 14, 1.2), 3, { closed: true, fill: true });
+      inkPath(g, circlePts(cx + 98, cy - 60, 17, 14, 1.2), 3, { closed: false });
+      g.save(); g.setLineDash([2, 9]); inkPath(g, [[cx - 84, cy + 46], [cx - 20, cy - 96], [cx + 84, cy - 78]], 3); g.restore();
+      sparkle(g, cx - 70, cy - 70, 14); sparkle(g, cx + 62, cy + 78, 11);
+    },
+    wall: function (g, cx, cy) {            // 벽돌 담
+      var bw = 62, bh = 36, x0 = cx - 2 * bw, y0 = cy - 2 * bh;
+      for (var row = 0; row < 4; row++) {
+        var off = row % 2 ? bw / 2 : 0;
+        for (var col = -1; col < 4; col++) {
+          var x = x0 + col * bw + off, w = bw; if (x < x0) { w -= (x0 - x); x = x0; } if (x + w > x0 + 4 * bw) w = x0 + 4 * bw - x; if (w < 12) continue;
+          var y = y0 + row * bh;
+          inkPath(g, [[x, y], [x + w, y], [x + w, y + bh], [x, y + bh]], 3, { closed: true, jit: 1.3 });
+          if ((row + col) % 3 === 0) for (var h = 0; h < 3; h++) inkPath(g, [[x + 6 + h * 8, y + bh - 5], [x + 14 + h * 8, y + 7]], 1.6, { jit: 0.4 });
+        }
+      }
+      inkPath(g, [[x0 - 16, y0 + 4 * bh + 6], [x0 + 4 * bw + 16, y0 + 4 * bh + 6]], 4);
+    },
+    sixth: function (g, cx, cy) {           // 눈 + 광선
+      var top = [], bot = [];
+      for (var i = 0; i <= 14; i++) { var t = i / 14, x = cx - 100 + 200 * t, y = Math.sin(t * Math.PI) * 62; top.push([x, cy - y]); bot.push([x, cy + y * 0.8]); }
+      inkPath(g, top.concat(bot.reverse()), 3.6, { closed: true, jit: 1.1 });
+      inkPath(g, circlePts(cx, cy, 36, 20), 3.4, { closed: true });
+      inkPath(g, circlePts(cx, cy, 17, 14), 3, { closed: true, fill: true });
+      g.save(); g.fillStyle = '#d9c79a'; g.globalAlpha = 0.9; g.beginPath(); g.arc(cx - 7, cy - 7, 5, 0, 7); g.fill(); g.restore();
+      for (var k = 0; k < 9; k++) { var a = -Math.PI + (k + 0.5) / 9 * Math.PI; inkPath(g, [[cx + Math.cos(a) * 70, cy - 62 + Math.sin(a) * 20], [cx + Math.cos(a) * 94, cy - 70 + Math.sin(a) * 30]], 2.6); }
+      inkPath(g, [[cx - 40, cy + 82], [cx - 40, cy + 108]], 2.6); inkPath(g, [[cx + 40, cy + 82], [cx + 40, cy + 108]], 2.6);
+    },
+    reversal: function (g, cx, cy) {        // 음양 + 화살
+      var r = 78;
+      inkPath(g, circlePts(cx, cy, r, 30), 3.6, { closed: true });
+      g.save(); g.fillStyle = INK; g.globalAlpha = 0.92; g.beginPath();
+      g.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2, false); g.arc(cx, cy + r / 2, r / 2, Math.PI / 2, -Math.PI / 2, true); g.arc(cx, cy - r / 2, r / 2, Math.PI / 2, -Math.PI / 2, false);
+      g.fill(); g.restore();
+      inkPath(g, circlePts(cx, cy - r / 2, 9, 10), 2.6, { closed: true, fill: false });
+      inkPath(g, circlePts(cx, cy + r / 2, 9, 10), 2.6, { closed: true, fill: true });
+      g.save(); g.fillStyle = '#d9c79a'; g.beginPath(); g.arc(cx, cy + r / 2, 8, 0, 7); g.fill(); g.restore();
+      inkPath(g, [[cx - 98, cy - 30], [cx - 108, cy], [cx - 98, cy + 30]], 3);
+      inkPath(g, [[cx - 114, cy - 12], [cx - 108, cy], [cx - 94, cy - 4]], 3);
+      inkPath(g, [[cx + 98, cy + 30], [cx + 108, cy], [cx + 98, cy - 30]], 3);
+      inkPath(g, [[cx + 114, cy + 12], [cx + 108, cy], [cx + 94, cy + 4]], 3);
+    }
+  };
+
+  function roughRectPts(x, y, w, h, jit, step) {
+    var p = [], c = 14;
+    var corners = [[x + c, y], [x + w - c, y], [x + w, y + c], [x + w, y + h - c], [x + w - c, y + h], [x + c, y + h], [x, y + h - c], [x, y + c]];
+    return roughen(corners, step || 14, jit, true);
+  }
+
   function cardTexture(id) {
     if (texCache[id]) return texCache[id];
     var c = CARDS[id], W = 384, H = 576;
     var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     var g = cv.getContext('2d');
-    var grad = g.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, '#dccb9e'); grad.addColorStop(1, '#b49b66');
+    g.clearRect(0, 0, W, H);
+
+    // 종이 모양(가장자리 거칠게)으로 잘라낸 뒤 그 안에만 그림
+    var edge = roughRectPts(6, 6, W - 12, H - 12, 2.4, 12);
+    g.save(); g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
+
+    var grad = g.createLinearGradient(0, 0, W * 0.4, H);
+    grad.addColorStop(0, '#d8c697'); grad.addColorStop(0.55, '#c9b483'); grad.addColorStop(1, '#b89f6a');
     g.fillStyle = grad; g.fillRect(0, 0, W, H);
-    for (var i = 0; i < 1100; i++) {
-      g.fillStyle = 'rgba(80,55,20,' + (Math.random() * 0.09) + ')';
-      g.fillRect(Math.random() * W, Math.random() * H, Math.random() * 3 + 1, Math.random() * 3 + 1);
+    for (var i = 0; i < 7; i++) {                       // 얼룩
+      var sx = rnd(0, W), sy = rnd(0, H), sr = rnd(30, 90), sg = g.createRadialGradient(sx, sy, 2, sx, sy, sr);
+      sg.addColorStop(0, 'rgba(110,75,30,' + rnd(0.06, 0.16) + ')'); sg.addColorStop(1, 'rgba(110,75,30,0)');
+      g.fillStyle = sg; g.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
     }
-    g.strokeStyle = c.color; g.lineWidth = 12; g.strokeRect(14, 14, W - 28, H - 28);
-    g.strokeStyle = '#3a2a14'; g.lineWidth = 2; g.strokeRect(30, 30, W - 60, H - 60);
-    g.fillStyle = '#2b1e10'; g.fillRect(46, 46, W - 92, 66);
-    g.fillStyle = '#f1e2b8'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = 'bold 36px ' + TEXT_FONT; g.fillText(c.name, W / 2, 80);
-    g.fillStyle = 'rgba(40,26,10,0.14)'; g.fillRect(46, 128, W - 92, 220);
-    g.font = '128px ' + EMOJI_FONT; g.fillStyle = '#000'; g.fillText(c.icon, W / 2, 242);
-    g.fillStyle = '#2b1e10'; g.font = '26px ' + TEXT_FONT;
-    var lines = wrapText(g, c.desc, W - 110);
-    lines.forEach(function (l, i) { g.fillText(l, W / 2, 392 + i * 34); });
-    g.fillStyle = c.color; g.font = 'bold 22px ' + TEXT_FONT;
-    g.fillText('— ' + c.cat + ' —', W / 2, H - 54);
+    for (var k = 0; k < 1400; k++) { g.fillStyle = 'rgba(70,45,15,' + rnd(0, 0.1) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(1, 3), rnd(1, 3)); }
+    // 접힌 자국
+    g.strokeStyle = 'rgba(255,245,215,0.18)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H * 0.46); g.lineTo(W, H * 0.5); g.stroke();
+    g.strokeStyle = 'rgba(70,45,15,0.18)'; g.beginPath(); g.moveTo(0, H * 0.46 + 3); g.lineTo(W, H * 0.5 + 3); g.stroke();
+    var vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);   // 가장자리 어둡게
+    vg.addColorStop(0, 'rgba(50,28,8,0)'); vg.addColorStop(1, 'rgba(50,28,8,0.62)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, H);
+
+    // 잉크 테두리
+    inkPath(g, roughRectPts(26, 26, W - 52, H - 52, 1.5, 14), 3.2, { closed: true, jit: 1 });
+    g.globalAlpha = 0.4; inkPath(g, roughRectPts(36, 36, W - 72, H - 72, 1.2, 14), 1.6, { closed: true, jit: 0.8 }); g.globalAlpha = 1;
+
+    // 상단 룬 + 이름
+    runeGlyph(g, W / 2, 70, 20);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK;
+    g.font = 'bold 40px ' + TEXT_FONT; g.globalAlpha = 0.93; g.fillText(c.name, W / 2, 124); g.globalAlpha = 1;
+    inkPath(g, [[W / 2 - 92, 150], [W / 2 + 92, 150]], 2.2, { jit: 1 });
+
+    // 그림 영역
+    ART[id](g, W / 2, 262);
+    for (var s = 0; s < 14; s++) { g.fillStyle = INK; g.globalAlpha = rnd(0.25, 0.7); g.beginPath(); g.arc(rnd(50, W - 50), rnd(170, 360), rnd(0.8, 3.4), 0, 7); g.fill(); }   // 잉크 튄 자국
+    g.globalAlpha = 1;
+
+    // 설명
+    g.fillStyle = INK; g.font = '25px ' + TEXT_FONT; g.globalAlpha = 0.9;
+    var lines = wrapText(g, c.desc, W - 112);
+    var y0 = 410 + (4 - Math.min(4, lines.length)) * 10;
+    lines.forEach(function (l, i) { g.fillText(l, W / 2, y0 + i * 32); });
+    g.globalAlpha = 1;
+
+    // 하단: 분류 + 턴 종료 표시
+    inkPath(g, [[56, 512], [W - 56, 512]], 2, { jit: 1 });
+    g.font = 'bold 22px ' + TEXT_FONT; g.textAlign = 'left'; g.fillStyle = INK; g.fillText(c.cat, 58, 540);
+    g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.endsTurn ? '턴 종료' : '턴 유지', W - 58, 540); g.globalAlpha = 1;
+    g.restore();
+    // 가장자리 잉크 윤곽
+    g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath();
+    g.strokeStyle = 'rgba(40,24,8,0.75)'; g.lineWidth = 2.5; g.stroke();
     return (texCache[id] = toTex(cv));
   }
+
+  // 카드 뒤에서 번지는 빛 (카드마다 색이 다름)
+  var glowCache = {};
+  function glowTexture(color) {
+    if (glowCache[color]) return glowCache[color];
+    var cv = document.createElement('canvas'); cv.width = 256; cv.height = 384;
+    var g = cv.getContext('2d');
+    g.shadowColor = color; g.shadowBlur = 42; g.fillStyle = color;
+    g.fillRect(40, 56, 176, 272);
+    g.shadowBlur = 20; g.fillRect(40, 56, 176, 272);
+    var t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
+    return (glowCache[color] = t);
+  }
+  var glowGeo = new THREE.PlaneGeometry(2.14, 3.2);
 
   function visibleWidth() {
     return 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
@@ -283,8 +446,10 @@
     cardMeshes = [];
     var h = hands[S.turn];
     h.forEach(function (id, i) {
-      var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id) }));
+      var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
       m.userData.i = i;
+      var gl = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ map: glowTexture(CARDS[id].glow), transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending, depthWrite: false }));
+      gl.position.z = -0.004; m.add(gl); m.userData.glow = gl;
       m.position.set(0, -4.2, 0.2); // 아래에서 올라오는 등장 연출
       handGroup.add(m); cardMeshes.push(m);
     });
@@ -301,6 +466,8 @@
       var s = m.scale.x + (t.s - m.scale.x) * k; m.scale.set(s, s, 1);
       var c = m.material.color.r + (t.tint - m.material.color.r) * k;
       m.material.color.setRGB(c, c, c);
+      var gl = m.userData.glow;
+      if (gl) gl.material.opacity += ((t.tint > 0.9 ? 0.95 : 0.32) + Math.sin(performance.now() / 420 + i) * 0.05 - gl.material.opacity) * k;
     });
   }
 
@@ -579,7 +746,7 @@
   }
 
   // 테스트/디버그용 접근
-  window.__game = { get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
+  window.__game = { cardCanvas: function (id) { return cardTexture(id).image; }, get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
 
   resize(); reset(); frame();
 })();
