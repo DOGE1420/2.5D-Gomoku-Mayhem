@@ -507,7 +507,7 @@
     '  gl_FragColor = vec4(charred + glow, c.a);',
     '}'
   ].join('\n');
-  var BURN_MOVE = 0.45, BURN_TIME = 1.25;
+  var BURN_MOVE = 1.0, BURN_TIME = 1.25;      // BURN_MOVE: 가운데로 오는 시간 (처음엔 빠르게, 도착할 때쯤 천천히)
   var emberTex = (function () {
     var cv = document.createElement('canvas'); cv.width = cv.height = 32;
     var g = cv.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
@@ -536,7 +536,7 @@
   function stepBurns(dt) {
     for (var bi = burns.length - 1; bi >= 0; bi--) {
       var b = burns[bi]; b.t += dt;
-      var mv = b.move ? Math.min(1, b.t / BURN_MOVE) : 1, e = 1 - Math.pow(1 - mv, 3);
+      var mv = b.move ? Math.min(1, b.t / BURN_MOVE) : 1, e = 1 - Math.pow(1 - mv, 3);   // ease-out: 감속하며 도착
       b.m.position.set(b.from.x * (1 - e), b.from.y * (1 - e), b.from.z + (0.9 - b.from.z) * e);   // 화면 가운데로
       var sc = b.fromS + (1.75 - b.fromS) * e; b.m.scale.set(sc, sc, 1); b.m.rotation.z = b.fromR * (1 - e);
       var bt = Math.max(0, b.t - b.off) / BURN_TIME;
