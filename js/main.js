@@ -1,5 +1,6 @@
 /* 증강 오목 3D 프로토타입 — 인스크립션 풍 (촛불 · 어두운 방 · 손패 카드)
- * 판 15x15, 돌, 카드 6장. 로컬 2인 대전(핫시트). 정확히 5목(식스센스 후 6목)이면 승리.
+ * 규칙은 js/rules.js 의 엔진(원본 규칙 + 일반 카드 21장)이 처리하고, 이 파일은 3D 화면·입력·연출만 담당.
+ * 로컬 2인 대전(핫시트).
  */
 (function () {
   'use strict';
@@ -9,16 +10,11 @@
   var EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
   var TEXT_FONT = '"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif';
 
-  /* ---------------- 카드 정의 (CARDS.md 의 21장 중 6장) ---------------- */
-  var CARDS = {
-    chain:    { icon: '⚡', name: '연속 착수', cat: '공격',  color: '#8a5a1c', desc: '이번 턴에 3수까지 둠\n(같은 턴 돌의 2칸 이내 금지)' },
-    bomb:     { icon: '💥', name: '폭파',     cat: '방해',  color: '#8a2a1c', desc: '상대 돌 1개를 제거' },
-    teleport: { icon: '✨', name: '순간이동', cat: '무작위', color: '#3d5a8a', desc: '내 돌 1개를\n무작위 빈 칸으로 이동' },
-    wall:     { icon: '🧱', name: '장벽',     cat: '지형',  color: '#5a4a3a', desc: '빈 칸에 영구 장벽\n(아무도 못 두고 줄도 끊김)' },
-    sixth:    { icon: '👁️', name: '식스센스', cat: '규칙',  color: '#5a2a6a', desc: '승리 조건이\n영구히 6목으로' },
-    reversal: { icon: '☯️', name: '전세 역전', cat: '희귀',  endsTurn: true, color: '#b8901c', desc: '판의 흑·백 돌을\n통째로 뒤바꿈' }
-  };
-  var CARD_IDS = Object.keys(CARDS);
+  /* ---------------- 카드 데이터: 엔진(js/rules.js)에서 가져옴 ---------------- */
+  var Rules = window.Rules;
+  var CARDS = {};
+  Rules.CARDS.forEach(function (c) { CARDS[c.id] = { name: c.name, cat: c.cat, desc: c.desc, endsTurn: !!c.ends }; });
+  var CARD_IDS = Rules.CARDS.map(function (c) { return c.id; });
 
   /* ---------------- 설정(js/config.js) · 이미지 로더 ---------------- */
   var CFG = window.GAME_CONFIG || {};
@@ -161,16 +157,12 @@
   spot.castShadow = true; spot.shadow.mapSize.set(2048, 2048); spot.shadow.bias = -0.0015;
   scene.add(spot); scene.add(spot.target);
 
-  /* ---------------- 상태 ---------------- */
-  var board = [], meshes = [];
-  var hands = {};
-  var S = {};
-  var sixth = false;
-  var walls = [];
+  /* ---------------- 상태 (규칙 상태는 엔진 G 가 가짐) ---------------- */
+  var G = Rules.create(), meshes = [];
+  for (var _r = 0; _r < N; _r++) meshes.push(new Array(N).fill(null));
+  var S = { turn: 1, mode: null, pendingIdx: -1, over: false };   // 화면 쪽 요약 (카드 강조 등에 사용)
 
   function inb(x, y) { return x >= 0 && y >= 0 && x < N && y < N; }
-  function opp(c) { return c === BLACK ? WHITE : BLACK; }
-  function cellName(c) { return c === BLACK ? '흑' : '백'; }
 
   /* ---------------- 돌 ---------------- */
   var stoneGeo = new THREE.SphereGeometry(0.43, 28, 18);
@@ -182,13 +174,16 @@
     m.scale.set(1, 0.45, 1); m.castShadow = true; m.receiveShadow = true;
     return m;
   }
-  function cellPos(x, y) { return new THREE.Vector3(x - HALF, STONE_Y, y - HALF); }
+  function cellAt(r, c) { return new THREE.Vector3(c - HALF, STONE_Y, r - HALF); }   // 행 r, 열 c
 
   var ghost = makeStone(BLACK, new THREE.MeshStandardMaterial({ color: 0x17130f, transparent: true, opacity: 0.45 }));
   ghost.castShadow = false; ghost.visible = false; scene.add(ghost);
   var ring = new THREE.Mesh(new THREE.RingGeometry(0.38, 0.52, 36),
     new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ring.visible = false; scene.add(ring);
+  var ring2 = new THREE.Mesh(new THREE.RingGeometry(0.38, 0.52, 36), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.9, side: THREE.DoubleSide }));
+  ring2.rotation.x = -Math.PI / 2; ring2.position.y = 0.035; ring2.visible = false; scene.add(ring2);
+  var PEND_COLOR = { remove: 0xff5a3a, trade: 0xffd27a, wall: 0xffd27a, trap: 0xb070ff, windmill: 0x7ad0ff, shield: 0x7ad0ff, teleport: 0x7ad0ff };
 
   /* ---------------- 애니메이션 · 파티클 ---------------- */
   var anims = [], busy = 0, particles = [];
@@ -362,7 +357,7 @@
       }
       inkPath(g, [[x0 - 16, y0 + 4 * bh + 6], [x0 + 4 * bw + 16, y0 + 4 * bh + 6]], 4);
     },
-    sixth: function (g, cx, cy) {           // 눈 + 광선
+    sixsense: function (g, cx, cy) {        // 눈 + 광선
       var top = [], bot = [];
       for (var i = 0; i <= 14; i++) { var t = i / 14, x = cx - 100 + 200 * t, y = Math.sin(t * Math.PI) * 62; top.push([x, cy - y]); bot.push([x, cy + y * 0.8]); }
       inkPath(g, top.concat(bot.reverse()), 3.6, { closed: true, jit: 1.1 });
@@ -385,6 +380,124 @@
       inkPath(g, [[cx - 114, cy - 12], [cx - 108, cy], [cx - 94, cy - 4]], 3);
       inkPath(g, [[cx + 98, cy + 30], [cx + 108, cy], [cx + 98, cy - 30]], 3);
       inkPath(g, [[cx + 114, cy + 12], [cx + 108, cy], [cx + 94, cy + 4]], 3);
+    }
+    ,
+    windmill: function (g, cx, cy) {         // 풍차: 탑 + 날개 4개
+      var hx = cx, hy = cy + 12, hub = hy - 30;
+      inkPath(g, [[hx - 28, hy + 92], [hx - 15, hy - 24], [hx + 15, hy - 24], [hx + 28, hy + 92]], 3.4, { closed: true });
+      inkPath(g, [[hx - 40, hy + 92], [hx + 40, hy + 92]], 3.6);
+      for (var k = 0; k < 4; k++) {
+        var a = k * Math.PI / 2 + 0.45, ex = hx + Math.cos(a) * 84, ey = hub + Math.sin(a) * 84, nx = -Math.sin(a) * 17, ny = Math.cos(a) * 17;
+        inkPath(g, [[hx, hub], [ex - nx * 0.2, ey - ny * 0.2], [ex + nx, ey + ny], [hx + nx * 0.35, hub + ny * 0.35]], 3, { closed: true });
+        inkPath(g, [[hx, hub], [ex, ey]], 2);
+      }
+      inkPath(g, circlePts(hx, hub, 9, 10), 3, { closed: true, fill: true });
+    },
+    alkkagi: function (g, cx, cy) {          // 알까기: 돌이 돌을 튕김
+      inkPath(g, circlePts(cx - 68, cy + 44, 36, 20), 3.4, { closed: true, fill: true });
+      inkPath(g, circlePts(cx + 52, cy - 26, 36, 20), 3.4, { closed: true });
+      inkPath(g, [[cx - 34, cy + 24], [cx + 8, cy + 0]], 3);
+      sparkle(g, cx - 4, cy + 8, 16);
+      inkPath(g, [[cx + 96, cy + 14], [cx + 124, cy - 8]], 2.6); inkPath(g, [[cx + 100, cy + 40], [cx + 130, cy + 30]], 2.6);
+      g.save(); g.setLineDash([2, 9]); inkPath(g, [[cx - 118, cy + 98], [cx - 92, cy + 80]], 2.6); g.restore();
+    },
+    trade: function (g, cx, cy) {            // 맞교환: 두 돌이 자리를 바꿈
+      inkPath(g, circlePts(cx - 64, cy + 34, 34, 20), 3.4, { closed: true, fill: true });
+      inkPath(g, circlePts(cx + 64, cy + 34, 34, 20), 3.4, { closed: true });
+      var top = [], bot = [];
+      for (var i = 0; i <= 12; i++) { var t = i / 12; top.push([cx - 64 + 128 * t, cy - 8 - 46 * Math.sin(Math.PI * t)]); bot.push([cx + 64 - 128 * t, cy + 76 + 46 * Math.sin(Math.PI * t)]); }
+      inkPath(g, top, 3); inkPath(g, bot, 3);
+      inkPath(g, [[cx + 46, cy - 14], [cx + 64, cy - 8], [cx + 62, cy - 28]], 3);
+      inkPath(g, [[cx - 46, cy + 98], [cx - 64, cy + 76], [cx - 44, cy + 74]], 3);
+    },
+    infection: function (g, cx, cy) {        // 감염: 병균에 물든 돌
+      inkPath(g, circlePts(cx, cy + 6, 42, 22), 3.4, { closed: true, fill: true });
+      for (var k = 0; k < 10; k++) {
+        var a = k / 10 * Math.PI * 2, x1 = cx + Math.cos(a) * 42, y1 = cy + 6 + Math.sin(a) * 42, x2 = cx + Math.cos(a) * 72, y2 = cy + 6 + Math.sin(a) * 72;
+        inkPath(g, [[x1, y1], [x2, y2]], 3); inkPath(g, circlePts(x2, y2, 7, 8), 2.6, { closed: true, fill: true });
+      }
+      g.save(); g.fillStyle = '#d9c79a'; g.globalAlpha = 0.85; g.beginPath(); g.arc(cx - 14, cy - 8, 6, 0, 7); g.arc(cx + 12, cy + 18, 4, 0, 7); g.fill(); g.restore();
+    },
+    earthquake: function (g, cx, cy) {       // 지진: 갈라지는 땅과 흔들리는 돌
+      inkPath(g, [[cx - 128, cy + 52], [cx - 60, cy + 56], [cx - 30, cy + 78], [cx + 0, cy + 54], [cx + 38, cy + 82], [cx + 70, cy + 56], [cx + 128, cy + 60]], 3.6);
+      inkPath(g, [[cx - 30, cy + 78], [cx - 40, cy + 104]], 3); inkPath(g, [[cx + 38, cy + 82], [cx + 30, cy + 108]], 3);
+      inkPath(g, circlePts(cx - 70, cy + 22, 26, 16), 3.2, { closed: true, fill: true });
+      inkPath(g, circlePts(cx + 8, cy - 8, 26, 16), 3.2, { closed: true });
+      inkPath(g, circlePts(cx + 84, cy + 24, 26, 16), 3.2, { closed: true, fill: true });
+      [[-98, 2], [-98, 20], [112, 6], [112, 24], [-10, -44], [26, -44]].forEach(function (d) { inkPath(g, [[cx + d[0], cy + d[1]], [cx + d[0] + (d[0] < 0 ? -14 : 14) * (d[1] === -44 ? 0 : 1), cy + d[1] + (d[1] === -44 ? -10 : 0)]], 2.6); });
+    },
+    meteor: function (g, cx, cy) {           // 운석: 불꼬리를 단 바위
+      inkPath(g, [[cx + 6, cy - 4], [cx - 96, cy - 84], [cx - 60, cy - 30], [cx - 118, cy - 40], [cx - 52, cy + 6], [cx - 96, cy + 14], [cx - 32, cy + 36]], 3, { closed: true });
+      inkPath(g, circlePts(cx + 38, cy + 30, 52, 14), 3.6, { closed: true, fill: true });
+      g.save(); g.fillStyle = '#d9c79a'; g.globalAlpha = 0.8; g.beginPath(); g.arc(cx + 22, cy + 12, 7, 0, 7); g.arc(cx + 54, cy + 44, 5, 0, 7); g.arc(cx + 40, cy + 26, 4, 0, 7); g.fill(); g.restore();
+    },
+    trap: function (g, cx, cy) {             // 함정: 곰덫
+      var up = [], dn = [];
+      for (var i = 0; i <= 14; i++) { var t = i / 14, x = cx - 98 + 196 * t; up.push([x, cy + 14 - Math.sin(Math.PI * t) * 66]); dn.push([x, cy + 14 + Math.sin(Math.PI * t) * 52]); }
+      inkPath(g, up, 3.6); inkPath(g, dn, 3.6);
+      for (i = 1; i < 14; i += 2) { inkPath(g, [up[i], [up[i][0] + 8, up[i][1] + 22], up[i + 1]], 2.6, { fill: true }); inkPath(g, [dn[i], [dn[i][0] + 8, dn[i][1] - 20], dn[i + 1]], 2.6, { fill: true }); }
+      inkPath(g, [[cx - 98, cy + 14], [cx + 98, cy + 14]], 2.4);
+      inkPath(g, [[cx - 98, cy + 14], [cx - 124, cy + 52], [cx - 124, cy + 90]], 3);
+      g.save(); g.setLineDash([2, 8]); inkPath(g, [[cx - 124, cy + 90], [cx - 40, cy + 100]], 2.4); g.restore();
+    },
+    snipe: function (g, cx, cy) {            // 저격: 조준경
+      inkPath(g, circlePts(cx, cy + 6, 78, 30), 3.6, { closed: true });
+      inkPath(g, circlePts(cx, cy + 6, 46, 24), 2.4, { closed: true });
+      inkPath(g, [[cx - 108, cy + 6], [cx - 30, cy + 6]], 3); inkPath(g, [[cx + 30, cy + 6], [cx + 108, cy + 6]], 3);
+      inkPath(g, [[cx, cy - 72], [cx, cy - 24]], 3); inkPath(g, [[cx, cy + 36], [cx, cy + 84]], 3);
+      inkPath(g, circlePts(cx, cy + 6, 9, 10), 3, { closed: true, fill: true });
+    },
+    double: function (g, cx, cy) {           // 1+1: 카드 두 장
+      inkPath(g, [[cx - 96, cy - 62], [cx - 8, cy - 62], [cx - 8, cy + 66], [cx - 96, cy + 66]], 3.4, { closed: true });
+      inkPath(g, [[cx + 8, cy - 42], [cx + 96, cy - 42], [cx + 96, cy + 86], [cx + 8, cy + 86]], 3.4, { closed: true, fill: false });
+      sparkle(g, cx - 52, cy + 2, 20); sparkle(g, cx + 52, cy + 22, 20);
+      inkPath(g, [[cx - 8, cy + 8], [cx + 8, cy + 8]], 3); inkPath(g, [[cx, cy], [cx, cy + 16]], 3);
+    },
+    peek: function (g, cx, cy) {             // 엿보기: 돋보기 속의 눈
+      inkPath(g, circlePts(cx - 14, cy - 6, 62, 28), 4, { closed: true });
+      inkPath(g, [[cx + 32, cy + 38], [cx + 92, cy + 98]], 9);
+      var t = [], b = [];
+      for (var i = 0; i <= 10; i++) { var u = i / 10, x = cx - 14 - 40 + 80 * u, y = Math.sin(Math.PI * u) * 24; t.push([x, cy - 6 - y]); b.push([x, cy - 6 + y * 0.8]); }
+      inkPath(g, t.concat(b.reverse()), 2.8, { closed: true });
+      inkPath(g, circlePts(cx - 14, cy - 6, 12, 12), 2.8, { closed: true, fill: true });
+    },
+    giant: function (g, cx, cy) {            // 거대한 돌: 쩍 갈라진 바위
+      inkPath(g, [[cx - 92, cy + 70], [cx - 108, cy + 6], [cx - 66, cy - 58], [cx - 8, cy - 78], [cx + 56, cy - 52], [cx + 104, cy + 10], [cx + 90, cy + 72]], 4, { closed: true, fill: false });
+      inkPath(g, [[cx - 8, cy - 78], [cx - 22, cy - 20], [cx + 10, cy + 8], [cx - 4, cy + 72]], 3);
+      inkPath(g, [[cx - 66, cy - 58], [cx - 40, cy - 8], [cx - 70, cy + 20]], 2.6);
+      inkPath(g, [[cx + 56, cy - 52], [cx + 36, cy - 6], [cx + 66, cy + 28]], 2.6);
+      [[-128, 84, 11], [118, 88, 9], [-112, 100, 7]].forEach(function (p) { inkPath(g, circlePts(cx + p[0], cy + p[1], p[2], 8), 2.6, { closed: true, fill: true }); });
+    },
+    ghost: function (g, cx, cy) {            // 투명한 돌: 유령
+      var pts = [[cx - 58, cy + 86]];
+      for (var i = 0; i <= 12; i++) { var a = Math.PI + i / 12 * Math.PI; pts.push([cx + Math.cos(a) * 58, cy - 8 + Math.sin(a) * 66]); }
+      pts.push([cx + 58, cy + 86]);
+      for (i = 0; i < 4; i++) { pts.push([cx + 58 - (i + 0.5) * 29, cy + 62]); pts.push([cx + 58 - (i + 1) * 29, cy + 86]); }
+      inkPath(g, pts, 3.6, { closed: true });
+      inkPath(g, circlePts(cx - 20, cy - 14, 9, 10), 2.6, { closed: true, fill: true }); inkPath(g, circlePts(cx + 20, cy - 14, 9, 10), 2.6, { closed: true, fill: true });
+      inkPath(g, [[cx - 14, cy + 14], [cx, cy + 22], [cx + 14, cy + 14]], 2.8);
+      g.save(); g.setLineDash([3, 8]); inkPath(g, circlePts(cx + 92, cy + 76, 22, 14), 2.6, { closed: true }); g.restore();
+    },
+    weather: function (g, cx, cy) {          // 기상 이변: 비구름과 번개
+      var cl = [[cx - 80, cy + 20]];
+      for (var i = 0; i <= 8; i++) { var a = Math.PI + i / 8 * Math.PI; cl.push([cx - 46 + Math.cos(a) * 36, cy + 4 + Math.sin(a) * 34]); }
+      for (i = 0; i <= 8; i++) { var b = Math.PI * 1.25 + i / 8 * Math.PI * 0.95; cl.push([cx + 18 + Math.cos(b) * 50, cy - 6 + Math.sin(b) * 46]); }
+      cl.push([cx + 90, cy + 20]);
+      inkPath(g, cl, 3.6, { closed: true });
+      [[-56, 44], [-26, 52], [10, 44], [44, 52], [70, 44]].forEach(function (p) { inkPath(g, [[cx + p[0], cy + p[1]], [cx + p[0] - 10, cy + p[1] + 28]], 2.8); });
+      inkPath(g, [[cx + 8, cy + 30], [cx - 10, cy + 62], [cx + 4, cy + 62], [cx - 14, cy + 96]], 3.4, { fill: false });
+    },
+    shield: function (g, cx, cy) {           // 보호막: 방패
+      inkPath(g, [[cx - 66, cy - 74], [cx + 66, cy - 74], [cx + 66, cy + 6], [cx, cy + 96], [cx - 66, cy + 6]], 4, { closed: true });
+      inkPath(g, [[cx - 50, cy - 58], [cx + 50, cy - 58], [cx + 50, cy + 2], [cx, cy + 74], [cx - 50, cy + 2]], 2.4, { closed: true });
+      inkPath(g, [[cx, cy - 58], [cx, cy + 74]], 2.8); inkPath(g, [[cx - 50, cy - 14], [cx + 50, cy - 14]], 2.8);
+      inkPath(g, circlePts(cx, cy - 14, 14, 12), 3, { closed: true, fill: true });
+    },
+    blockade: function (g, cx, cy) {         // 봉쇄: 카드 위의 금지 표시
+      inkPath(g, [[cx - 44, cy - 64], [cx + 44, cy - 64], [cx + 44, cy + 76], [cx - 44, cy + 76]], 3.4, { closed: true });
+      inkPath(g, [[cx - 26, cy - 40], [cx + 26, cy - 40]], 2.4); inkPath(g, [[cx - 26, cy - 22], [cx + 14, cy - 22]], 2.4);
+      inkPath(g, circlePts(cx, cy + 6, 84, 32), 6, { closed: true });
+      inkPath(g, [[cx - 60, cy - 54], [cx + 60, cy + 66]], 6);
     }
   };
 
@@ -611,7 +724,7 @@
   function rebuildHand() {
     cardMeshes.forEach(function (m) { handGroup.remove(m); m.material.dispose(); });
     cardMeshes = [];
-    var h = hands[S.turn];
+    var h = G.hand[G.current];
     h.forEach(function (id, i) {
       var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
       m.userData.i = i;
@@ -623,7 +736,8 @@
   }
   function stepCards(dt) {
     var k = 1 - Math.pow(0.0006, dt), n = cardMeshes.length;
-    var op = dimMesh.material.opacity + ((inspectIdx >= 0 ? 0.68 : 0) - dimMesh.material.opacity) * k;
+    stepDraft(k);
+    var op = dimMesh.material.opacity + (((inspectIdx >= 0 || draftMeshes.length) ? 0.68 : 0) - dimMesh.material.opacity) * k;
     dimMesh.material.opacity = op; dimMesh.visible = op > 0.01;
     if (playedMesh) {                       // 사용한 카드: 직부감일 때만 왼쪽 아래에 표시
       var vs = viewSize(), sc = 0.62, ch = 2.25 * sc, cwp = 1.5 * sc, show = topGoal > 0.5;
@@ -648,213 +762,325 @@
 
   /* ---------------- HUD ---------------- */
   var elTurn = document.getElementById('turn');
-  var elMsg = document.getElementById('msg');
   var elEnd = document.getElementById('endturn');
   var elBanner = document.getElementById('banner');
   function setMsg() { /* 상단 안내 문구는 표시하지 않음 (차례만 보여줌) */ }
   function updateHUD() {
-    elTurn.textContent = (S.turn === BLACK ? '⚫ 흑' : '⚪ 백') + ' 차례';
-    elEnd.style.display = (!S.over && S.maxStones > 1 && S.placed >= 1) ? 'block' : 'none';
+    if (!G) return;
+    var who = function (p) { return p === BLACK ? '⚫ 흑' : '⚪ 백'; };
+    var t = G.alk ? ('🪀 ' + who(G.alk.order[G.alk.idx]) + ' 알까기') : (who(G.current) + ' 차례');
+    var b = [];                                   // 작은 상태 표시만
+    if (G.next.giant === G.current) b.push('🪨');
+    if (G.next.ghost === G.current) b.push('👻');
+    if (G.lock[G.current]) b.push('🚫');
+    if (G.winLength === 6) b.push('6목');
+    elTurn.textContent = t + (b.length ? '  ' + b.join(' ') : '');
+    elEnd.style.display = 'none';
+  }
+  function syncS() {
+    S.turn = G.current; S.over = G.gameOver;
+    S.mode = G.pending ? G.pending.type : null; S.pendingIdx = G.pending ? G.pending.handIndex : -1;
   }
 
-  /* ---------------- 승리 판정 ---------------- */
-  var DIRS = [[1, 0], [0, 1], [1, 1], [1, -1]];
-  function findWin(c) {
-    var target = sixth ? 6 : 5;
-    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
-      if (board[y][x] !== c) continue;
-      for (var d = 0; d < 4; d++) {
-        var dx = DIRS[d][0], dy = DIRS[d][1], px = x - dx, py = y - dy;
-        if (inb(px, py) && board[py][px] === c) continue;
-        var cells = [], cx = x, cy = y;
-        while (inb(cx, cy) && board[cy][cx] === c) { cells.push([cx, cy]); cx += dx; cy += dy; }
-        if (cells.length === target) return cells;
-      }
+  /* ---------------- 판 위의 표시: 풍차 · 보호막 · 함정 · 구멍 ---------------- */
+  var markerGroup = new THREE.Group(); scene.add(markerGroup);
+  var spinners = [], tradeFirst = null;
+  function clearMarkers() {
+    while (markerGroup.children.length) {
+      var o = markerGroup.children.pop();
+      o.traverse(function (n) { if (n.geometry) n.geometry.dispose(); if (n.material) n.material.dispose(); });
     }
-    return null;
+    spinners.length = 0;
   }
-  function checkWin() {
-    var order = [S.turn, opp(S.turn)];
-    for (var i = 0; i < 2; i++) {
-      var cells = findWin(order[i]);
-      if (cells) { finish(order[i], cells); return true; }
-    }
-    return false;
+  function addBox(parent, w, h, d, color, x, y, z, ry) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: color, roughness: 0.9 }));
+    m.position.set(x, y, z); if (ry) m.rotation.y = ry; m.castShadow = true; parent.add(m); return m;
   }
-  function finish(winner, cells) {
-    S.over = true; S.mode = null; S.pendingIdx = -1;
-    cells.forEach(function (p) {
-      var m = meshes[p[1]][p[0]]; if (!m) return;
-      m.material = m.material.clone();
-      m.material.emissive = new THREE.Color(0xffaa33); m.material.emissiveIntensity = 0.7;
+  function syncMarkers() {
+    clearMarkers();
+    G.craters.forEach(function (cr) {                                   // 폭파 구멍
+      var p = cellAt(cr.r, cr.c);
+      var d = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), new THREE.MeshBasicMaterial({ color: 0x0a0604, transparent: true, opacity: 0.85 }));
+      d.rotation.x = -Math.PI / 2; d.position.set(p.x, 0.012, p.z); markerGroup.add(d);
+      var rg = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.5, 24), new THREE.MeshBasicMaterial({ color: 0x7a3a18, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
+      rg.rotation.x = -Math.PI / 2; rg.position.set(p.x, 0.014, p.z); markerGroup.add(rg);
     });
-    sfx('win'); updateHUD();
-    setTimeout(function () {
-      document.getElementById('bannerText').textContent = (winner === BLACK ? '⚫ 흑' : '⚪ 백') + ' 승리!';
-      elBanner.style.display = 'flex';
-    }, 900);
-  }
-
-  /* ---------------- 보드 조작 ---------------- */
-  function placeStone(x, y, c, cb) {
-    board[y][x] = c;
-    var m = makeStone(c), p = cellPos(x, y);
-    m.position.set(p.x, p.y + 2.2, p.z);
-    scene.add(m); meshes[y][x] = m;
-    tween(0.26, function (t) { m.position.y = p.y + 2.2 * (1 - t * t); }, function () {
-      m.position.y = p.y; sfx('place'); if (cb) cb();
+    G.shields.forEach(function (sh) {                                   // 보호막: 3×3 푸른 막
+      var p = cellAt(sh.r, sh.c);
+      var pl = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), new THREE.MeshBasicMaterial({ color: sh.owner === BLACK ? 0x5aa9ff : 0x9ad9ff, transparent: true, opacity: 0.16, depthWrite: false }));
+      pl.rotation.x = -Math.PI / 2; pl.position.set(p.x, 0.02, p.z); markerGroup.add(pl);
+      var ln = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(3, 3)), new THREE.LineBasicMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.7 }));
+      ln.rotation.x = -Math.PI / 2; ln.position.set(p.x, 0.03, p.z); markerGroup.add(ln);
+    });
+    G.traps.forEach(function (tr) {                                     // 함정: 설치한 사람(= 지금 차례)에게만 보임
+      if (tr.owner !== G.current || G.board[tr.r][tr.c] !== EMPTY) return;
+      var p = cellAt(tr.r, tr.c), grp = new THREE.Group(); grp.position.set(p.x, 0.04, p.z);
+      addBox(grp, 0.62, 0.03, 0.08, 0x8c4614, 0, 0, 0, 0.785); addBox(grp, 0.62, 0.03, 0.08, 0x8c4614, 0, 0, 0, -0.785);
+      var rg = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.4, 20), new THREE.MeshBasicMaterial({ color: 0x8c4614, side: THREE.DoubleSide }));
+      rg.rotation.x = -Math.PI / 2; grp.add(rg); markerGroup.add(grp);
+    });
+    G.windmills.forEach(function (w) {                                  // 풍차: 돌 위의 작은 풍차
+      if (!Rules.isStone(G.board[w.r][w.c]) || Rules.isHiddenFor(G, w.r, w.c, G.current)) return;
+      var p = cellAt(w.r, w.c), grp = new THREE.Group(); grp.position.set(p.x, 0.36, p.z);
+      addBox(grp, 0.05, 0.4, 0.05, 0xcdbd95, 0, 0.15, 0);
+      var blades = new THREE.Group(); blades.position.y = 0.36;
+      for (var k = 0; k < 4; k++) { var b = addBox(blades, 0.34, 0.02, 0.1, 0xe8d8a8, 0.18, 0, 0); b.parent.remove(b); var pv = new THREE.Group(); pv.rotation.y = k * Math.PI / 2; pv.add(b); blades.add(pv); }
+      grp.add(blades); markerGroup.add(grp); spinners.push(blades);
     });
   }
-  function removeStone(x, y) {
-    var m = meshes[y][x]; if (m) scene.remove(m);
-    meshes[y][x] = null; board[y][x] = EMPTY;
-  }
-  function listCells(pred) {
-    var out = [];
-    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) if (pred(board[y][x], x, y)) out.push([x, y]);
-    return out;
-  }
 
-  function consumeCard(i) {
-    hands[S.turn].splice(i, 1);
-    S.cardUsed = true; S.mode = null; S.pendingIdx = -1;
-    rebuildHand(); updateHUD();
+  /* ---------------- 돌·벽 3D 조작 ---------------- */
+  function addStoneMesh(r, c, color, animate) {
+    var m = makeStone(color), p = cellAt(r, c);
+    m.userData.kind = 'stone'; m.userData.color = color;
+    if (animate) { m.position.set(p.x, p.y + 2.2, p.z); tween(0.26, function (t) { m.position.y = p.y + 2.2 * (1 - t * t); }, function () { m.position.y = p.y; }); }
+    else m.position.copy(p);
+    scene.add(m); meshes[r][c] = m; return m;
   }
-  function cancelMode() { S.mode = null; S.pendingIdx = -1; clearPlayed(); setMsg(''); }
-
-  function afterAction() {
-    if (checkWin()) return;
-    if (S.placed >= S.maxStones) endTurn(); else updateHUD();
+  function addWallMesh(r, c, animate) {
+    var w = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.8, 0.86), new THREE.MeshStandardMaterial({ color: 0x4d443a, roughness: 1 }));
+    w.castShadow = true; w.receiveShadow = true; w.userData.kind = 'wall';
+    var q = cellAt(r, c);
+    if (animate) { w.position.set(q.x, -0.4, q.z); tween(0.5, function (t) { w.position.y = -0.4 + 0.8 * t; }, function () { w.position.y = 0.4; }); }
+    else w.position.set(q.x, 0.4, q.z);
+    scene.add(w); meshes[r][c] = w; return w;
   }
-  function endTurn() {
-    if (S.over) return;
-    S.turn = opp(S.turn); S.placed = 0; S.maxStones = 1; S.cardUsed = false;
-    S.mode = null; S.pendingIdx = -1; S.turnCells = [];
-    setTopView(false); clearPlayed();
-    rebuildHand(); updateHUD();
-    setMsg(cellName(S.turn) + ' 차례 — 카드를 확인하거나, 판을 눌러 돌을 두세요');
+  function dropMesh(r, c) { var m = meshes[r][c]; if (m) { scene.remove(m); meshes[r][c] = null; } return m; }
+  function flipMesh(m, newColor) {
+    tween(0.5, function (t) {
+      m.scale.y = 0.45 * Math.max(0.05, Math.abs(Math.cos(t * Math.PI)));
+      if (t >= 0.5 && m.userData.color !== newColor) { m.userData.color = newColor; m.material = newColor === BLACK ? matBlack : matWhite; }
+    }, function () { m.scale.y = 0.45; m.userData.color = newColor; m.material = newColor === BLACK ? matBlack : matWhite; });
   }
-
-  function onCell(x, y) {
-    if (S.over || busy > 0 || topGoal < 0.5 || topT < 0.85) return;   // 돌은 직부감 시점에서만 둘 수 있음
-    if (S.mode === 'bomb') {
-      if (board[y][x] !== opp(S.turn)) { setMsg('제거할 상대 돌을 고르세요'); return; }
-      var p = cellPos(x, y);
-      consumeCard(S.pendingIdx);
-      busy++;                                                       // 카드가 가운데서 불붙을 때까지 입력 잠금
-      burnPlayed(function () { busy--; removeStone(x, y); burst(p.clone(), 0xff8a2a, 22); sfx('boom'); });
-      return;
+  function arcMove(m, a, b, dur) {
+    tween(dur, function (t) { m.position.x = a.x + (b.x - a.x) * t; m.position.z = a.z + (b.z - a.z) * t; m.position.y = a.y + Math.sin(t * Math.PI) * 2.4; }, function () { m.position.copy(b); });
+  }
+  // 엔진 상태에 맞춰 3D 돌·벽을 맞춤 (연출 도중 어긋난 것을 바로잡는 안전장치)
+  function syncBoard() {
+    for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) {
+      var want = G.board[r][c], m = meshes[r][c];
+      if (want === EMPTY) { if (m) dropMesh(r, c); continue; }
+      if (want === WALL) { if (!m || m.userData.kind !== 'wall') { dropMesh(r, c); addWallMesh(r, c, false); } continue; }
+      if (!m || m.userData.kind !== 'stone') { dropMesh(r, c); m = addStoneMesh(r, c, want, false); }
+      else if (m.userData.color !== want) { m.userData.color = want; m.material = want === BLACK ? matBlack : matWhite; }
+      m.scale.y = 0.45; m.position.copy(cellAt(r, c));
+      m.visible = !Rules.isHiddenFor(G, r, c, G.current);              // 투명한 돌은 상대에게 안 보임
     }
-    if (S.mode === 'wall') {
-      if (board[y][x] !== EMPTY) { setMsg('빈 칸에 설치하세요'); return; }
-      consumeCard(S.pendingIdx);
-      busy++;                                                       // 카드가 가운데서 불붙을 때까지 입력 잠금
-      burnPlayed(function () {
-        busy--;
-        board[y][x] = WALL;
-        var w = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.8, 0.86),
-          new THREE.MeshStandardMaterial({ color: 0x4d443a, roughness: 1 }));
-        w.castShadow = true; w.receiveShadow = true;
-        var q = cellPos(x, y); w.position.set(q.x, -0.4, q.z); scene.add(w); meshes[y][x] = w;
-        tween(0.5, function (t) { w.position.y = -0.4 + 0.8 * t; });
-        sfx('boom'); burst(new THREE.Vector3(q.x, 0.1, q.z), 0x8a7a66, 10);
-      });
-      return;
+  }
+  function highlightLine(line) {
+    if (!line) return;
+    var a = line[0], b = line[1], dr = Math.sign(b.r - a.r), dc = Math.sign(b.c - a.c), r = a.r, c = a.c;
+    for (var i = 0; i < 20; i++) {
+      var m = meshes[r][c];
+      if (m) { m.material = m.material.clone(); m.material.emissive = new THREE.Color(0xffaa33); m.material.emissiveIntensity = 0.7; }
+      if (r === b.r && c === b.c) break; r += dr; c += dc;
     }
-    if (board[y][x] !== EMPTY) { setMsg('이미 돌이 있는 자리입니다'); return; }
-    if (S.maxStones > 1 && S.placed >= 1) {
-      for (var i = 0; i < S.turnCells.length; i++) {
-        var tc = S.turnCells[i];
-        if (Math.max(Math.abs(tc[0] - x), Math.abs(tc[1] - y)) <= 2) { setMsg('연속 착수: 같은 턴에 둔 돌의 2칸 이내에는 둘 수 없어요'); return; }
-      }
-    }
-    S.placed++; S.turnCells.push([x, y]);
-    placeStone(x, y, S.turn, afterAction);
-    setMsg('');
   }
 
-  function useCard(i) {
-    if (S.over || busy > 0) return;
-    var id = hands[S.turn][i]; if (!id) return;
-    if (S.mode && S.pendingIdx === i) { cancelMode(); return; }
-    if (S.mode) cancelMode();
-    if (S.cardUsed) { setMsg('카드는 턴에 1장만 쓸 수 있어요'); return; }
-    sfx('card');
-    if (id === 'chain') {
-      S.maxStones = 3; consumeCard(i); setMsg('연속 착수! 이번 턴에 3수까지 둘 수 있어요 (최소 1수 후 "턴 종료" 가능)');
-    } else if (id === 'sixth') {
-      sixth = true; consumeCard(i); sfx('magic'); setMsg('식스센스! 이제 정확히 6목이 되어야 승리합니다');
-      checkWin();
-    } else if (id === 'bomb') {
-      if (!listCells(function (v) { return v === opp(S.turn); }).length) { setMsg('제거할 상대 돌이 없어요'); return; }
-      S.mode = 'bomb'; S.pendingIdx = i; setMsg('폭파: 제거할 상대 돌을 클릭하세요 (카드를 다시 누르면 취소)');
-    } else if (id === 'wall') {
-      S.mode = 'wall'; S.pendingIdx = i; setMsg('장벽: 설치할 빈 칸을 클릭하세요 (카드를 다시 누르면 취소)');
-    } else if (id === 'teleport') {
-      var mine = listCells(function (v) { return v === S.turn; });
-      var empt = listCells(function (v) { return v === EMPTY; });
-      if (!mine.length) { setMsg('옮길 내 돌이 없어요'); return; }
-      var from = mine[Math.floor(Math.random() * mine.length)];
-      var to = empt[Math.floor(Math.random() * empt.length)];
-      var m = meshes[from[1]][from[0]], a = cellPos(from[0], from[1]), b = cellPos(to[0], to[1]);
-      board[from[1]][from[0]] = EMPTY; meshes[from[1]][from[0]] = null;
-      board[to[1]][to[0]] = S.turn; meshes[to[1]][to[0]] = m;
-      consumeCard(i); sfx('magic'); burst(a.clone(), 0x9ad0ff, 14);
-      tween(0.6, function (t) {
-        m.position.x = a.x + (b.x - a.x) * t; m.position.z = a.z + (b.z - a.z) * t;
-        m.position.y = a.y + Math.sin(t * Math.PI) * 2.6;
-      }, function () { m.position.copy(b); burst(b.clone(), 0x9ad0ff, 14); sfx('place'); checkWin(); });
-      setMsg('순간이동!');
-    } else if (id === 'reversal') {
-      var all = listCells(function (v) { return v === BLACK || v === WHITE; });
-      consumeCard(i); sfx('magic'); setMsg('전세 역전! 모든 돌의 색이 뒤바뀝니다');
-      tween(0.6, function (t) {
-        var s = Math.abs(Math.cos(t * Math.PI)); // 1 → 0 → 1
-        all.forEach(function (p) {
-          var mm = meshes[p[1]][p[0]]; if (!mm) return;
-          mm.scale.y = 0.45 * Math.max(0.05, s);
-          if (t >= 0.5 && !mm.userData.flipped) {
-            mm.userData.flipped = true;
-            var nc = opp(board[p[1]][p[0]]); board[p[1]][p[0]] = nc;
-            mm.material = nc === BLACK ? matBlack : matWhite;
-          }
+  /* ---------------- 엔진 이벤트 → 연출 (순서대로 하나씩) ---------------- */
+  var handDirty = false, peekMeshes = [];
+  function mapIndexOf(name) { var ms = getMaps(); for (var i = 0; i < ms.length; i++) if (ms[i].id === name) return i; return -1; }
+  // 이벤트 하나를 연출하고, 다음 이벤트까지 기다릴 시간(초)을 돌려줌
+  function handleEvent(e) {
+    var p, m, i;
+    switch (e.t) {
+      case 'place': addStoneMesh(e.r, e.c, e.p, true); sfx('place'); return 0.3;
+      case 'trapHit': m = dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0xb070ff, 18); sfx('boom'); return 0.35;
+      case 'remove':
+        m = dropMesh(e.r, e.c);
+        burst(cellAt(e.r, e.c), e.why === 'snipe' ? 0xff4a3a : 0xff8a2a, e.why === 'snipe' ? 14 : 22); sfx(e.why === 'snipe' ? 'place' : 'boom');
+        return e.why === 'snipe' ? 0.3 : 0.45;
+      case 'move':
+        m = meshes[e.from.r][e.from.c]; if (!m) return 0;
+        meshes[e.from.r][e.from.c] = null; meshes[e.to.r][e.to.c] = m;
+        burst(cellAt(e.from.r, e.from.c), 0x9ad0ff, 12); sfx('magic');
+        arcMove(m, m.position.clone(), cellAt(e.to.r, e.to.c), 0.7);
+        return 0.75;
+      case 'convert': m = meshes[e.r][e.c]; if (m) flipMesh(m, e.to); sfx('magic'); return e.why === 'trade' ? 0.05 : 0.15;
+      case 'flip':
+        sfx('magic');
+        e.cells.forEach(function (q) { var mm = meshes[q.r][q.c]; if (mm) flipMesh(mm, mm.userData.color === BLACK ? WHITE : BLACK); });
+        return 0.6;
+      case 'quake': {
+        var old = meshes, nm = [];
+        for (var r = 0; r < N; r++) { nm.push(new Array(N).fill(null)); for (var c = 0; c < N; c++) if (old[r][c] && old[r][c].userData.kind === 'wall') nm[r][c] = old[r][c]; }
+        e.moves.forEach(function (mv) {
+          var mm = old[mv.from.r][mv.from.c]; if (!mm) return;
+          nm[mv.to.r][mv.to.c] = mm;
+          var a = mm.position.clone(), b = cellAt(mv.to.r, mv.to.c);
+          tween(0.5, function (t) { mm.position.x = a.x + (b.x - a.x) * t; mm.position.z = a.z + (b.z - a.z) * t; mm.position.y = a.y + Math.sin(t * Math.PI * 3) * 0.12; }, function () { mm.position.copy(b); });
         });
-      }, function () {
-        all.forEach(function (p) { var mm = meshes[p[1]][p[0]]; if (mm) { mm.userData.flipped = false; mm.scale.y = 0.45; } });
-        if (!checkWin()) endTurn();
-      });
+        meshes = nm; sfx('boom'); camShake = 0.6; return 0.6;
+      }
+      case 'wall': addWallMesh(e.r, e.c, true); sfx('boom'); burst(cellAt(e.r, e.c), 0x8a7a66, 10); return 0.5;
+      case 'giant':
+        for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+          var rr = e.r + dr, cc = e.c + dc; if (!Rules.inb(rr, cc)) continue;
+          if (meshes[rr][cc]) { burst(cellAt(rr, cc), 0xb09a80, 8); dropMesh(rr, cc); }
+          addWallMesh(rr, cc, true);
+        }
+        sfx('boom'); camShake = 1; return 0.7;
+      case 'windmill': case 'shield': case 'trap': case 'crater': sfx('magic'); return 0.15;
+      case 'blocked': sfx('boom'); return 0.3;
+      case 'weather': {
+        var mi = mapIndexOf(e.map); if (mi >= 0) { curMapIdx = mi; var sel = document.getElementById('mapSel'); if (sel) sel.value = mi; applyMap(getMaps()[mi]); }
+        sfx('magic'); return 0.8;
+      }
+      case 'gain': case 'overflow': case 'spend': handDirty = true; if (e.t === 'gain') sfx('card'); return 0;
+      case 'tradeFirst': tradeFirst = { r: e.r, c: e.c }; sfx('card'); return 0;
+      case 'cancel': tradeFirst = null; return 0;
+      case 'reveal': sfx('magic'); return 0.2;
+      case 'turn': onTurnChanged(); return 0.15;
+      case 'draft': openDraftUI(e.picks); return 0.3;
+      case 'alkTurn': startAlkUI(); return 0;
+      case 'alkSnap': finishAlkUI(e.stones); return 0.4;
+      case 'win': highlightLine(e.line); sfx('win'); tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = (e.p === BLACK ? '⚫ 흑' : '⚪ 백') + ' 승리!'; elBanner.style.display = 'flex'; }); return 0;
+      case 'draw': tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = '무승부'; elBanner.style.display = 'flex'; }); return 0;
     }
+    return 0;
+  }
+  function onTurnChanged() {
+    tradeFirst = null; inspectIdx = -1; clearPlayed(); handDirty = true; setTopView(false, true);
+  }
+  function syncAll() {
+    syncBoard(); syncMarkers(); syncPeek(); syncS(); updateHUD();
+    if (handDirty) { rebuildHand(); handDirty = false; }
+  }
+  function runEvents(evs, after) {
+    var i = 0; busy++;
+    (function next() {
+      if (i >= evs.length) { syncAll(); busy--; if (after) after(); return; }
+      var d = handleEvent(evs[i++]);
+      if (d > 0) tween(d, function () {}, next); else next();
+    })();
   }
 
-  // 카드가 실제로 쓰였는지(소모됨/대상 선택 대기) 알려주는 래퍼
-  function activateCard(i) {
-    var turn = S.turn, before = hands[turn].length;
-    useCard(i);
-    return hands[turn].length < before || (S.mode && S.pendingIdx === i);
+  /* ---------------- 엿보기: 상대 패를 위쪽에 펼쳐 보여줌 ---------------- */
+  function syncPeek() {
+    peekMeshes.forEach(function (m) { handGroup.remove(m); m.material.dispose(); });
+    peekMeshes = [];
+    if (!G.peek || G.peek.by !== G.current) return;
+    var vs = viewSize();
+    G.peek.cards.forEach(function (id, i) {
+      var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
+      m.scale.set(0.42, 0.42, 1); m.position.set(-vs.vw / 2 + 0.55 + i * 0.7, vs.vh / 2 - 0.85, 0.3);
+      handGroup.add(m); peekMeshes.push(m);
+    });
   }
+
+  /* ---------------- 카드 뽑기 (3장 중 1장) ---------------- */
+  var draftMeshes = [], draftIds = [], hoverDraft = -1;
+  function openDraftUI(picks) {
+    closeDraftUI(); draftIds = picks.slice(); inspectIdx = -1;
+    picks.forEach(function (id, i) {
+      var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
+      m.userData.draftIdx = i; m.position.set((i - 1) * 2.4, -4.6, 1.0); m.scale.set(1.5, 1.5, 1);
+      handGroup.add(m); draftMeshes.push(m);
+    });
+    sfx('card');
+  }
+  function closeDraftUI() {
+    draftMeshes.forEach(function (m) { handGroup.remove(m); m.material.dispose(); });
+    draftMeshes = []; draftIds = []; hoverDraft = -1;
+  }
+  function stepDraft(k) {
+    draftMeshes.forEach(function (m, i) {
+      var hov = hoverDraft === i, tx = (i - 1) * 2.45, ty = hov ? 0.32 : 0.1, ts = hov ? 1.62 : 1.5;
+      m.position.x += (tx - m.position.x) * k; m.position.y += (ty - m.position.y) * k; m.position.z = 1.0 + (hov ? 0.1 : 0);
+      var s = m.scale.x + (ts - m.scale.x) * k; m.scale.set(s, s, 1);
+      var c = m.material.color.r + ((hov ? 1 : 0.8) - m.material.color.r) * k; m.material.color.setRGB(c, c, c);
+    });
+  }
+  function onDraftClick(i) {
+    if (busy > 0 || !G.draft) return;
+    var res = Rules.pickDraft(G, draftIds[i]); if (!res.ok) return;
+    var evs = Rules.drain(G); sfx('card'); closeDraftUI(); runEvents(evs);
+  }
+
+  /* ---------------- 알까기 (3D 물리: 당겨서 쏘기) ---------------- */
+  var alkUI = null, alkAcc = 0;
+  var aimBand = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xff6a3a }));
+  var aimDir = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xffd27a }));
+  aimBand.visible = aimDir.visible = false; scene.add(aimBand); scene.add(aimDir);
+  function startAlkUI() {
+    setTopView(true, true);
+    var ms = [];
+    G.alk.stones.forEach(function (s) {
+      var m;
+      if (s.isNew) { m = makeStone(s.color); m.userData.kind = 'stone'; m.userData.color = s.color; m.position.set(s.x, STONE_Y, s.z); scene.add(m); }
+      else m = meshes[Math.round(s.z + HALF)][Math.round(s.x + HALF)];
+      ms.push(m);
+    });
+    alkUI = { meshes: ms, dragging: false };
+    alkAcc = 0; updateHUD();
+  }
+  function updateAlkMeshes() {
+    if (!alkUI || !G.alk) return;
+    G.alk.stones.forEach(function (s, i) { var m = alkUI.meshes[i]; if (m) m.position.set(s.x, STONE_Y, s.z); });
+  }
+  function finishAlkUI(snaps) {
+    if (!alkUI) return;
+    var nm = [];
+    for (var r = 0; r < N; r++) { nm.push(new Array(N).fill(null)); for (var c = 0; c < N; c++) if (meshes[r][c] && meshes[r][c].userData.kind === 'wall') nm[r][c] = meshes[r][c]; }
+    snaps.forEach(function (sn, i) {
+      var m = alkUI.meshes[i]; if (!m) return;
+      nm[sn.r][sn.c] = m;
+      var a = m.position.clone(), b = cellAt(sn.r, sn.c);
+      tween(0.3, function (t) { m.position.x = a.x + (b.x - a.x) * t; m.position.z = a.z + (b.z - a.z) * t; }, function () { m.position.copy(b); });
+    });
+    meshes = nm; alkUI = null; aimBand.visible = aimDir.visible = false; sfx('place');
+  }
+  function aimUpdate(pos) {
+    var s = G.alk.stones[G.alk.newIndex], px = pos.x - s.x, pz = pos.z - s.z, d = Math.hypot(px, pz), mx = Rules.ALK.MAXPULL;
+    if (d > mx) { px *= mx / d; pz *= mx / d; }
+    aimBand.geometry.setFromPoints([new THREE.Vector3(s.x, 0.15, s.z), new THREE.Vector3(s.x + px, 0.15, s.z + pz)]);
+    aimDir.geometry.setFromPoints([new THREE.Vector3(s.x, 0.15, s.z), new THREE.Vector3(s.x - px * 1.5, 0.15, s.z - pz * 1.5)]);
+    aimBand.visible = aimDir.visible = true;
+  }
+
+  /* ---------------- 게임 흐름 ---------------- */
+  function cancelMode() {
+    if (!G.pending) return;
+    Rules.cancel(G); Rules.drain(G); tradeFirst = null; clearPlayed(); syncS(); updateHUD();
+  }
+  // 카드: 1번 누르면 크게 확대, 확대된 카드를 한 번 더 누르면 발동
   function onCardClick(i) {
-    if (S.over || busy > 0) return;
-    if (inspectIdx !== i) { inspectIdx = i; sfx('card'); return; }        // 1번: 자세히 보기
-    var mesh = cardMeshes[i];
-    var snap = { id: hands[S.turn][i], x: mesh.position.x, y: mesh.position.y, s: mesh.scale.x };
-    if (!activateCard(i)) return;                                          // 못 쓰는 경우: 메시지 표시, 확대 유지
-    inspectIdx = -1;                                                       // 2번: 능력 발동 → 직부감으로 이동
-    setTopView(true, true);                                                // 카드 효과 메시지는 그대로 둠
-    if (S.mode) showPlayed(snap);                                          // 대상을 고르는 카드: 왼쪽 아래에서 기다림
-    else burnSnap(snap);                                                   // 바로 발동한 카드: 가운데서 불타 사라짐
+    if (G.gameOver || busy > 0 || G.draft || G.alk) return;
+    if (inspectIdx !== i) { inspectIdx = i; sfx('card'); return; }
+    var mesh = cardMeshes[i], id = G.hand[G.current][i];
+    var snap = { id: id, x: mesh.position.x, y: mesh.position.y, s: mesh.scale.x };
+    if (G.pending && G.pending.handIndex === i) { cancelMode(); inspectIdx = -1; return; }   // 대기 중인 카드를 다시 누르면 취소
+    var res = Rules.useCard(G, i), evs = Rules.drain(G);
+    if (!res.ok) return;
+    inspectIdx = -1; setTopView(true, true);
+    if (res.pending) { showPlayed(snap); syncS(); return; }          // 대상을 고르는 카드는 왼쪽 아래에서 기다림
+    burnSnap(snap); runEvents(evs);                                  // 바로 발동: 가운데서 불타며 효과 실행
+  }
+  // 판의 칸 (r=행, c=열): 직부감에서만 동작
+  function onCell(r, c) {
+    if (G.gameOver || busy > 0 || G.draft || G.alk || topGoal < 0.5 || topT < 0.85) return;
+    if (G.pending) {
+      var res = Rules.target(G, r, c), evs = Rules.drain(G);
+      if (!res.ok) return;
+      if (!res.resolved) { runEvents(evs); return; }
+      busy++; burnPlayed(function () { busy--; runEvents(evs); });   // 효과는 카드가 불붙는 순간에
+      return;
+    }
+    var res2 = Rules.place(G, r, c), evs2 = Rules.drain(G);
+    if (!res2.ok) return;
+    runEvents(evs2);
   }
 
   /* ---------------- 입력 ---------------- */
   var pointer = new THREE.Vector2(0, 0), raycaster = new THREE.Raycaster();
   var groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  var hoverCell = null, hoverTable = false, hitPoint = new THREE.Vector3();
+  var hoverCell = null, hoverTable = false, hitPoint = new THREE.Vector3(), camShake = 0;
   // 시점: 0 = 앉은 시점(시네마틱), 1 = 직부감(판 전체). 테이블/버튼/V키로 전환
   var topT = 0, topGoal = 0, topH = 30, topDz = 2, parX = 0, parY = 0;
   var elViewBtn = document.getElementById('viewbtn');
   function setTopView(on, quiet) {
     topGoal = on ? 1 : 0;
     elViewBtn.textContent = on ? '🎴 카드 보기' : '🔍 판 보기';
-    if (!quiet && !S.mode && !S.over) setMsg(on ? '판을 눌러 돌을 두세요 (테이블을 누르면 카드 화면으로 돌아가요)' : '카드를 눌러 확인 · 한 번 더 누르면 발동 · 판을 누르면 돌을 둘 수 있어요');
   }
   var mouseN = { x: 0, y: 0 };
 
@@ -868,37 +1094,59 @@
   function updateHover() {
     camera.updateMatrixWorld();
     raycaster.setFromCamera(pointer, camera);
-    var hits = topGoal > 0.5 ? [] : raycaster.intersectObjects(cardMeshes, false);
+    var dh = draftMeshes.length ? raycaster.intersectObjects(draftMeshes, false) : [];
+    hoverDraft = dh.length ? dh[0].object.userData.draftIdx : -1;
+    var hits = (topGoal > 0.5 || draftMeshes.length) ? [] : raycaster.intersectObjects(cardMeshes, false);
     hoverCard = hits.length ? hits[0].object.userData.i : -1;
-    handUp = topGoal < 0.5 && (hoverCard >= 0 || (Math.abs(pointer.x) < 0.5 && pointer.y < -0.3));
+    handUp = topGoal < 0.5 && !draftMeshes.length && (hoverCard >= 0 || (Math.abs(pointer.x) < 0.5 && pointer.y < -0.3));
     hoverCell = null; hoverTable = false;
-    if (hoverCard < 0 && raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
+    var hasGround = hoverCard < 0 && hoverDraft < 0 && !draftMeshes.length && raycaster.ray.intersectPlane(groundPlane, hitPoint);
+    if (hasGround) {
       var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
       if (inb(x, y) && Math.abs(hitPoint.x + HALF - x) < 0.5 && Math.abs(hitPoint.z + HALF - y) < 0.5) hoverCell = [x, y];
       else hoverTable = true;                 // 격자 밖(판 테두리·테이블) = 시점 전환 영역
     }
-    dom.style.cursor = (hoverCard >= 0 || hoverCell || hoverTable) ? 'pointer' : 'default';
+    dom.style.cursor = (hoverCard >= 0 || hoverDraft >= 0 || hoverCell || hoverTable) ? 'pointer' : 'default';
+    if (alkUI && alkUI.dragging && raycaster.ray.intersectPlane(groundPlane, hitPoint)) aimUpdate(hitPoint);
   }
-  dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch') return; setPointer(e); updateHover(); });
+  dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch' && !(alkUI && alkUI.dragging)) return; setPointer(e); updateHover(); });
+  // 알까기: 새 돌을 눌러 당겼다 놓으면 발사
+  dom.addEventListener('pointerdown', function (e) {
+    if (!G || !G.alk || G.alk.phase !== 'aim' || topT < 0.85 || busy > 0) return;
+    setPointer(e); updateHover();
+    if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return;
+    var s = G.alk.stones[G.alk.newIndex];
+    if (Math.hypot(hitPoint.x - s.x, hitPoint.z - s.z) <= 0.95) { alkUI.dragging = true; aimUpdate(hitPoint); sfx('card'); }
+  });
+  window.addEventListener('pointerup', function (e) {
+    if (!alkUI || !alkUI.dragging) return;
+    alkUI.dragging = false; setPointer(e); updateHover();
+    var s = G.alk && G.alk.stones[G.alk.newIndex];
+    if (s && raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
+      if (Rules.alkLaunch(G, hitPoint.x - s.x, hitPoint.z - s.z)) { alkAcc = 0; sfx('boom'); }
+    }
+    aimBand.visible = aimDir.visible = false;
+  });
   dom.addEventListener('click', function (e) {
     ac(); if (actx && actx.state === 'suspended') actx.resume();
+    if (G.alk) return;                                                       // 알까기 중에는 클릭 대신 당기기
     setPointer(e); updateHover();
+    if (draftMeshes.length) { if (hoverDraft >= 0) onDraftClick(hoverDraft); return; }
     if (hoverCard >= 0) onCardClick(hoverCard);
     else if (inspectIdx >= 0) inspectIdx = -1;                              // 확대 중 다른 곳을 누르면 닫기
     else if (hoverCell || hoverTable) {
       if (topGoal < 0.5) setTopView(true);                                  // 뒤 시점에서 판/테이블을 누르면 직부감으로
-      else if (hoverCell) onCell(hoverCell[0], hoverCell[1]);               // 직부감에서만 돌을 둠
+      else if (hoverCell) onCell(hoverCell[1], hoverCell[0]);               // 직부감에서만 돌을 둠 (행, 열)
       else setTopView(false);                                               // 직부감에서 테이블을 누르면 카드 화면으로
     }
-    // 터치는 '호버'가 없으므로 탭이 끝나면 호버 효과(카드 빛·미리보기)를 지움
+    // 터치는 '호버'가 없으므로 탭이 끝나면 호버 효과를 지움
     if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; handUp = false; }
   });
   window.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { if (inspectIdx >= 0) inspectIdx = -1; else if (S.mode) cancelMode(); }
+    if (e.key === 'Escape') { if (inspectIdx >= 0) inspectIdx = -1; else if (G.pending) cancelMode(); }
     else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
   });
   elViewBtn.addEventListener('click', function () { setTopView(topGoal < 0.5); });
-  elEnd.addEventListener('click', function () { if (busy === 0) endTurn(); });
   document.getElementById('restart').addEventListener('click', reset);
   document.getElementById('again').addEventListener('click', reset);
 
@@ -990,19 +1238,12 @@
 
   /* ---------------- 초기화 ---------------- */
   function reset() {
-    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
-      if (meshes[y] && meshes[y][x]) scene.remove(meshes[y][x]);
-    }
-    board = []; meshes = [];
-    for (var j = 0; j < N; j++) { board.push(new Array(N).fill(EMPTY)); meshes.push(new Array(N).fill(null)); }
-    anims.length = 0; busy = 0;
-    hands = { 1: CARD_IDS.slice(), 2: CARD_IDS.slice() };
-    sixth = false;
-    S = { turn: BLACK, placed: 0, maxStones: 1, cardUsed: false, mode: null, pendingIdx: -1, over: false, turnCells: [] };
-    elBanner.style.display = 'none';
-    setTopView(false); clearPlayed(); clearBurns();
-    rebuildHand(); updateHUD();
-    setMsg('흑 선공 — 카드를 눌러 확인(한 번 더 누르면 발동), 판을 누르면 위에서 보며 돌을 둘 수 있어요');
+    for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) { if (meshes[r][c]) scene.remove(meshes[r][c]); meshes[r][c] = null; }
+    if (alkUI) alkUI.meshes.forEach(function (m) { if (m) scene.remove(m); });
+    G = Rules.create(); anims.length = 0; busy = 0; tradeFirst = null; alkUI = null; alkAcc = 0;
+    closeDraftUI(); aimBand.visible = aimDir.visible = false;
+    elBanner.style.display = 'none'; setTopView(false, true); clearPlayed(); clearBurns();
+    handDirty = false; inspectIdx = -1; syncAll(); rebuildHand();
   }
 
   /* ---------------- 루프 ---------------- */
@@ -1043,20 +1284,25 @@
       (CAM_BASE.y * camDist + parY * k) * k + topH * topT,
       (CAM_BASE.z * camDist) * k + topDz * topT);
     camera.up.set(0, k, -topT).normalize();
+    if (camShake > 0) { camera.position.x += (Math.random() - 0.5) * camShake * 0.35; camera.position.y += (Math.random() - 0.5) * camShake * 0.25; camShake = Math.max(0, camShake - dt * 2.2); }
     camera.lookAt(CAM_LOOK.x * k, CAM_LOOK.y * k, CAM_LOOK.z * k + topDz * topT);
     if (scene.fog) { scene.fog.near = fogBase.near + 30 * topT; scene.fog.far = fogBase.far + 70 * topT; }
 
     // 고스트 / 링 표시
-    ghost.visible = false; ring.visible = false;
-    if (!S.over && hoverCell && hoverCard < 0 && topT > 0.85 && inspectIdx < 0) {
-      var x = hoverCell[0], y = hoverCell[1], v = board[y][x], p = cellPos(x, y);
-      if (!S.mode && v === EMPTY) {
-        ghost.visible = true; ghost.position.copy(p);
-        ghost.material.color.set(S.turn === BLACK ? 0x17130f : 0xece4d2);
-      } else if (S.mode === 'bomb' && v === opp(S.turn)) {
-        ring.visible = true; ring.position.set(p.x, 0.05, p.z); ring.material.color.set(0xff5a3a);
-      } else if (S.mode === 'wall' && v === EMPTY) {
-        ring.visible = true; ring.position.set(p.x, 0.05, p.z); ring.material.color.set(0xffd27a);
+    ghost.visible = false; ring.visible = false; ring2.visible = false;
+    if (!G.gameOver && hoverCell && hoverCard < 0 && topT > 0.85 && inspectIdx < 0 && !draftMeshes.length && !G.alk && busy === 0) {
+      var rr = hoverCell[1], cc = hoverCell[0], hp = cellAt(rr, cc);
+      if (G.pending) {
+        if (Rules.isValidTarget(G, rr, cc)) { ring.visible = true; ring.position.set(hp.x, 0.05, hp.z); ring.material.color.set(PEND_COLOR[G.pending.type] || 0xffd27a); }
+      } else if (Rules.canPlace(G, rr, cc)) { ghost.visible = true; ghost.position.copy(hp); ghost.material.color.set(G.current === BLACK ? 0x17130f : 0xece4d2); }
+    }
+    if (tradeFirst && G.pending) { var tp = cellAt(tradeFirst.r, tradeFirst.c); ring2.visible = true; ring2.position.set(tp.x, 0.055, tp.z); }
+    spinners.forEach(function (bl) { bl.rotation.y += dt * 2.4; });
+    if (G.alk && G.alk.phase === 'sim' && busy === 0) {                       // 알까기 물리 (60Hz 고정 간격)
+      alkAcc += dt; var steps = Math.min(10, Math.floor(alkAcc * 60)); alkAcc -= steps / 60;
+      for (var si = 0; si < steps; si++) {
+        if (Rules.alkTick(G)) { runEvents(Rules.drain(G)); break; }
+        updateAlkMeshes();
       }
     }
     renderer.render(scene, camera);
@@ -1064,7 +1310,7 @@
   }
 
   // 테스트/디버그용 접근
-  window.__game = { onCardClick: onCardClick, played: function () { return playedMesh ? playedMesh.userData.id : null; }, setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, cardCanvas: function (id) { return cardTexture(id).image; }, get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
+window.__game = { get G() { return G; }, get S() { return S; }, Rules: Rules, onCardClick: onCardClick, onCell: onCell, onDraftClick: onDraftClick, cancelMode: cancelMode, sync: function () { syncAll(); rebuildHand(); }, runEvents: runEvents, setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, played: function () { return playedMesh ? playedMesh.userData.id : null; }, cardCanvas: function (id) { return cardTexture(id).image; }, reset: reset, busy: function () { return busy; }, draftOpen: function () { return draftMeshes.length; }, meshGrid: function () { return meshes.map(function (row) { return row.map(function (m) { return !m ? 0 : m.userData.kind === 'wall' ? 3 : m.userData.color; }); }); }, markers: function () { return markerGroup.children.length; }, alkUI: function () { return alkUI; } };
 
   resize(); frame();
   buildMapSelect();

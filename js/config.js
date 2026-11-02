@@ -7,14 +7,30 @@
 window.GAME_CONFIG = {
 
   /* ---------- 카드 ---------- */
-  cards: {                      // 카드 일러스트 (권장 584x428 PNG, 투명/흰 배경 모두 가능)
-    chain:    null,             // 예: 'assets/cards/chain.png'
-    bomb:     null,
+  cards: {                      // 카드 일러스트 (권장 584x428 PNG, 투명/흰 배경 모두 가능). 21장 전부 지정 가능
+    chain: null,
+    windmill: null,
+    alkkagi: null,
+    bomb: null,
+    trade: null,
+    infection: null,
+    reversal: null,
     teleport: null,
-    wall:     null,
-    sixth:    null,
-    reversal: null
+    earthquake: null,
+    meteor: null,
+    sixsense: null,
+    wall: null,
+    trap: null,
+    snipe: null,
+    double: null,
+    peek: null,
+    giant: null,
+    ghost: null,
+    weather: null,
+    shield: null,
+    blockade: null
   },
+
   cardPaper: null,              // 카드 바탕 이미지 (권장 768x1152 PNG). 예: 'assets/cards/paper.png'
   artBlend: 'normal',           // 'normal' | 'multiply' (흰 배경 선화를 양피지에 스며들게 하려면 multiply)
 
