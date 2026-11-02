@@ -521,7 +521,7 @@
     g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
     return new THREE.CanvasTexture(cv);
   })();
-  function startBurn(mesh, moveToCenter) {
+  function startBurn(mesh, moveToCenter, onIgnite) {
     var tex = mesh.material.map;
     mesh.material.dispose();
     mesh.material = new THREE.ShaderMaterial({ uniforms: { map: { value: tex }, burn: { value: 0 } }, vertexShader: burnVert, fragmentShader: burnFrag, transparent: true, depthWrite: false });
@@ -535,9 +535,10 @@
     var pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 9, map: emberTex, sizeAttenuation: false, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     pts.frustumCulled = false; pts.position.set(0, 0, 1.0); handGroup.add(pts);
     var off = moveToCenter ? BURN_MOVE : 0.1;
-    burns.push({ m: mesh, pts: pts, n: n, base: base, vel: vel, delay: delay, off: off, move: moveToCenter, t: 0,
+    burns.push({ m: mesh, pts: pts, n: n, base: base, vel: vel, delay: delay, off: off, move: moveToCenter, t: 0, ignited: !moveToCenter, onIgnite: onIgnite,
       from: mesh.position.clone(), fromS: mesh.scale.x, fromR: mesh.rotation.z });
-    sfx('burn');
+    if (!moveToCenter) sfx('burn');          // 바로 발동하는 카드: 시작과 동시에 불이 붙음
+    // 날아오는 카드: 가운데에 도착해 불이 붙는 순간(stepBurns)에 소리와 효과가 나옴
   }
   function stepBurns(dt) {
     for (var bi = burns.length - 1; bi >= 0; bi--) {
@@ -545,6 +546,10 @@
       var mv = b.move ? Math.min(1, b.t / BURN_MOVE) : 1, e = 1 - Math.pow(1 - mv, 3);   // ease-out: 감속하며 도착
       b.m.position.set(b.from.x * (1 - e), b.from.y * (1 - e), b.from.z + (0.9 - b.from.z) * e);   // 화면 가운데로
       var sc = b.fromS + (1.75 - b.fromS) * e; b.m.scale.set(sc, sc, 1); b.m.rotation.z = b.fromR * (1 - e);
+      if (!b.ignited && b.t >= b.off) {                       // 도착 → 점화: 타는 소리 + 카드 효과를 이 순간에 맞춤
+        b.ignited = true; sfx('burn');
+        if (b.onIgnite) b.onIgnite();
+      }
       var bt = Math.max(0, b.t - b.off) / BURN_TIME;
       b.m.material.uniforms.burn.value = Math.min(1, bt);
       var pa = b.pts.geometry.attributes.position, ca = b.pts.geometry.attributes.color;
@@ -568,9 +573,9 @@
     burns.length = 0;
   }
   // 효과가 실행된 카드: 왼쪽 아래에서 가운데로 와서 탐
-  function burnPlayed() {
-    if (!playedMesh) return;
-    var m = playedMesh; playedMesh = null; startBurn(m, true);
+  function burnPlayed(onIgnite) {
+    if (!playedMesh) { if (onIgnite) onIgnite(); return; }
+    var m = playedMesh; playedMesh = null; startBurn(m, true, onIgnite);
   }
   // 바로 발동하는 카드: 확대된 자리(가운데)에서 바로 탐
   function burnSnap(snap) {
@@ -734,20 +739,26 @@
     if (S.over || busy > 0 || topGoal < 0.5 || topT < 0.85) return;   // 돌은 직부감 시점에서만 둘 수 있음
     if (S.mode === 'bomb') {
       if (board[y][x] !== opp(S.turn)) { setMsg('제거할 상대 돌을 고르세요'); return; }
-      var p = cellPos(x, y); removeStone(x, y); burst(p.clone(), 0xff8a2a, 22); sfx('boom');
-      consumeCard(S.pendingIdx); burnPlayed(); setMsg('폭파! 상대 돌이 사라졌습니다');
+      var p = cellPos(x, y);
+      consumeCard(S.pendingIdx);
+      busy++;                                                       // 카드가 가운데서 불붙을 때까지 입력 잠금
+      burnPlayed(function () { busy--; removeStone(x, y); burst(p.clone(), 0xff8a2a, 22); sfx('boom'); });
       return;
     }
     if (S.mode === 'wall') {
       if (board[y][x] !== EMPTY) { setMsg('빈 칸에 설치하세요'); return; }
-      board[y][x] = WALL;
-      var w = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.8, 0.86),
-        new THREE.MeshStandardMaterial({ color: 0x4d443a, roughness: 1 }));
-      w.castShadow = true; w.receiveShadow = true;
-      var q = cellPos(x, y); w.position.set(q.x, -0.4, q.z); scene.add(w); meshes[y][x] = w;
-      tween(0.5, function (t) { w.position.y = -0.4 + 0.8 * t; });
-      sfx('boom'); burst(new THREE.Vector3(q.x, 0.1, q.z), 0x8a7a66, 10);
-      consumeCard(S.pendingIdx); burnPlayed(); setMsg('장벽이 솟아올랐습니다');
+      consumeCard(S.pendingIdx);
+      busy++;                                                       // 카드가 가운데서 불붙을 때까지 입력 잠금
+      burnPlayed(function () {
+        busy--;
+        board[y][x] = WALL;
+        var w = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.8, 0.86),
+          new THREE.MeshStandardMaterial({ color: 0x4d443a, roughness: 1 }));
+        w.castShadow = true; w.receiveShadow = true;
+        var q = cellPos(x, y); w.position.set(q.x, -0.4, q.z); scene.add(w); meshes[y][x] = w;
+        tween(0.5, function (t) { w.position.y = -0.4 + 0.8 * t; });
+        sfx('boom'); burst(new THREE.Vector3(q.x, 0.1, q.z), 0x8a7a66, 10);
+      });
       return;
     }
     if (board[y][x] !== EMPTY) { setMsg('이미 돌이 있는 자리입니다'); return; }
