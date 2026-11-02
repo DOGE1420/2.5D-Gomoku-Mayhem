@@ -49,13 +49,13 @@
   var dom = renderer.domElement;
 
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x07050a);
-  scene.fog = new THREE.Fog(0x07050a, 22, 90);
+  scene.background = new THREE.Color(0x000000);
+  scene.fog = new THREE.Fog(0x000000, 16, 46);
 
   var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
   scene.add(camera);
-  var CAM_BASE = new THREE.Vector3(0, 15.5, 13.5);
-  var CAM_LOOK = new THREE.Vector3(0, 0, 3.2);
+  var CAM_BASE = new THREE.Vector3(0, 7.2, 16.5);
+  var CAM_LOOK = new THREE.Vector3(0, 0.7, -0.4);
   var camDist = 1;
 
   /* ---------------- 텍스처 ---------------- */
@@ -123,28 +123,42 @@
   boardPlane.rotation.x = -Math.PI / 2; boardPlane.position.y = 0.002; boardPlane.receiveShadow = true;
   scene.add(boardPlane);
 
-  // 촛불
-  var candle = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 1.5, 20),
-    new THREE.MeshStandardMaterial({ color: 0xd9cfae, roughness: 0.8 }));
-  candle.position.set(-10.5, 0.15, -4.5); candle.castShadow = true;
-  scene.add(candle);
-  var flame = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 12),
-    new THREE.MeshBasicMaterial({ color: 0xffc66a }));
-  flame.scale.set(1, 1.7, 1); flame.position.set(-10.5, 1.1, -4.5);
-  scene.add(flame);
-  var candleBase = 1.5;
-  var candleLight = new THREE.PointLight(0xffa550, 1.5, 55, 1.4);
-  candleLight.position.set(-10.5, 1.9, -4.5);
-  candleLight.castShadow = true;
-  candleLight.shadow.mapSize.set(1024, 1024);
-  candleLight.shadow.bias = -0.002;
-  scene.add(candleLight);
+  // 촛불: 오른쪽 뒤쪽에 두 개 (인스크립션 풍). 첫 번째만 그림자를 만듦
+  var candles = [], candleBase = 1.2;
+  function makeCandle(x, z, h, shadow) {
+    var body = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.3, h, 20),
+      new THREE.MeshStandardMaterial({ color: 0xcfc3a0, roughness: 0.8 }));
+    body.position.set(x, -0.6 + h / 2, z); body.castShadow = true; scene.add(body);
+    var fy = -0.6 + h + 0.24;
+    var flame = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffd08a }));
+    flame.scale.set(1, 1.8, 1); flame.position.set(x, fy, z); scene.add(flame);
+    var light = new THREE.PointLight(0xffa550, candleBase, 42, 1.5);
+    light.position.set(x, fy + 0.4, z);
+    if (shadow) { light.castShadow = true; light.shadow.mapSize.set(1024, 1024); light.shadow.bias = -0.002; }
+    scene.add(light);
+    candles.push({ body: body, flame: flame, light: light, x: x, phase: Math.random() * 6, k: shadow ? 1 : 0.8 });
+  }
+  makeCandle(9.6, -2.4, 2.4, true);
+  makeCandle(11.2, -4.4, 3.5, false);
 
-  var hemi = new THREE.HemisphereLight(0x7a6650, 0x0a0806, 0.45);
+  // 어두운 하늘의 별
+  var stars = (function () {
+    var n = 260, pos = new Float32Array(n * 3);
+    for (var i = 0; i < n; i++) {
+      var a = Math.random() * Math.PI * 2, e = Math.random() * 0.95, r = 75;
+      pos[i * 3] = Math.cos(a) * Math.cos(e) * r; pos[i * 3 + 1] = 3 + Math.sin(e) * r * 0.6; pos[i * 3 + 2] = Math.sin(a) * Math.cos(e) * r;
+    }
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    var pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.8, sizeAttenuation: false, transparent: true, opacity: 0.55, fog: false, depthWrite: false }));
+    scene.add(pts); return pts;
+  })();
+
+  // 조명: 거의 어둠 속에서 테이블 한 곳만 주황빛으로 밝게
+  var hemi = new THREE.HemisphereLight(0x3a2a1a, 0x050403, 0.05);
   scene.add(hemi);
-  var spot = new THREE.SpotLight(0xffe2b0, 0.55, 60, 0.7, 1, 1);
-  spot.position.set(0, 15, 6); spot.target.position.set(0, 0, 0);
-  spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.002;
+  var spot = new THREE.SpotLight(0xff9a40, 1.5, 70, 0.62, 1, 1.1);
+  spot.position.set(1, 14, 9); spot.target.position.set(0, 0, 0.5);
+  spot.castShadow = true; spot.shadow.mapSize.set(2048, 2048); spot.shadow.bias = -0.0015;
   scene.add(spot); scene.add(spot.target);
 
   /* ---------------- 상태 ---------------- */
@@ -678,7 +692,14 @@
   /* ---------------- 입력 ---------------- */
   var pointer = new THREE.Vector2(0, 0), raycaster = new THREE.Raycaster();
   var groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  var hoverCell = null, hitPoint = new THREE.Vector3();
+  var hoverCell = null, hoverTable = false, hitPoint = new THREE.Vector3();
+  // 시점: 0 = 앉은 시점(시네마틱), 1 = 직부감(판 전체). 테이블/버튼/V키로 전환
+  var topT = 0, topGoal = 0, topH = 30, topDz = 2, parX = 0, parY = 0;
+  var elViewBtn = document.getElementById('viewbtn');
+  function setTopView(on) {
+    topGoal = on ? 1 : 0;
+    elViewBtn.textContent = on ? '🎥 시점 복귀' : '🔍 전체 보기';
+  }
   var mouseN = { x: 0, y: 0 };
 
   function setPointer(e) {
@@ -693,12 +714,13 @@
     raycaster.setFromCamera(pointer, camera);
     var hits = raycaster.intersectObjects(cardMeshes, false);
     hoverCard = hits.length ? hits[0].object.userData.i : -1;
-    hoverCell = null;
+    hoverCell = null; hoverTable = false;
     if (hoverCard < 0 && raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
       var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
       if (inb(x, y) && Math.abs(hitPoint.x + HALF - x) < 0.5 && Math.abs(hitPoint.z + HALF - y) < 0.5) hoverCell = [x, y];
+      else hoverTable = true;                 // 격자 밖(판 테두리·테이블) = 시점 전환 영역
     }
-    dom.style.cursor = (hoverCard >= 0 || hoverCell) ? 'pointer' : 'default';
+    dom.style.cursor = (hoverCard >= 0 || hoverCell || hoverTable) ? 'pointer' : 'default';
   }
   dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch') return; setPointer(e); updateHover(); });
   dom.addEventListener('click', function (e) {
@@ -706,10 +728,15 @@
     setPointer(e); updateHover();
     if (hoverCard >= 0) useCard(hoverCard);
     else if (hoverCell) onCell(hoverCell[0], hoverCell[1]);
+    else if (hoverTable) setTopView(topGoal < 0.5);
     // 터치는 '호버'가 없으므로 탭이 끝나면 호버 효과(카드 빛·미리보기)를 지움
-    if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; }
+    if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; }
   });
-  window.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S.mode) cancelMode(); });
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && S.mode) cancelMode();
+    else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
+  });
+  elViewBtn.addEventListener('click', function () { setTopView(topGoal < 0.5); });
   elEnd.addEventListener('click', function () { if (busy === 0) endTurn(); });
   document.getElementById('restart').addEventListener('click', reset);
   document.getElementById('again').addEventListener('click', reset);
@@ -717,7 +744,7 @@
   /* ---------------- 맵 (배경 · 판 · 조명 교체) — js/config.js 의 maps ---------------- */
   var defTableTex = table.material.map, defBoardTex = boardPlane.material.map;
   var defCam = { pos: CAM_BASE.clone(), look: CAM_LOOK.clone() };
-  var backdrop = null, curMapIdx = 0;
+  var backdrop = null, curMapIdx = 0, fogBase = { near: 16, far: 46 };
   var elNotice = document.getElementById('notice');
 
   function texFromImg(img, repeat) {
@@ -759,17 +786,17 @@
         backdrop.material.map = texFromImg(di); backdrop.material.needsUpdate = true; backdrop.visible = true;
       } else if (backdrop) backdrop.visible = false;
       // 배경색 · 안개
-      var bg = m.background || '#07050a';
+      var bg = m.background || '#000000';
       scene.background.set(bg);
       if (m.fog === null) scene.fog = null;
-      else { var F = m.fog || {}; scene.fog = new THREE.Fog(F.color || bg, F.near != null ? F.near : 22, F.far != null ? F.far : 90); }
+      else { var F = m.fog || {}; fogBase.near = F.near != null ? F.near : 16; fogBase.far = F.far != null ? F.far : 46; scene.fog = new THREE.Fog(F.color || bg, fogBase.near, fogBase.far); }
       // 조명 · 촛불
-      hemi.color.set(L.hemiSky || '#7a6650'); hemi.groundColor.set(L.hemiGround || '#0a0806'); hemi.intensity = L.hemi != null ? L.hemi : 0.45;
-      spot.color.set(L.spotColor || '#ffe2b0'); spot.intensity = L.spot != null ? L.spot : 0.55; spot.angle = L.spotAngle || 0.7;
+      hemi.color.set(L.hemiSky || '#3a2a1a'); hemi.groundColor.set(L.hemiGround || '#050403'); hemi.intensity = L.hemi != null ? L.hemi : 0.05;
+      spot.color.set(L.spotColor || '#ff9a40'); spot.intensity = L.spot != null ? L.spot : 1.5; spot.angle = L.spotAngle || 0.62;
       var candleOn = C.visible !== false;
-      candle.visible = flame.visible = candleLight.visible = candleOn;
-      candleLight.color.set(C.color || '#ffa550'); candleBase = C.intensity != null ? C.intensity : 1.5;
-      spot.castShadow = !candleOn;            // 촛불이 없으면 위쪽 조명이 그림자를 만듦
+      candles.forEach(function (c) { c.body.visible = c.flame.visible = c.light.visible = candleOn; c.light.color.set(C.color || '#ffa550'); });
+      candleBase = C.intensity != null ? C.intensity : 1.2;
+      stars.visible = m.stars !== false && !di;
       // 카메라
       var cam = m.camera || {};
       CAM_BASE.fromArray(cam.pos || defCam.pos.toArray()); CAM_LOOK.fromArray(cam.look || defCam.look.toArray());
@@ -824,6 +851,10 @@
     camDist = camera.aspect < 1.5 ? Math.min(1.9, 1.5 / camera.aspect) : 1;
     camera.fov = camera.aspect < 1.2 ? 62 : 45;
     camera.updateProjectionMatrix();
+    // 직부감: 위쪽 HUD와 아래쪽 손패를 피해 판(17칸 폭)이 화면 66% 높이·94% 폭 안에 들어오는 높이
+    var th = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    topH = Math.max((17 / 0.66) / (2 * th), (17 / 0.94) / (2 * th * camera.aspect));
+    topDz = 0.09 * 2 * topH * th;      // 판을 살짝 위로 올려 손패 자리를 확보
   }
   window.addEventListener('resize', resize);
 
@@ -833,18 +864,25 @@
     stepAnims(dt); stepParticles(dt); stepCards(dt);
 
     // 촛불 일렁임
-    var fl = 1 + Math.sin(time * 13) * 0.05 + Math.sin(time * 31 + 1.7) * 0.04 + (Math.random() - 0.5) * 0.04;
-    candleLight.intensity = candleBase * fl; flame.scale.set(1, 1.7 * fl, 1);
-    candleLight.position.x = -10.5 + Math.sin(time * 5) * 0.06;
+    candles.forEach(function (c) {
+      var fl = 1 + Math.sin(time * 13 + c.phase) * 0.06 + Math.sin(time * 31 + 1.7 + c.phase) * 0.05 + (Math.random() - 0.5) * 0.05;
+      c.light.intensity = candleBase * c.k * fl; c.flame.scale.set(1, 1.8 * fl, 1);
+      c.light.position.x = c.x + Math.sin(time * 5 + c.phase) * 0.06;
+    });
+    stars.material.opacity = 0.5 + Math.sin(time * 1.3) * 0.08;
 
-    // 카메라: 앉은 시점 + 마우스 시차
-    var tx = CAM_BASE.x * camDist + mouseN.x * 0.9;
-    var ty = CAM_BASE.y * camDist + mouseN.y * 0.5;
-    var tz = CAM_BASE.z * camDist;
-    camera.position.x += (tx - camera.position.x) * 0.06;
-    camera.position.y += (ty - camera.position.y) * 0.06;
-    camera.position.z += (tz - camera.position.z) * 0.06;
-    camera.lookAt(CAM_LOOK);
+    // 카메라: 앉은 시점(마우스 시차) ↔ 직부감 부드럽게 전환
+    topT += (topGoal - topT) * (1 - Math.pow(0.002, dt));
+    if (Math.abs(topGoal - topT) < 0.0008) topT = topGoal;
+    parX += (mouseN.x * 0.9 - parX) * 0.06; parY += (mouseN.y * 0.5 - parY) * 0.06;
+    var k = 1 - topT;
+    camera.position.set(
+      (CAM_BASE.x * camDist + parX * k) * k,
+      (CAM_BASE.y * camDist + parY * k) * k + topH * topT,
+      (CAM_BASE.z * camDist) * k + topDz * topT);
+    camera.up.set(0, k, -topT).normalize();
+    camera.lookAt(CAM_LOOK.x * k, CAM_LOOK.y * k, CAM_LOOK.z * k + topDz * topT);
+    if (scene.fog) { scene.fog.near = fogBase.near + 30 * topT; scene.fog.far = fogBase.far + 70 * topT; }
 
     // 고스트 / 링 표시
     ghost.visible = false; ring.visible = false;

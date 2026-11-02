@@ -11,6 +11,7 @@
   body { -webkit-user-select: none; user-select: none; }
   #game { position: fixed; inset: 0; touch-action: manipulation; }
   canvas { display: block; outline: none; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+  #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 75% 70% at 50% 46%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 78%, rgba(0,0,0,.9) 100%); }
   #hud { position: fixed; top: 12px; left: 0; right: 0; padding: 0 190px; box-sizing: border-box; text-align: center; color: #e8d9b5; pointer-events: none; text-shadow: 0 2px 6px #000; }
   #turn { font-size: 20px; letter-spacing: 1px; }
   @media (max-width: 600px) { #turn { font-size: 15px; } #msg { font-size: 12px; } .btn { padding: 6px 10px; } #hud { padding: 0 92px 0 104px; } #mapSel { left: 12px; right: auto; top: 12px; max-width: 84px; font-size: 12px; } #endturn { top: 52px; } }
@@ -18,6 +19,7 @@
   .btn { position: fixed; top: 12px; padding: 8px 14px; background: #2a1d12; color: #e8d9b5; border: 1px solid #6b4f2e; border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px; }
   .btn:hover { background: #3a2917; }
   #restart { right: 12px; }
+  #viewbtn { right: 12px; top: 52px; }
   #mapSel { right: 92px; display: none; }
   #notice { position: fixed; left: 12px; bottom: 10px; max-width: 70%; padding: 6px 10px; background: rgba(40,20,10,.85); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 12px; display: none; pointer-events: none; }
   #endturn { left: 12px; display: none; }
@@ -27,9 +29,11 @@
 </head>
 <body>
 <div id="game"></div>
+<div id="vignette"></div>
 <div id="hud"><div id="turn"></div><div id="msg"></div></div>
 <button id="endturn" class="btn">턴 종료</button>
 <button id="restart" class="btn">새 게임</button>
+<button id="viewbtn" class="btn">🔍 전체 보기</button>
 <select id="mapSel" class="btn"></select>
 <div id="notice"></div>
 <div id="banner"><div id="bannerText"></div><button class="btn" id="again">다시 하기</button></div>
