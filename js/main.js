@@ -260,7 +260,7 @@
   var cardGeo = new THREE.PlaneGeometry(1.5, 2.25);
   var texCache = {};
   var cardMeshes = [];
-  var hoverCard = -1, inspectIdx = -1;       // inspectIdx: 크게 확대해서 보는 중인 카드
+  var hoverCard = -1, inspectIdx = -1, handUp = false;   // handUp: 패 쪽을 보면 패 전체가 위로 올라옴       // inspectIdx: 크게 확대해서 보는 중인 카드
   // 확대 보기 때 나머지 화면을 어둡게 (일반 카드보다 앞, 확대 카드보다 뒤)
   var dimMesh = new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, depthWrite: false }));
   dimMesh.position.z = 0.5; dimMesh.visible = false; handGroup.add(dimMesh);
@@ -479,17 +479,20 @@
     var vh = 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), vw = vh * camera.aspect;
     var sel = (S.mode && S.pendingIdx === i), hov = hoverCard === i;
     if (inspectIdx === i) return { x: 0, y: 0.0, z: 0.9, rz: 0, s: 1.75, tint: 1 };   // 자세히 보기: 화면 중앙에 크게
-    // 왼쪽 아래에 한 줄로 전부 보이게 (겹치지 않음)
-    var sc = 0.52, cw = 1.5 * sc, ch = 2.25 * sc, gap = 0.07;
-    var x0 = -vw / 2 + 0.45 + cw / 2;
-    var lift = (hov ? 0.22 : 0) + (sel ? 0.3 : 0);
+    // 인스크립션 패: 큰 카드를 겹쳐서 부채꼴로, 평소엔 윗부분만 보이다가 패 쪽을 보면 위로 올라옴
+    var up = handUp && inspectIdx < 0;
+    var sc = 0.95, cw = 1.5 * sc;
+    var step = up ? 0.82 : 0.62;
+    var mid = (n - 1) / 2, d = i - mid;
+    var x0 = -vw / 2 + 0.55 + cw / 2;
+    var y = -vh / 2 + 0.1 + (up ? 1.1 : 0) + (hov ? 0.3 : 0) + (sel ? 0.3 : 0) - d * d * 0.012;
     return {
-      x: x0 + i * (cw + gap),
-      y: -vh / 2 + ch / 2 + 0.2 + lift,
+      x: x0 + i * step,
+      y: y,
       z: (hov || sel ? 0.3 : 0) + i * 0.01,
-      rz: i % 2 ? 0.012 : -0.012,
-      s: sc * (hov || sel ? 1.1 : 1),
-      tint: (hov || sel) ? 1.0 : 0.82
+      rz: -d * (hov ? 0.012 : 0.045),
+      s: sc * (hov || sel ? 1.08 : 1),
+      tint: (up || hov || sel) ? 1.0 : 0.78
     };
   }
   function rebuildHand() {
@@ -751,6 +754,7 @@
     raycaster.setFromCamera(pointer, camera);
     var hits = raycaster.intersectObjects(cardMeshes, false);
     hoverCard = hits.length ? hits[0].object.userData.i : -1;
+    handUp = hoverCard >= 0 || (pointer.x < 0.2 && pointer.y < -0.3);
     hoverCell = null; hoverTable = false;
     if (hoverCard < 0 && raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
       var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
@@ -771,7 +775,7 @@
       else setTopView(false);                                               // 직부감에서 테이블을 누르면 카드 화면으로
     }
     // 터치는 '호버'가 없으므로 탭이 끝나면 호버 효과(카드 빛·미리보기)를 지움
-    if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; }
+    if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; handUp = false; }
   });
   window.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { if (inspectIdx >= 0) inspectIdx = -1; else if (S.mode) cancelMode(); }
