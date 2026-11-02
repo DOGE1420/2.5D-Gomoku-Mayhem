@@ -31,7 +31,7 @@
     { id: 'snipe',      name: '저격',      cat: '방해',   weight: 4,  ends: true, desc: '상대 돌 무작위\n2개 제거' },
     { id: 'double',     name: '1+1',       cat: '보급',   weight: 6,  desc: '무작위 카드\n2장 받기' },
     { id: 'peek',       name: '엿보기',    cat: '정보',   weight: 6,  desc: '이번 턴 동안\n상대 패를 봄' },
-    { id: 'giant',      name: '거대한 돌', cat: '희귀',   weight: 3,  desc: '다음 착수 자리에\n3×3 중립 바위\n(그 9칸의 돌은 깨짐)' },
+    { id: 'giant',      name: '거대한 돌', cat: '희귀',   weight: 3,  desc: '다음 착수 자리에 3×3\n중립 바위가 떨어짐\n(돌은 깨짐 · 폭파로 파괴)' },
     { id: 'weather',    name: '기상 이변', cat: '지형',   weight: 4,  desc: '맵을 다른\n무작위 맵으로 바꿈' },
     { id: 'shield',     name: '보호막',    cat: '수비',   weight: 7,  target: true, desc: '내 돌 주변 3×3 보호\n(상대의 다음 2턴)' },
     { id: 'blockade',   name: '봉쇄',      cat: '수비',   weight: 3,  desc: '상대가 다음에\n쓰는 카드 1장 무효' }
@@ -63,7 +63,17 @@
   ];
   var ABILITY_BY_ID = {}; ABILITIES.forEach(function (c) { ABILITY_BY_ID[c.id] = c; });
   var H = {};   // rules-legend.js 가 채우는 훅
-  var MAPS = ['candle', 'moon'];   // 기상 이변으로 바뀌는 (임시) 맵 — 맵 효과는 다음 단계
+  // 맵: 판마다 무작위 하나. 라운드 = 흑·백이 한 번씩 둔 것 (백의 턴이 끝날 때 1 증가). 효과는 js/rules-world.js
+  var MAP_LIST = [
+    { id: 'classic', icon: '🏞️', name: '평원', short: '자연재해 없음', desc: '아무 일도 없는 기본 맵.' },
+    { id: 'summer',  icon: '☀️', name: '여름', short: '5라운드마다 흑·백 돌 1개씩 녹음', desc: '5라운드마다 흑돌·백돌이 하나씩 무작위로 녹아 사라집니다.' },
+    { id: 'winter',  icon: '❄️', name: '겨울', short: '5라운드마다 돌 1개가 2라운드 동안 얼음', desc: '5라운드마다 무작위 돌 하나가 2라운드 동안 얼음(누구의 돌도 아님, 줄이 끊김)이 됩니다. 녹으면 원래 주인에게 돌아갑니다.' },
+    { id: 'space',   icon: '🌌', name: '우주', short: '웜홀: 판의 양 끝이 반대편과 연결', desc: '판의 왼쪽·오른쪽 끝, 위·아래 끝이 이어져 줄이 반대편으로 넘어가도 이어집니다.' },
+    { id: 'desert',  icon: '🏜️', name: '사막', short: '8라운드부터 4라운드마다 모래폭풍', desc: '8라운드부터 4라운드마다 모래폭풍이 모든 돌을 무작위 방향으로 한 칸씩 밉니다(승리 줄이 되는 이동은 없음).' },
+    { id: 'rain',    icon: '🌧️', name: '장마', short: '알까기 미끄러움 · 지진 때 쓰나미', desc: '알까기가 더 미끄럽고, 지진 카드가 2배로 자주 나오며, 지진 때 쓰나미가 한쪽 가장자리 3줄의 돌을 쓸어 갑니다.' }
+  ];
+  var MAP_BY_ID = {}; MAP_LIST.forEach(function (m) { MAP_BY_ID[m.id] = m; });
+  var ZONE_START = 15, ZONE_EVERY = 5, ZONE_MAX = 3;   // 자기장(모든 맵): 15라운드부터 5라운드마다 바깥 한 줄씩, 최대 3줄(9×9까지), 1라운드 전에 예고
 
   /* ---------------- 유틸 ---------------- */
   function other(p) { return p === BLACK ? WHITE : BLACK; }
@@ -77,7 +87,7 @@
   }
   // 가중치 기반 비복원 추출 (Efraimidis–Spirakis)
   function weightedSample(G, k) {
-    var keyed = CARDS.map(function (c) { return { c: c, key: Math.pow(rnd(G), 1 / (c.weight || 10)) }; });
+    var keyed = CARDS.map(function (c) { var w = (c.weight || 10) * (G.map === 'rain' && c.id === 'earthquake' ? 2 : 1); return { c: c, key: Math.pow(rnd(G), 1 / w) }; });   // 장마: 지진 2배
     keyed.sort(function (a, b) { return b.key - a.key; });
     return keyed.slice(0, k).map(function (x) { return x.c.id; });
   }
@@ -105,10 +115,12 @@
       next: { giant: 0 }, giants: [], peek: null,
       lg: lgFresh(), winOver: {}, immune: [], sturdy: { 1: 0, 2: 0 }, ab: { 1: null, 2: null }, refresh: { 1: 1, 2: 1 },
       startQueue: null, counter: null, sloth: null, lgUsedThisTurn: false,
-      round: 0, noMoveStreak: 0, map: 'candle',
+      round: 0, noMoveStreak: 0, map: 'classic', zone: 0, zoneWarn: false, frozen: [],
       alk: null, ev: [], log: []
     };
     for (var r = 0; r < SIZE; r++) { G.board.push([]); for (var c = 0; c < SIZE; c++) G.board[r].push(EMPTY); }
+    G.map = opts.map === 'random' ? MAP_LIST[Math.floor(rnd(G) * MAP_LIST.length)].id : (opts.map || 'classic');
+    ev(G, { t: 'map', id: G.map });
     if (opts.ability) {                                    // 시작 능력: 판마다 무작위 1개가 양쪽에 똑같이
       var ab = opts.ability === 'random' ? ABILITIES[Math.floor(rnd(G) * ABILITIES.length)].id : opts.ability;
       G.ab = { 1: ab, 2: ab };
@@ -178,6 +190,26 @@
     lg.far[p] = near >= 3 ? lg.far[p] + 1 : 0;
     lg.last[p] = { r: r, c: c };
   }
+  // 거대한 돌: 3×3 칸을 차지하는 중립 바위 하나. 어느 칸이든 같은 돌로 취급 (폭파로 통째로 부술 수 있음)
+  function giantAt(G, r, c) {
+    if (G.board[r][c] !== WALL) return null;
+    for (var i = 0; i < G.giants.length; i++) { var g = G.giants[i]; if (Math.max(Math.abs(g.r - r), Math.abs(g.c - c)) <= 1) return g; }
+    return null;
+  }
+  function breakGiant(G, g) {
+    var cells = [];
+    for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
+      var rr = g.r + dr, cc = g.c + dc;
+      if (!inb(rr, cc) || G.board[rr][cc] !== WALL || isZoneCell(G, rr, cc)) continue;
+      G.board[rr][cc] = EMPTY; cells.push({ r: rr, c: cc });
+      G.craters.push({ r: rr, c: cc, turns: 2, fresh: true });       // 폭파한 자리는 2턴 동안 아무도 못 둠
+    }
+    G.giants = G.giants.filter(function (x) { return x !== g; });
+    ev(G, { t: 'giantBreak', r: g.r, c: g.c, cells: cells });
+  }
+  function ringOf(r, c) { return Math.min(r, c, SIZE - 1 - r, SIZE - 1 - c); }
+  function isZoneCell(G, r, c) { return ringOf(r, c) < G.zone; }
+  function disasterHits(G, p) { return G.ab[p] !== 'umbrella'; }   // 자연재해 면역은 맵 재해·쓰나미만 막음 (자기장은 막지 못함)
   function handLimit(G, p) { return HAND_LIMIT + (G.ab[p] === 'pouch' ? 1 : 0); }
   function draftSize(G, p) { return G.ab[p] === 'clover' ? 4 : 3; }
   function isDark(G) { return G.lg.turnNo < G.lg.darkUntil; }          // 눈 감고 두기: 판이 어두운 중
@@ -188,14 +220,22 @@
 
   /* ---------------- 승리 판정 ---------------- */
   function checkWin(G, r, c, player) {
-    var dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    var dirs = [[0, 1], [1, 0], [1, 1], [1, -1]], wrap = G.map === 'space';   // 우주 맵: 웜홀로 판의 양 끝이 이어짐
     for (var d = 0; d < 4; d++) {
-      var dr = dirs[d][0], dc = dirs[d][1], count = 1, start = { r: r, c: c }, end = { r: r, c: c };
-      var rr = r + dr, cc = c + dc;
-      while (inb(rr, cc) && G.board[rr][cc] === player && count < SIZE) { end = { r: rr, c: cc }; count++; rr += dr; cc += dc; }
+      var dr = dirs[d][0], dc = dirs[d][1], count = 1, start = { r: r, c: c }, end = { r: r, c: c }, cells = [{ r: r, c: c }], crossed = false;
+      var rr = r + dr, cc = c + dc, wr, wc;
+      for (;;) {
+        if (wrap) { wr = (rr + SIZE) % SIZE; wc = (cc + SIZE) % SIZE; if (wr !== rr || wc !== cc) crossed = true; rr = wr; cc = wc; }
+        if (!inb(rr, cc) || G.board[rr][cc] !== player || count >= SIZE) break;
+        end = { r: rr, c: cc }; cells.push({ r: rr, c: cc }); count++; rr += dr; cc += dc;
+      }
       rr = r - dr; cc = c - dc;
-      while (inb(rr, cc) && G.board[rr][cc] === player && count < SIZE) { start = { r: rr, c: cc }; count++; rr -= dr; cc -= dc; }
-      if (count === G.winLength || (G.winOver[player] && count === G.winOver[player])) return { start: start, end: end, n: count };   // 정확히 N개만 승리 (장목은 승리 아님), 토끼와 거북이는 4개도
+      for (;;) {
+        if (wrap) { wr = (rr + SIZE) % SIZE; wc = (cc + SIZE) % SIZE; if (wr !== rr || wc !== cc) crossed = true; rr = wr; cc = wc; }
+        if (!inb(rr, cc) || G.board[rr][cc] !== player || count >= SIZE) break;
+        start = { r: rr, c: cc }; cells.unshift({ r: rr, c: cc }); count++; rr -= dr; cc -= dc;
+      }
+      if (count === G.winLength || (G.winOver[player] && count === G.winOver[player])) return { start: start, end: end, n: count, cells: cells, wrap: wrap && crossed };   // 정확히 N개만 승리 (장목은 승리 아님), 토끼와 거북이는 4개도
     }
     return null;
   }
@@ -205,13 +245,13 @@
     }
     return null;
   }
-  function finish(G, winner, line) {
+  function finish(G, winner, line, cells) {
     G.gameOver = true; G.winner = winner; G.winLine = line || null;
-    ev(G, winner ? { t: 'win', p: winner, line: line } : { t: 'draw' });
+    ev(G, winner ? { t: 'win', p: winner, line: line, cells: cells } : { t: 'draw' });
   }
   function endIfBoardWin(G) {
     var f = scanBoardForWin(G);
-    if (f) { finish(G, f.player, [f.win.start, f.win.end]); return true; }
+    if (f) { finish(G, f.player, [f.win.start, f.win.end], f.win.cells); return true; }
     return false;
   }
 
@@ -248,6 +288,7 @@
     G.current = other(prev);
     if (G.current === BLACK) {                            // 백 턴이 끝나 흑 차례 = 1라운드
       G.round++;
+      if (H.roundTick) H.roundTick(G);                    // 맵 자연재해 · 자기장 (rules-world.js)
       pruneTraps(G);
       if (endIfBoardWin(G)) return;
     }
@@ -353,7 +394,7 @@
     onPlaceEffects(G, r, c, cur);
 
     var win = checkWin(G, r, c, cur);
-    if (win) { finish(G, cur, [win.start, win.end]); return { ok: true, win: true }; }
+    if (win) { finish(G, cur, [win.start, win.end], win.cells); return { ok: true, win: true }; }
     if (!hasEmptyCell(G)) { finish(G, 0); return { ok: true, draw: true }; }
 
     if (countsForDraft) G.placedCount[cur]++;
@@ -378,6 +419,7 @@
         if (isStone(v)) { removeStoneAt(G, rr, cc); broken.push({ r: rr, c: cc, p: v }); if (dr || dc) lgLose(G, v, rr, cc); }
         G.board[rr][cc] = WALL;
       }
+      G.giants = G.giants.filter(function (o) { return Math.max(Math.abs(o.r - r), Math.abs(o.c - c)) > 2; });   // 겹친 옛 바위는 새 바위에 묻힘
       G.giants.push({ r: r, c: c });
       G.craters = G.craters.filter(function (x) { return Math.max(Math.abs(x.r - r), Math.abs(x.c - c)) > 1; });
       pruneTraps(G);
@@ -516,7 +558,7 @@
         if (!listStones(G, p).some(function (q) { return !isWindmill(G, q.r, q.c); })) return { ok: false, reason: 'noTarget' };
         G.pending = { type: 'windmill', forPlayer: p, handIndex: idx }; return { ok: true, pending: true };
       case 'bomb':
-        if (!hasStoneOf(G, opp)) return { ok: false, reason: 'noTarget' };
+        if (!hasStoneOf(G, opp) && !G.giants.length) return { ok: false, reason: 'noTarget' };
         G.pending = { type: 'remove', forPlayer: p, opponent: opp, handIndex: idx }; return { ok: true, pending: true };
       case 'trade':
         if (!hasTradablePair(G)) return { ok: false, reason: 'noTarget' };
@@ -535,6 +577,7 @@
         return { ok: true, alk: true };
       case 'earthquake':
         spend(G, idx); runEarthquake(G);
+        if (G.map === 'rain' && H.tsunami) H.tsunami(G);   // 장마: 지진 뒤 쓰나미
         if (!hasEmptyCell(G)) finish(G, 0); else endIfBoardWin(G);
         return { ok: true };
       case 'blockade':
@@ -588,10 +631,12 @@
       case 'giant':
         spend(G, idx); G.next.giant = p; ev(G, { t: 'next', what: 'giant', p: p });
         return { ok: true };
-      case 'weather': {
+      case 'weather': {                                    // 맵을 다른 무작위 맵으로 (얼음은 모두 녹고 새 맵 규칙이 바로 적용됨)
         spend(G, idx);
-        var others = MAPS.filter(function (m) { return m !== G.map; });
-        G.map = others[Math.floor(rnd(G) * others.length)];
+        G.frozen.forEach(function (f) { if (G.board[f.r][f.c] === WALL && !isZoneCell(G, f.r, f.c)) { G.board[f.r][f.c] = f.owner; ev(G, { t: 'thaw', r: f.r, c: f.c, owner: f.owner }); } });
+        G.frozen = [];
+        var others = MAP_LIST.filter(function (m) { return m.id !== G.map; });
+        G.map = others[Math.floor(rnd(G) * others.length)].id;
         ev(G, { t: 'weather', map: G.map });
         endIfBoardWin(G);
         return { ok: true };
@@ -609,7 +654,7 @@
     switch (t.type) {
       case 'sacrifice': case 'wager': case 'kingPick': return v === t.forPlayer;       // 전설 카드: 내 돌 고르기
       case 'windmill': return v === t.forPlayer && !isWindmill(G, r, c);
-      case 'remove': return v === t.opponent && !isProtected(G, r, c);
+      case 'remove': return (v === t.opponent && !isProtected(G, r, c)) || (!!giantAt(G, r, c) && !isZoneCell(G, r, c));   // 폭파는 거대한 돌도 부술 수 있음
       case 'teleport': case 'shield': return v === t.forPlayer;
       case 'wall': return v === EMPTY;
       case 'trap': return v === EMPTY && !G.traps.some(function (x) { return x.r === r && x.c === c; });
@@ -660,6 +705,7 @@
 
     switch (t.type) {
       case 'remove':
+        if (v === WALL) { breakGiant(G, giantAt(G, r, c)); break; }
         lgLose(G, t.opponent, r, c);
         removeStoneAt(G, r, c);
         G.traps = G.traps.filter(function (x) { return !(x.r === r && x.c === c); });
@@ -737,10 +783,10 @@
     a.phase = 'sim'; a.frames = 0;
     return true;
   }
-  function alkStep(stones) {
-    var R2 = ALK.R * 2, i, j, s;
-    for (i = 0; i < stones.length; i++) { s = stones[i]; s.x += s.vx; s.z += s.vz; s.vx *= ALK.FRICTION; s.vz *= ALK.FRICTION; }
-    for (i = 0; i < stones.length; i++) { s = stones[i]; s.x += s.vx; s.z += s.vz; s.vx *= ALK.FRICTION; s.vz *= ALK.FRICTION; }
+  function alkStep(stones, friction) {
+    var R2 = ALK.R * 2, i, j, s, F = friction || ALK.FRICTION;
+    for (i = 0; i < stones.length; i++) { s = stones[i]; s.x += s.vx; s.z += s.vz; s.vx *= F; s.vz *= F; }
+    for (i = 0; i < stones.length; i++) { s = stones[i]; s.x += s.vx; s.z += s.vz; s.vx *= F; s.vz *= F; }
     for (i = 0; i < stones.length; i++) {
       s = stones[i];
       if (s.x < -ALK.XMAX + ALK.R) { s.x = -ALK.XMAX + ALK.R; s.vx = Math.abs(s.vx) * 0.6; }
@@ -763,7 +809,7 @@
   // 한 프레임 진행. 멈췄으면 finishAlk 까지 처리하고 true 반환
   function alkTick(G) {
     var a = G.alk; if (!a || a.phase !== 'sim') return false;
-    alkStep(a.stones); a.frames++;
+    alkStep(a.stones, G.map === 'rain' ? 0.978 : ALK.FRICTION); a.frames++;
     if (alkMaxSpeed(a.stones) < ALK.MIN_SPEED || a.frames > ALK.MAX_FRAMES) { finishAlk(G); return true; }
     return false;
   }
@@ -811,13 +857,14 @@
     pruneTraps: pruneTraps, pruneCraters: pruneCraters, isCrater: isCrater, listStones: listStones, hasEmptyCell: hasEmptyCell,
     grantRandomCard: grantRandomCard, trimHand: trimHand, endIfBoardWin: endIfBoardWin, finish: finish, checkWin: checkWin,
     passTurn: passTurn, execCard: execCard, lgLose: lgLose, lgWouldWin: lgWouldWin, handLimit: handLimit, draftPicks: draftPicks,
-    isProtected: isProtected, isWindmill: isWindmill, pickRandomEmptyCell: pickRandomEmptyCell, isDark: isDark };
+    isProtected: isProtected, isWindmill: isWindmill, pickRandomEmptyCell: pickRandomEmptyCell, isDark: isDark,
+    isZoneCell: isZoneCell, ringOf: ringOf, disasterHits: disasterHits, MAP_LIST: MAP_LIST, ZONE: { START: ZONE_START, EVERY: ZONE_EVERY, MAX: ZONE_MAX } };
   root.Rules = {
     SIZE: SIZE, EMPTY: EMPTY, BLACK: BLACK, WHITE: WHITE, WALL: WALL, HAND_LIMIT: HAND_LIMIT, INTERVAL: INTERVAL,
     CARDS: CARDS, CARD_BY_ID: CARD_BY_ID, ALK: ALK, other: other, isStone: isStone, inb: inb,
     create: create, drain: drain, place: place, canPlace: canPlace, useCard: useCard, canUseCard: canUseCard,
     target: target, isValidTarget: isValidTarget, cancel: cancel, pickDraft: pickDraft,
-    isProtected: isProtected, core: core, H: H, LEGENDS: LEGENDS, LEGEND_BY_ID: LEGEND_BY_ID, ABILITIES: ABILITIES, ABILITY_BY_ID: ABILITY_BY_ID,
+    isProtected: isProtected, isZoneCell: isZoneCell, ringOf: ringOf, giantAt: giantAt, MAP_LIST: MAP_LIST, MAP_BY_ID: MAP_BY_ID, ZONE: { START: ZONE_START, EVERY: ZONE_EVERY, MAX: ZONE_MAX }, core: core, H: H, LEGENDS: LEGENDS, LEGEND_BY_ID: LEGEND_BY_ID, ABILITIES: ABILITIES, ABILITY_BY_ID: ABILITY_BY_ID,
     reroll: reroll, isDark: isDark, handLimit: handLimit, isWindmill: isWindmill, isBlockedForPlayer: isBlockedForPlayer,
     listStones: listStones, alkLaunch: alkLaunch, alkTick: alkTick, alkStep: alkStep, hasEmptyCell: hasEmptyCell,
     weightedSample: weightedSample, grantRandomCard: grantRandomCard

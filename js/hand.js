@@ -43,7 +43,8 @@ var emberTex = (function () {
   g.fillStyle = gr; g.fillRect(0, 0, 32, 32);
   return new THREE.CanvasTexture(cv);
 })();
-function startBurn(mesh, moveToCenter, onIgnite) {
+// onDone: 카드가 다 타서 사라진 뒤에 부르는 함수 — 카드 효과는 연출이 끝난 다음에 적용됨
+function startBurn(mesh, moveToCenter, onDone) {
   var tex = mesh.material.map;
   mesh.material.dispose();
   mesh.material = new THREE.ShaderMaterial({ uniforms: { map: { value: tex }, burn: { value: 0 } }, vertexShader: burnVert, fragmentShader: burnFrag, transparent: true, depthWrite: false });
@@ -57,10 +58,10 @@ function startBurn(mesh, moveToCenter, onIgnite) {
   var pts = new THREE.Points(g, new THREE.PointsMaterial({ size: 9, map: emberTex, sizeAttenuation: false, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
   pts.frustumCulled = false; pts.position.set(0, 0, 1.0); handGroup.add(pts);
   var off = moveToCenter ? BURN_MOVE : 0.1;
-  burns.push({ m: mesh, pts: pts, n: n, base: base, vel: vel, delay: delay, off: off, move: moveToCenter, t: 0, ignited: !moveToCenter, onIgnite: onIgnite,
+  burns.push({ m: mesh, pts: pts, n: n, base: base, vel: vel, delay: delay, off: off, move: moveToCenter, t: 0, ignited: !moveToCenter, done: false, onDone: onDone,
     from: mesh.position.clone(), fromS: mesh.scale.x, fromR: mesh.rotation.z });
   if (!moveToCenter) sfx('burn');          // 바로 발동하는 카드: 시작과 동시에 불이 붙음
-  // 날아오는 카드: 가운데에 도착해 불이 붙는 순간(stepBurns)에 소리와 효과가 나옴
+  // 날아오는 카드: 가운데에 도착해 불이 붙는 순간(stepBurns)에 타는 소리가 나고, 효과는 다 탄 뒤에 적용됨
 }
 function stepBurns(dt) {
   for (var bi = burns.length - 1; bi >= 0; bi--) {
@@ -68,12 +69,10 @@ function stepBurns(dt) {
     var mv = b.move ? Math.min(1, b.t / BURN_MOVE) : 1, e = 1 - Math.pow(1 - mv, 3);   // ease-out: 감속하며 도착
     b.m.position.set(b.from.x * (1 - e), b.from.y * (1 - e), b.from.z + (0.9 - b.from.z) * e);   // 화면 가운데로
     var sc = b.fromS + (1.75 - b.fromS) * e; b.m.scale.set(sc, sc, 1); b.m.rotation.z = b.fromR * (1 - e);
-    if (!b.ignited && b.t >= b.off) {                       // 도착 → 점화: 타는 소리 + 카드 효과를 이 순간에 맞춤
-      b.ignited = true; sfx('burn');
-      if (b.onIgnite) b.onIgnite();
-    }
+    if (!b.ignited && b.t >= b.off) { b.ignited = true; sfx('burn'); }          // 도착 → 점화: 타는 소리
     var bt = Math.max(0, b.t - b.off) / BURN_TIME;
     b.m.material.uniforms.burn.value = Math.min(1, bt);
+    if (!b.done && bt >= 1) { b.done = true; if (b.onDone) b.onDone(); }           // 다 탔다 → 이제 카드 효과 적용
     var pa = b.pts.geometry.attributes.position, ca = b.pts.geometry.attributes.color;
     for (var j = 0; j < b.n; j++) {                         // 불씨: 위로 떠오르며 사라짐
       var age = (b.t - b.off) - b.delay[j] * BURN_TIME * 0.8, life = 1.3;
@@ -95,15 +94,15 @@ function clearBurns() {
   burns.length = 0;
 }
 // 효과가 실행된 카드: 왼쪽 아래에서 가운데로 와서 탐
-function burnPlayed(onIgnite) {
-  if (!playedMesh) { if (onIgnite) onIgnite(); return; }
-  var m = playedMesh; playedMesh = null; startBurn(m, true, onIgnite);
+function burnPlayed(onDone) {
+  if (!playedMesh) { if (onDone) onDone(); return; }
+  var m = playedMesh; playedMesh = null; startBurn(m, true, onDone);
 }
 // 바로 발동하는 카드: 확대된 자리(가운데)에서 바로 탐
-function burnSnap(snap) {
+function burnSnap(snap, onDone) {
   var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(snap.id), transparent: true, alphaTest: 0.02 }));
   m.position.set(snap.x, snap.y, 0.9); m.scale.set(snap.s, snap.s, 1); handGroup.add(m);
-  startBurn(m, false);
+  startBurn(m, false, onDone);
 }
 function clearPlayed() {
   if (!playedMesh) return;

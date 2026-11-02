@@ -1,6 +1,7 @@
 // 규칙 엔진 시험: node tests/rules-test.js
 const Rules = require('../js/rules.js');
 require('../js/rules-legend.js');
+require('../js/rules-world.js');
 const { BLACK, WHITE, EMPTY, WALL, SIZE } = Rules;
 let fails = 0;
 function ok(c, m) { if (!c) { fails++; console.log('  ✗', m); } else console.log('  ✓', m); }
@@ -114,6 +115,12 @@ console.log('[카드: 함정 · 장벽 · 거대한 돌 · 투명한 돌 · 엿�
   T.board[6][6] = WHITE; T.board[6][7] = BLACK; T.hand[BLACK] = ['giant'];
   Rules.useCard(T, 0); Rules.place(T, 7, 7);
   ok(T.board[6][6] === WALL && T.board[7][7] === WALL && T.board[6][7] === WALL, '거대한 돌: 착수 자리 3×3이 중립 바위가 되고 돌은 깨짐');
+  ok(T.giants.length === 1 && Rules.giantAt(T, 8, 8) && Rules.giantAt(T, 6, 6) && !Rules.giantAt(T, 9, 9), '거대한 돌: 3×3 칸이 하나의 돌');
+  T.hand[WHITE] = ['bomb']; T.current = WHITE; T.used[WHITE] = false; T.done = 0; T.needed = 1; T.placed = [];
+  const bb = Rules.useCard(T, 0);
+  ok(bb.ok && bb.pending && Rules.isValidTarget(T, 6, 6) && Rules.isValidTarget(T, 8, 8) && !Rules.isValidTarget(T, 9, 9), '폭파: 거대한 돌의 어느 칸이든 대상이 됨');
+  Rules.target(T, 8, 7);
+  ok(T.giants.length === 0 && T.board[7][7] === EMPTY && T.board[6][6] === EMPTY && T.board[8][8] === EMPTY && Rules.isBlockedForPlayer(T, 7, 7, BLACK), '폭파: 거대한 돌이 통째로 부서지고 그 자리는 2턴간 막힘');
   const X = Rules.create({ rng: seeded(16) });
   X.hand[BLACK] = ['peek']; X.hand[WHITE] = ['bomb', 'wall'];
   Rules.useCard(X, 0);
@@ -286,13 +293,69 @@ function legendGame(card, seed) {
   ok(F.lg.king[BLACK] === null, '왕의 귀환: 왕이 쓰러지면 실패');
 }
 
+
+console.log('[맵 · 자기장]');
+function passes(G, n) { for (let i = 0; i < n; i++) Rules.core.passTurn(G); }
+function fill(G) { [[3,3],[3,5],[5,3],[10,10]].forEach(([r,c]) => G.board[r][c] = BLACK); [[4,4],[4,6],[6,4],[11,11]].forEach(([r,c]) => G.board[r][c] = WHITE); }
+{
+  ok(Rules.MAP_LIST.length === 6, '맵 6종');
+  const R6 = new Set(); for (let i = 1; i <= 120; i++) R6.add(Rules.create({ map: 'random' }).map);
+  ok(R6.size >= 5, '맵은 판마다 무작위: ' + [...R6].join(','));
+  // 여름
+  const G = Rules.create({ map: 'summer', rng: seeded(50) }); fill(G);
+  const nb = Rules.countStones(G, BLACK), nw = Rules.countStones(G, WHITE);
+  passes(G, 8); ok(Rules.countStones(G, BLACK) === nb && Rules.countStones(G, WHITE) === nw, '여름: 4라운드까지는 아무 일도 없음');
+  passes(G, 2);
+  ok(Rules.countStones(G, BLACK) === nb - 1 && Rules.countStones(G, WHITE) === nw - 1 && G.round === 5, '여름: 5라운드에 흑·백 돌이 하나씩 녹음');
+  // 겨울
+  const W = Rules.create({ map: 'winter', rng: seeded(51) }); fill(W);
+  passes(W, 10);
+  ok(W.frozen.length === 1 && W.board[W.frozen[0].r][W.frozen[0].c] === WALL, '겨울: 5라운드에 돌 하나가 얼음(중립)이 됨');
+  const fz = W.frozen[0]; passes(W, 4);
+  ok(W.frozen.length === 0 && W.board[fz.r][fz.c] === fz.owner, '겨울: 2라운드 뒤 녹아 원래 주인에게 돌아옴');
+  // 우주: 웜홀
+  const S = Rules.create({ map: 'space' }); [13,14,0,1].forEach(c => S.board[7][c] = BLACK);
+  Rules.place(S, 7, 2);
+  ok(S.gameOver && S.winner === BLACK, '우주: 판의 끝을 넘어 이어진 5목이 승리 (웜홀)');
+  const P = Rules.create({ map: 'classic' }); [13,14,0,1].forEach(c => P.board[7][c] = BLACK); Rules.place(P, 7, 2);
+  ok(!P.gameOver, '평원: 끝을 넘는 줄은 이어지지 않음');
+  // 사막
+  const D = Rules.create({ map: 'desert', rng: seeded(52) }); fill(D);
+  passes(D, 14); const before = JSON.stringify(D.board);
+  passes(D, 2);
+  ok(D.round === 8 && JSON.stringify(D.board) !== before && Rules.countStones(D, BLACK) === 4 && Rules.countStones(D, WHITE) === 4, '사막: 8라운드에 모래폭풍 — 돌이 밀림(개수는 그대로)');
+  // 장마: 지진 뒤 쓰나미
+  const T = Rules.create({ map: 'rain', rng: seeded(53) });
+  [[0,0],[0,5],[1,1],[2,2],[7,7],[12,12],[14,14],[8,3],[3,9]].forEach(([r,c], i) => T.board[r][c] = i % 2 ? BLACK : WHITE);
+  T.hand[BLACK] = ['earthquake']; Rules.useCard(T, 0);
+  const evs = Rules.drain(T);
+  ok(evs.some(e => e.t === 'disaster' && e.kind === 'tsunami'), '장마: 지진 뒤 쓰나미가 일어남');
+  // 자기장
+  const Z = Rules.create({ map: 'classic', rng: seeded(54) }); Z.board[0][5] = BLACK; Z.board[7][7] = WHITE;
+  passes(Z, 28); ok(Z.zoneWarn && Z.zone === 0, '자기장: 14라운드에 예고');
+  passes(Z, 2);
+  ok(Z.zone === 1 && Z.board[0][5] === WALL && Rules.countStones(Z, BLACK) === 0 && Z.board[7][7] === WHITE, '자기장: 15라운드에 바깥 한 줄이 닫히고 그 줄의 돌이 사라짐');
+  ok(!Rules.canPlace(Z, 0, 3) && !Rules.canPlace(Z, 14, 14) && Rules.canPlace(Z, 1, 1), '자기장: 닫힌 줄에는 둘 수 없음');
+  passes(Z, 10 + 10); ok(Z.zone === 3, '자기장: 5라운드마다 한 줄씩, 최대 3줄 (9×9까지)');
+  passes(Z, 20); ok(Z.zone === 3, '자기장: 3줄을 넘어 닫히지 않음');
+  // 자연재해 면역
+  const U = Rules.create({ map: 'summer', ability: 'umbrella', rng: seeded(55) }); fill(U); passes(U, 10);
+  ok(Rules.countStones(U, BLACK) === 4 && Rules.countStones(U, WHITE) === 4, '자연재해 면역: 여름에도 돌이 녹지 않음');
+  const U2 = Rules.create({ map: 'classic', ability: 'umbrella', rng: seeded(56) }); U2.board[0][5] = BLACK; passes(U2, 30);
+  ok(U2.zone === 1 && Rules.countStones(U2, BLACK) === 0, '자연재해 면역: 자기장은 막지 못함');
+  // 기상 이변
+  const X = Rules.create({ map: 'winter', rng: seeded(57) }); fill(X); passes(X, 10);
+  const fz2 = X.frozen[0]; X.hand[X.current] = ['weather']; Rules.useCard(X, 0);
+  ok(X.map !== 'winter' && X.frozen.length === 0 && X.board[fz2.r][fz2.c] === fz2.owner, '기상 이변: 다른 맵으로 바뀌고 얼음은 모두 녹음 → ' + X.map);
+}
+
 console.log('[무작위 대국 — 오류·멈춤 확인]');
 {
   const Rules2 = Rules; let games = 0, finished = 0, steps = 0, maxSteps = 0, errors = 0;
   const used = {}, usedL = {};
   for (let seed = 1; seed <= 400; seed++) {
     const rng = seeded(seed * 7919);
-    const G = Rules2.create({ rng, legends: true, ability: 'random' });
+    const G = Rules2.create({ rng, legends: true, ability: 'random', map: 'random' });
     let n = 0;
     try {
       while (!G.gameOver && n < 3000) {

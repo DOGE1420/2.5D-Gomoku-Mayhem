@@ -57,6 +57,8 @@ function applyMap(m) {
     candles.forEach(function (c) { c.body.visible = c.flame.visible = c.light.visible = candleOn; c.light.color.set(C.color || '#ffa550'); });
     candleBase = C.intensity != null ? C.intensity : 1.2;
     stars.visible = m.stars !== false && !di;
+    stars.material.size = m.stars === 'bright' ? 2.6 : 1.8; starBase = m.stars === 'bright' ? 0.95 : 0.55;
+    setPrecip(m.snow ? 'snow' : m.rain ? 'rain' : null);
     // 카메라
     var cam = m.camera || {};
     CAM_BASE.fromArray(cam.pos || defCam.pos.toArray()); CAM_LOOK.fromArray(cam.look || defCam.look.toArray());
@@ -64,18 +66,7 @@ function applyMap(m) {
     skinStone(matBlack, st.black, 0x17130f); skinStone(matWhite, st.white, 0xece4d2);
   });
 }
-function buildMapSelect() {
-  var sel = document.getElementById('mapSel'), ms = getMaps();
-  try { var sv = parseInt(localStorage.getItem('gomoku3d.map'), 10); if (sv >= 0 && sv < ms.length) curMapIdx = sv; } catch (e) {}
-  if (ms.length < 2) { sel.style.display = 'none'; return; }
-  ms.forEach(function (m, i) { var o = document.createElement('option'); o.value = i; o.textContent = '🗺 ' + (m.name || m.id || ('맵 ' + (i + 1))); sel.appendChild(o); });
-  sel.value = curMapIdx; sel.style.display = 'block';
-  sel.addEventListener('change', function () {
-    curMapIdx = parseInt(sel.value, 10);
-    try { localStorage.setItem('gomoku3d.map', curMapIdx); } catch (e) {}
-    applyMap(ms[curMapIdx]).then(showAssetNotice);
-  });
-}
+function buildMapSelect() { document.getElementById('mapSel').style.display = 'none'; }   // 맵은 판마다 무작위 (직접 고르지 않음)
 function showAssetNotice() {
   var t = '';
   if (blockedPaths.length) t = '이미지 에셋은 웹/로컬 서버에서만 로드돼요 (run.bat · run.sh 로 열기). 지금은 기본 그림으로 표시 중입니다.';
@@ -85,4 +76,36 @@ function showAssetNotice() {
 function loadCardAssets() {
   var list = [CFG.cardPaper].concat(CARD_IDS.map(cardArtPath)).filter(Boolean);
   return Promise.all(list.map(loadImg));
+}
+
+/* ---------------- 눈 · 비 (겨울 · 장마) ---------------- */
+var precip = { kind: null, pts: null, n: 520 }, starBase = 0.55;
+function setPrecip(kind) {
+  if (precip.kind === kind) return;
+  if (precip.pts) { scene.remove(precip.pts); precip.pts.geometry.dispose(); precip.pts.material.dispose(); precip.pts = null; }
+  precip.kind = kind; if (!kind) return;
+  var n = precip.n, pos = new Float32Array(n * 3);
+  for (var i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 46; pos[i * 3 + 1] = Math.random() * 20; pos[i * 3 + 2] = (Math.random() - 0.5) * 46; }
+  var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  var m = kind === 'snow'
+    ? new THREE.PointsMaterial({ color: 0xeaf2ff, size: 7, map: emberTex, sizeAttenuation: false, transparent: true, opacity: 0.85, depthWrite: false })
+    : new THREE.PointsMaterial({ color: 0x9ab8d8, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0.55, depthWrite: false });
+  precip.pts = new THREE.Points(g, m); precip.pts.frustumCulled = false; scene.add(precip.pts);
+}
+function stepPrecip(dt) {
+  if (!precip.pts) return;
+  var a = precip.pts.geometry.attributes.position, snow = precip.kind === 'snow', sp = snow ? 2.2 : 16;
+  for (var i = 0; i < precip.n; i++) {
+    var y = a.getY(i) - sp * dt;
+    if (snow) a.setX(i, a.getX(i) + Math.sin(time * 0.8 + i) * dt * 0.6);
+    if (y < 0) { y = 18 + Math.random() * 2; a.setX(i, (Math.random() - 0.5) * 46); a.setZ(i, (Math.random() - 0.5) * 46); }
+    a.setY(i, y);
+  }
+  a.needsUpdate = true;
+}
+// 이번 판 맵(규칙)에 맞는 장면 설정으로 바꿈
+function applyThemeFor(mapId) {
+  var i = mapIndexOf(mapId);
+  if (i < 0) return Promise.resolve();
+  curMapIdx = i; return applyMap(getMaps()[i]);
 }

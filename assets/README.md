@@ -24,7 +24,7 @@
 
 ## 2. 맵  (`assets/maps/<맵이름>/`)
 
-`config.js`의 `maps` 배열에 항목을 추가하면 됩니다. 맵이 2개 이상이면 화면 위쪽에 선택 메뉴가 생깁니다.
+`config.js`의 `maps` 에서 규칙 맵 id(classic·summer·winter·space·desert·rain)마다 설정합니다. 맵은 판마다 무작위로 정해집니다(메뉴로 고르지 않음).
 모든 항목은 선택 사항이고, 빼면 기본값을 씁니다.
 
 | 항목 | 설명 | 규격 |

@@ -47,36 +47,24 @@ window.GAME_CONFIG = {
   artBlend: 'normal',           // 'normal' | 'multiply' (흰 배경 선화를 양피지에 스며들게 하려면 multiply)
 
   /* ---------- 맵 ---------- */
-  // 여러 개 넣으면 화면 위쪽에 맵 선택 메뉴가 나타납니다. 첫 번째가 기본값입니다.
+  // 게임 규칙의 맵 6종(평원·여름·겨울·우주·사막·장마)마다 3D 장면의 분위기를 정합니다. 맵은 판마다 무작위로 정해지고
+  // (기상 이변 카드로 바뀜) 해당 id 의 설정이 적용됩니다. 이미지를 쓰려면 항목에 board/table/backdrop/stones 를 추가하세요.
   maps: [
-    {
-      id: 'candle', name: '촛불 방'            // 아무 항목도 안 쓰면 기본 촛불 방
-    },
-    {
-      id: 'moon', name: '달빛 방',              // 이미지 없이 색/조명만 바꾼 예시
-      background: '#04060e',
-      fog: { color: '#04060e', near: 22, far: 90 },
-      light: { hemiSky: '#5a6e9a', hemiGround: '#05060a', hemi: 0.55, spotColor: '#a9c2ff', spot: 1.1, spotAngle: 0.9 },
-      candle: { visible: false }
-    }
-
-    /* 이미지를 넣은 맵 예시 (모든 항목 선택 사항):
-    ,{
-      id: 'cabin', name: '오두막',
-      board: 'assets/maps/cabin/board.png',     // 판 윗면 (정사각형 1024x1024 권장)
-      boardGrid: true,                          // true: 이미지 위에 격자선/화점을 자동으로 그림
-                                                // false: 이미지에 이미 격자가 그려져 있음 (아래 규격 참고)
-      table: 'assets/maps/cabin/table.png',     // 테이블 바닥 (타일링 텍스처)
-      tableRepeat: 6,
-      hideTable: false,                         // true: 테이블 바닥을 숨김 (backdrop 에 바닥이 그려진 경우)
-      backdrop: 'assets/maps/cabin/room.jpg',   // 방 전체 배경 (360° 파노라마, 가로세로 2:1)
-      stones: { black: 'assets/maps/cabin/black.png', white: 'assets/maps/cabin/white.png' },
-      background: '#07050a',
-      fog: { color: '#07050a', near: 22, far: 90 },   // 또는 fog: null (안개 없음)
-      light: { hemiSky: '#7a6650', hemiGround: '#0a0806', hemi: 0.45, spotColor: '#ffe2b0', spot: 0.55, spotAngle: 0.7 },
-      candle: { visible: true, color: '#ffa550', intensity: 1.5 },
-      camera: { pos: [0, 15.5, 13.5], look: [0, 0, 3.2] }
-    }
-    */
+    { id: 'classic', name: '평원' },                                   // 기본 촛불 방
+    { id: 'summer', name: '여름', background: '#150a03', fog: { color: '#150a03', near: 21, far: 54 },
+      light: { hemiSky: '#8a6a3a', hemiGround: '#120a04', hemi: 0.16, spotColor: '#ffb050', spot: 1.9, spotAngle: 0.7 },
+      candle: { visible: true, color: '#ff9a30', intensity: 1.4 } },
+    { id: 'winter', name: '겨울', background: '#02050c', fog: { color: '#02050c', near: 21, far: 54 }, snow: true,
+      light: { hemiSky: '#4a6a9a', hemiGround: '#04070d', hemi: 0.2, spotColor: '#cfe2ff', spot: 1.35, spotAngle: 0.66 },
+      candle: { visible: true, color: '#9fc4ff', intensity: 0.85 } },
+    { id: 'space', name: '우주', background: '#05010d', fog: { color: '#05010d', near: 26, far: 70 }, stars: 'bright',
+      light: { hemiSky: '#4a3a8a', hemiGround: '#05030c', hemi: 0.22, spotColor: '#b488ff', spot: 1.25, spotAngle: 0.7 },
+      candle: { visible: false } },
+    { id: 'desert', name: '사막', background: '#1a0f04', fog: { color: '#1a0f04', near: 21, far: 54 },
+      light: { hemiSky: '#9a7a44', hemiGround: '#120a03', hemi: 0.2, spotColor: '#ffd28a', spot: 2.0, spotAngle: 0.72 },
+      candle: { visible: true, color: '#ffc060', intensity: 1.2 } },
+    { id: 'rain', name: '장마', background: '#02060a', fog: { color: '#02060a', near: 20, far: 50 }, rain: true,
+      light: { hemiSky: '#3a5a7a', hemiGround: '#03060a', hemi: 0.18, spotColor: '#9ab8d8', spot: 1.1, spotAngle: 0.66 },
+      candle: { visible: true, color: '#88aacc', intensity: 0.8 } }
   ]
 };

@@ -11,7 +11,7 @@ var pendingCounterSnap = null;
 function afterUse(res, evs, snap) {
   if (res.counter) { pendingCounterSnap = snap; runEvents(evs); return; }          // 'counterAsk' 이벤트가 대응 창을 엶
   if (res.pending) { showPlayed(snap); syncS(); runEvents(evs); return; }          // 대상을 고르는 카드는 왼쪽 아래에서 기다림
-  burnSnap(snap); runEvents(evs);                                                  // 바로 발동: 가운데서 불타며 효과 실행
+  busy++; burnSnap(snap, function () { busy--; runEvents(evs); });                 // 바로 발동: 가운데서 다 타고 난 뒤에 효과 적용
 }
 // 🧘 무소유 대응 창의 답: 막으면 카드가 무효, 넘기면 그대로 발동
 function answerCounterUI(yes) {

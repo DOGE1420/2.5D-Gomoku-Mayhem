@@ -9,9 +9,11 @@
 function reset(opts) {
   for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) { if (meshes[r][c]) scene.remove(meshes[r][c]); meshes[r][c] = null; }
   if (alkUI) alkUI.meshes.forEach(function (m) { if (m) scene.remove(m); });
-  G = Rules.create(opts === undefined || (opts && opts.type) ? { legends: true, ability: 'random' } : opts); anims.length = 0; busy = 0; tradeFirst = null; alkUI = null; alkAcc = 0;
+  Object.keys(giantMeshes).forEach(function (k) { scene.remove(giantMeshes[k]); }); giantMeshes = {};
+  G = Rules.create(opts === undefined || (opts && opts.type) ? { legends: true, ability: 'random', map: 'random' } : opts); anims.length = 0; busy = 0; tradeFirst = null; alkUI = null; alkAcc = 0;
   closeDraftUI(); aimBand.visible = aimDir.visible = false;
   elBanner.style.display = 'none'; setTopView(false, true); clearPlayed(); clearBurns();
+  applyThemeFor(G.map);
   hideLegendHint(); hideDraftCaption(); pendingCounterSnap = null; inspectLegend = false;
   ['counterBox', 'choiceBox', 'slotBox'].forEach(function (id) { document.getElementById(id).classList.remove('show'); });
   handDirty = false; inspectIdx = -1; syncAll(); rebuildHand();
@@ -44,7 +46,7 @@ function frame() {
     c.light.intensity = candleBase * c.k * fl; c.flame.scale.set(1, 1.8 * fl, 1);
     c.light.position.x = c.x + Math.sin(time * 5 + c.phase) * 0.06;
   });
-  stars.material.opacity = 0.5 + Math.sin(time * 1.3) * 0.08;
+  stars.material.opacity = starBase + Math.sin(time * 1.3) * 0.08; stepPrecip(dt);
 
   // 카메라: 앉은 시점(마우스 시차) ↔ 직부감 부드럽게 전환
   topT += (topGoal - topT) * (1 - Math.pow(0.002, dt));
