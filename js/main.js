@@ -20,6 +20,24 @@
   };
   var CARD_IDS = Object.keys(CARDS);
 
+  /* ---------------- 설정(js/config.js) · 이미지 로더 ---------------- */
+  var CFG = window.GAME_CONFIG || {};
+  // file:// 로 열면 브라우저가 이미지를 WebGL 에 못 올리게 막으므로 이미지는 건너뛰고 기본 그림을 씁니다.
+  var CAN_IMG = location.protocol !== 'file:' || /[?&]img=1/.test(location.search);
+  var IMG = {}, blockedPaths = [], failedPaths = [];
+  function loadImg(path) {
+    return new Promise(function (resolve) {
+      if (!path) return resolve(null);
+      if (!CAN_IMG) { if (blockedPaths.indexOf(path) < 0) blockedPaths.push(path); return resolve(null); }
+      if (IMG[path] !== undefined) return resolve(IMG[path]);
+      var im = new Image();
+      im.onload = function () { IMG[path] = im; resolve(im); };
+      im.onerror = function () { IMG[path] = null; failedPaths.push(path); console.warn('이미지를 불러오지 못했습니다:', path); resolve(null); };
+      im.src = path;
+    });
+  }
+  function cardArtPath(id) { return CFG.cards && CFG.cards[id]; }
+
   /* ---------------- 렌더러 · 씬 ---------------- */
   var container = document.getElementById('game');
   var renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -63,10 +81,16 @@
     return t;
   }
 
-  function boardTexture() {
-    var S = 1024, U = S / 16;
-    var cv = woodCanvas(S, S, [176, 128, 72], '60,36,14');
-    var g = cv.getContext('2d');
+  // img 가 있으면 그 이미지를 판 바탕으로, grid 가 true 면 그 위에 격자를 그림. img 가 없으면 나무판 + 격자.
+  function boardTexture(img, grid) {
+    var S = 1024, U = S / 16, cv, g;
+    if (img) {
+      cv = document.createElement('canvas'); cv.width = cv.height = S;
+      g = cv.getContext('2d'); g.drawImage(img, 0, 0, S, S);
+      if (!grid) return toTex(cv);
+    } else {
+      cv = woodCanvas(S, S, [176, 128, 72], '60,36,14'); g = cv.getContext('2d');
+    }
     g.strokeStyle = 'rgba(28,16,6,0.9)'; g.lineWidth = 2.2;
     for (var i = 0; i < N; i++) {
       var p = (i + 1) * U;
@@ -108,6 +132,7 @@
     new THREE.MeshBasicMaterial({ color: 0xffc66a }));
   flame.scale.set(1, 1.7, 1); flame.position.set(-10.5, 1.1, -4.5);
   scene.add(flame);
+  var candleBase = 1.5;
   var candleLight = new THREE.PointLight(0xffa550, 1.5, 55, 1.4);
   candleLight.position.set(-10.5, 1.9, -4.5);
   candleLight.castShadow = true;
@@ -115,9 +140,11 @@
   candleLight.shadow.bias = -0.002;
   scene.add(candleLight);
 
-  scene.add(new THREE.HemisphereLight(0x7a6650, 0x0a0806, 0.45));
+  var hemi = new THREE.HemisphereLight(0x7a6650, 0x0a0806, 0.45);
+  scene.add(hemi);
   var spot = new THREE.SpotLight(0xffe2b0, 0.55, 60, 0.7, 1, 1);
   spot.position.set(0, 15, 6); spot.target.position.set(0, 0, 0);
+  spot.shadow.mapSize.set(1024, 1024); spot.shadow.bias = -0.002;
   scene.add(spot); scene.add(spot.target);
 
   /* ---------------- 상태 ---------------- */
@@ -349,6 +376,19 @@
     return roughen(corners, step || 14, jit, true);
   }
 
+  // 그림 칸(카드 좌표 384x576 기준): x46 y162 w292 h214 — 칸을 꽉 채우도록(cover) 맞춰 넣음
+  var ART_BOX = { x: 46, y: 162, w: 292, h: 214 };
+  function drawIllustration(g, img) {
+    var B = ART_BOX, sc = Math.max(B.w / img.width, B.h / img.height);
+    var dw = img.width * sc, dh = img.height * sc;
+    g.save();
+    g.beginPath(); roughRectPts(B.x, B.y, B.w, B.h, 1.2, 14).forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
+    if (CFG.artBlend === 'multiply') g.globalCompositeOperation = 'multiply';
+    g.drawImage(img, B.x + (B.w - dw) / 2, B.y + (B.h - dh) / 2, dw, dh);
+    g.restore();
+    inkPath(g, roughRectPts(B.x, B.y, B.w, B.h, 1.2, 14), 3, { closed: true, jit: 0.9 });   // 잉크 테두리
+  }
+
   function cardTexture(id) {
     if (texCache[id]) return texCache[id];
     var c = CARDS[id], W = 384, H = 576;
@@ -360,6 +400,9 @@
     var edge = roughRectPts(6, 6, W - 12, H - 12, 2.4, 12);
     g.save(); g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
 
+    var paperImg = CFG.cardPaper && IMG[CFG.cardPaper];
+    if (paperImg) g.drawImage(paperImg, 0, 0, W, H);
+    else {
     var grad = g.createLinearGradient(0, 0, W * 0.4, H);
     grad.addColorStop(0, '#d8c697'); grad.addColorStop(0.55, '#c9b483'); grad.addColorStop(1, '#b89f6a');
     g.fillStyle = grad; g.fillRect(0, 0, W, H);
@@ -375,6 +418,7 @@
     var vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);   // 가장자리 어둡게
     vg.addColorStop(0, 'rgba(50,28,8,0)'); vg.addColorStop(1, 'rgba(50,28,8,0.62)');
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
+    }
 
     // 잉크 테두리
     inkPath(g, roughRectPts(26, 26, W - 52, H - 52, 1.5, 14), 3.2, { closed: true, jit: 1 });
@@ -387,7 +431,8 @@
     inkPath(g, [[W / 2 - 92, 150], [W / 2 + 92, 150]], 2.2, { jit: 1 });
 
     // 그림 영역
-    ART[id](g, W / 2, 262);
+    var artImg = cardArtPath(id) && IMG[cardArtPath(id)];
+    if (artImg) drawIllustration(g, artImg); else ART[id](g, W / 2, 262);
     for (var s = 0; s < 14; s++) { g.fillStyle = INK; g.globalAlpha = rnd(0.25, 0.7); g.beginPath(); g.arc(rnd(50, W - 50), rnd(170, 360), rnd(0.8, 3.4), 0, 7); g.fill(); }   // 잉크 튄 자국
     g.globalAlpha = 1;
 
@@ -682,6 +727,92 @@
   document.getElementById('restart').addEventListener('click', reset);
   document.getElementById('again').addEventListener('click', reset);
 
+  /* ---------------- 맵 (배경 · 판 · 조명 교체) — js/config.js 의 maps ---------------- */
+  var defTableTex = table.material.map, defBoardTex = boardPlane.material.map;
+  var defCam = { pos: CAM_BASE.clone(), look: CAM_LOOK.clone() };
+  var backdrop = null, curMapIdx = 0;
+  var elNotice = document.getElementById('notice');
+
+  function texFromImg(img, repeat) {
+    var t = new THREE.Texture(img);
+    t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; t.needsUpdate = true;
+    if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat, repeat); }
+    return t;
+  }
+  function getMaps() { return (CFG.maps && CFG.maps.length) ? CFG.maps : [{ id: 'candle', name: '촛불 방' }]; }
+  function mapPaths(m) {
+    var st = m.stones || {};
+    return [m.board, m.table, m.backdrop, st.black, st.white].filter(Boolean);
+  }
+  function skinStone(mat, path, defColor) {
+    var img = path && IMG[path];
+    mat.map = img ? texFromImg(img) : null;
+    mat.color.setHex(img ? 0xffffff : defColor);
+    mat.needsUpdate = true;
+  }
+  function applyMap(m) {
+    m = m || {};
+    return Promise.all(mapPaths(m).map(loadImg)).then(function () {
+      var L = m.light || {}, C = m.candle || {}, st = m.stones || {};
+      // 판 · 테이블 · 배경 이미지
+      var bi = m.board && IMG[m.board];
+      boardPlane.material.map = bi ? boardTexture(bi, !!m.boardGrid) : defBoardTex;
+      boardPlane.material.needsUpdate = true;
+      var ti = m.table && IMG[m.table];
+      table.material.map = ti ? texFromImg(ti, m.tableRepeat || 6) : defTableTex;
+      table.material.needsUpdate = true;
+      table.visible = !m.hideTable;
+      var di = m.backdrop && IMG[m.backdrop];
+      if (di) {
+        if (!backdrop) {
+          var geo = new THREE.SphereGeometry(70, 48, 32); geo.scale(-1, 1, 1);
+          backdrop = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ fog: false }));
+          scene.add(backdrop);
+        }
+        backdrop.material.map = texFromImg(di); backdrop.material.needsUpdate = true; backdrop.visible = true;
+      } else if (backdrop) backdrop.visible = false;
+      // 배경색 · 안개
+      var bg = m.background || '#07050a';
+      scene.background.set(bg);
+      if (m.fog === null) scene.fog = null;
+      else { var F = m.fog || {}; scene.fog = new THREE.Fog(F.color || bg, F.near != null ? F.near : 22, F.far != null ? F.far : 90); }
+      // 조명 · 촛불
+      hemi.color.set(L.hemiSky || '#7a6650'); hemi.groundColor.set(L.hemiGround || '#0a0806'); hemi.intensity = L.hemi != null ? L.hemi : 0.45;
+      spot.color.set(L.spotColor || '#ffe2b0'); spot.intensity = L.spot != null ? L.spot : 0.55; spot.angle = L.spotAngle || 0.7;
+      var candleOn = C.visible !== false;
+      candle.visible = flame.visible = candleLight.visible = candleOn;
+      candleLight.color.set(C.color || '#ffa550'); candleBase = C.intensity != null ? C.intensity : 1.5;
+      spot.castShadow = !candleOn;            // 촛불이 없으면 위쪽 조명이 그림자를 만듦
+      // 카메라
+      var cam = m.camera || {};
+      CAM_BASE.fromArray(cam.pos || defCam.pos.toArray()); CAM_LOOK.fromArray(cam.look || defCam.look.toArray());
+      // 돌 표면
+      skinStone(matBlack, st.black, 0x17130f); skinStone(matWhite, st.white, 0xece4d2);
+    });
+  }
+  function buildMapSelect() {
+    var sel = document.getElementById('mapSel'), ms = getMaps();
+    try { var sv = parseInt(localStorage.getItem('gomoku3d.map'), 10); if (sv >= 0 && sv < ms.length) curMapIdx = sv; } catch (e) {}
+    if (ms.length < 2) { sel.style.display = 'none'; return; }
+    ms.forEach(function (m, i) { var o = document.createElement('option'); o.value = i; o.textContent = '🗺 ' + (m.name || m.id || ('맵 ' + (i + 1))); sel.appendChild(o); });
+    sel.value = curMapIdx; sel.style.display = 'block';
+    sel.addEventListener('change', function () {
+      curMapIdx = parseInt(sel.value, 10);
+      try { localStorage.setItem('gomoku3d.map', curMapIdx); } catch (e) {}
+      applyMap(ms[curMapIdx]).then(showAssetNotice);
+    });
+  }
+  function showAssetNotice() {
+    var t = '';
+    if (blockedPaths.length) t = '이미지 에셋은 웹/로컬 서버에서만 로드돼요 (run.bat · run.sh 로 열기). 지금은 기본 그림으로 표시 중입니다.';
+    else if (failedPaths.length) t = '불러오지 못한 이미지: ' + failedPaths.join(', ');
+    elNotice.textContent = t; elNotice.style.display = t ? 'block' : 'none';
+  }
+  function loadCardAssets() {
+    var list = [CFG.cardPaper].concat(CARD_IDS.map(cardArtPath)).filter(Boolean);
+    return Promise.all(list.map(loadImg));
+  }
+
   /* ---------------- 초기화 ---------------- */
   function reset() {
     for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
@@ -716,7 +847,7 @@
 
     // 촛불 일렁임
     var fl = 1 + Math.sin(time * 13) * 0.05 + Math.sin(time * 31 + 1.7) * 0.04 + (Math.random() - 0.5) * 0.04;
-    candleLight.intensity = 1.5 * fl; flame.scale.set(1, 1.7 * fl, 1);
+    candleLight.intensity = candleBase * fl; flame.scale.set(1, 1.7 * fl, 1);
     candleLight.position.x = -10.5 + Math.sin(time * 5) * 0.06;
 
     // 카메라: 앉은 시점 + 마우스 시차
@@ -748,5 +879,9 @@
   // 테스트/디버그용 접근
   window.__game = { cardCanvas: function (id) { return cardTexture(id).image; }, get S() { return S; }, get board() { return board; }, hands: function () { return hands; }, onCell: onCell, useCard: useCard, endTurn: endTurn, reset: reset, busy: function () { return busy; } };
 
-  resize(); reset(); frame();
+  resize(); frame();
+  buildMapSelect();
+  Promise.all([loadCardAssets(), applyMap(getMaps()[curMapIdx])]).then(function () {
+    texCache = {}; reset(); showAssetNotice();
+  });
 })();
