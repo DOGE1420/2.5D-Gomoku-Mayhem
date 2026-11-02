@@ -77,11 +77,26 @@ Three.js(r128)를 `js/`에 포함해서 **빌드·설치 없이** `index.html`�
 
 ## 파일
 
-- `index.html` — 화면 뼈대 · HUD
-- `js/config.js` — 일러스트·맵 설정 (여기만 고치면 됨)
-- `js/rules.js` — 규칙 엔진 (원본 규칙 + 카드 21장, 화면과 분리)
-- `js/main.js` — 3D 장면 · 카드 · 연출 · 입력
-- `tests/rules-test.js` — 규칙 엔진 시험
-- `assets/` — 일러스트·맵 이미지를 넣는 폴더
-- `run.bat` / `run.sh` — 로컬 서버로 실행
-- `js/three.min.js` — Three.js r128 (MIT, `js/THREE-LICENSE`)
+모두 같은 전역 공간을 쓰는 일반 스크립트라서(`file://` 더블클릭 실행을 위해) `index.html` 의 불러오는 순서가 중요합니다.
+
+| 파일 | 역할 |
+|---|---|
+| `index.html` | 화면 뼈대 · HUD · 폰트 선언 · 스크립트 불러오기 순서 |
+| `js/config.js` | 일러스트·맵 설정 (여기만 고치면 됨) |
+| `js/rules.js` | **규칙 엔진** (원본 규칙 + 카드 21장, 화면과 분리) |
+| `js/setup.js` | 공통 상수 · 카드 데이터 · 설정 · 이미지 로더 |
+| `js/scene.js` | 3D 장면: 렌더러 · 카메라 · 테이블 · 판 · 촛불 · 별 · 조명 |
+| `js/stones.js` | 게임 상태(`G`) · 돌 모델 |
+| `js/fx.js` | 연출 도구: tween · 파티클 |
+| `js/audio.js` | 효과음 (WebAudio) |
+| `js/card-art.js` | 카드 그림: 잉크 일러스트 21장 · 양피지 · 카드 텍스처 |
+| `js/hand.js` | 패: 부채꼴 배치 · 확대 · 쓴 카드 · 불타는 연출 |
+| `js/board3d.js` | 판 연출: HUD · 풍차/보호막/함정/구멍 표시 · 엔진 이벤트 → 3D 연출 |
+| `js/draft-alk.js` | 카드 뽑기(3장 중 1장) · 엿보기 · 알까기 화면 |
+| `js/flow.js` | 게임 흐름 · 입력(클릭·드래그·키보드) · 시점 전환 |
+| `js/maps.js` | 맵(배경·판·조명) 교체 · 맵 선택 메뉴 |
+| `js/main.js` | 시작 · 초기화 · 메인 루프 |
+| `js/three.min.js` | Three.js r128 (MIT, `js/THREE-LICENSE`) |
+| `assets/` | 일러스트·맵 이미지, 폰트(`fonts/HeoSangGothicB.ttf`) |
+| `tests/rules-test.js` | 규칙 엔진 시험 (`node tests/rules-test.js`) |
+| `run.bat` / `run.sh` | 로컬 서버로 실행 |
