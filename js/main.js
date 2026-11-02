@@ -484,10 +484,9 @@
     var sc = 0.95, cw = 1.5 * sc;
     var step = up ? 0.82 : 0.62;
     var mid = (n - 1) / 2, d = i - mid;
-    var x0 = -vw / 2 + 0.55 + cw / 2;
     var y = -vh / 2 + 0.1 + (up ? 1.1 : 0) + (hov ? 0.3 : 0) + (sel ? 0.3 : 0) - d * d * 0.012;
     return {
-      x: x0 + i * step,
+      x: d * step,                         // 화면 아래 중앙
       y: y,
       z: (hov || sel ? 0.3 : 0) + i * 0.01,
       rz: -d * (hov ? 0.012 : 0.045),
@@ -754,7 +753,7 @@
     raycaster.setFromCamera(pointer, camera);
     var hits = raycaster.intersectObjects(cardMeshes, false);
     hoverCard = hits.length ? hits[0].object.userData.i : -1;
-    handUp = hoverCard >= 0 || (pointer.x < 0.2 && pointer.y < -0.3);
+    handUp = hoverCard >= 0 || (Math.abs(pointer.x) < 0.42 && pointer.y < -0.3);
     hoverCell = null; hoverTable = false;
     if (hoverCard < 0 && raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
       var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
