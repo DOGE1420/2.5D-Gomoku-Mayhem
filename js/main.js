@@ -11,12 +11,12 @@
 
   /* ---------------- 카드 정의 (CARDS.md 의 21장 중 6장) ---------------- */
   var CARDS = {
-    chain:    { icon: '⚡', name: '연속 착수', cat: '공격',  glow: '#ffb347', color: '#8a5a1c', desc: '이번 턴에 3수까지 둠\n(같은 턴에 둔 돌의 2칸 이내 금지)' },
-    bomb:     { icon: '💥', name: '폭파',     cat: '방해',  glow: '#ff5a3a', color: '#8a2a1c', desc: '상대 돌 1개를 제거' },
-    teleport: { icon: '✨', name: '순간이동', cat: '무작위', glow: '#6aa8ff', color: '#3d5a8a', desc: '내 돌 1개를\n무작위 빈 칸으로 이동' },
-    wall:     { icon: '🧱', name: '장벽',     cat: '지형',  glow: '#b8a58a', color: '#5a4a3a', desc: '빈 칸에 영구 장벽\n아무도 못 두고 줄도 끊김' },
-    sixth:    { icon: '👁️', name: '식스센스', cat: '규칙',  glow: '#b36aff', color: '#5a2a6a', desc: '승리 조건이\n영구히 6목으로' },
-    reversal: { icon: '☯️', name: '전세 역전', cat: '희귀',  glow: '#ffd24a', endsTurn: true, color: '#b8901c', desc: '판의 흑·백 돌을\n통째로 뒤바꿈' }
+    chain:    { icon: '⚡', name: '연속 착수', cat: '공격',  color: '#8a5a1c', desc: '이번 턴에 3수까지 둠\n(같은 턴에 둔 돌의 2칸 이내 금지)' },
+    bomb:     { icon: '💥', name: '폭파',     cat: '방해',  color: '#8a2a1c', desc: '상대 돌 1개를 제거' },
+    teleport: { icon: '✨', name: '순간이동', cat: '무작위', color: '#3d5a8a', desc: '내 돌 1개를\n무작위 빈 칸으로 이동' },
+    wall:     { icon: '🧱', name: '장벽',     cat: '지형',  color: '#5a4a3a', desc: '빈 칸에 영구 장벽\n아무도 못 두고 줄도 끊김' },
+    sixth:    { icon: '👁️', name: '식스센스', cat: '규칙',  color: '#5a2a6a', desc: '승리 조건이\n영구히 6목으로' },
+    reversal: { icon: '☯️', name: '전세 역전', cat: '희귀',  endsTurn: true, color: '#b8901c', desc: '판의 흑·백 돌을\n통째로 뒤바꿈' }
   };
   var CARD_IDS = Object.keys(CARDS);
 
@@ -454,19 +454,6 @@
     return (texCache[id] = toTex(cv));
   }
 
-  // 카드 뒤에서 번지는 빛 (카드마다 색이 다름)
-  var glowCache = {};
-  function glowTexture(color) {
-    if (glowCache[color]) return glowCache[color];
-    var cv = document.createElement('canvas'); cv.width = 256; cv.height = 384;
-    var g = cv.getContext('2d');
-    g.shadowColor = color; g.shadowBlur = 42; g.fillStyle = color;
-    g.fillRect(40, 56, 176, 272);
-    g.shadowBlur = 20; g.fillRect(40, 56, 176, 272);
-    var t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
-    return (glowCache[color] = t);
-  }
-  var glowGeo = new THREE.PlaneGeometry(2.14, 3.2);
 
   function visibleWidth() {
     return 2 * 6.5 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect;
@@ -493,8 +480,7 @@
     h.forEach(function (id, i) {
       var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
       m.userData.i = i;
-      var gl = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ map: glowTexture(CARDS[id].glow), transparent: true, opacity: 0.22, blending: THREE.AdditiveBlending, depthWrite: false }));
-      gl.position.z = -0.004; m.add(gl); m.userData.glow = gl;
+
       m.position.set(0, -4.2, 0.2); // 아래에서 올라오는 등장 연출
       handGroup.add(m); cardMeshes.push(m);
     });
@@ -511,8 +497,6 @@
       var s = m.scale.x + (t.s - m.scale.x) * k; m.scale.set(s, s, 1);
       var c = m.material.color.r + (t.tint - m.material.color.r) * k;
       m.material.color.setRGB(c, c, c);
-      var gl = m.userData.glow;
-      if (gl) gl.material.opacity += ((t.tint > 0.9 ? 0.8 : 0.24) + Math.sin(performance.now() / 420 + i) * 0.05 - gl.material.opacity) * k;
     });
   }
 
