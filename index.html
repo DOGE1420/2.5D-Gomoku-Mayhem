@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>증강 오목 3D 프로토타입</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #07050a; overflow: hidden; font-family: "Noto Sans KR", "Malgun Gothic", sans-serif; }
+  #game { position: fixed; inset: 0; }
+  canvas { display: block; }
+  #hud { position: fixed; top: 12px; left: 0; right: 0; padding: 0 92px; box-sizing: border-box; text-align: center; color: #e8d9b5; pointer-events: none; text-shadow: 0 2px 6px #000; }
+  #turn { font-size: 20px; letter-spacing: 1px; }
+  @media (max-width: 600px) { #turn { font-size: 15px; } #msg { font-size: 12px; } .btn { padding: 6px 10px; } }
+  #msg { margin-top: 4px; font-size: 14px; color: #c9b88f; min-height: 20px; }
+  .btn { position: fixed; top: 12px; padding: 8px 14px; background: #2a1d12; color: #e8d9b5; border: 1px solid #6b4f2e; border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px; }
+  .btn:hover { background: #3a2917; }
+  #restart { right: 12px; }
+  #endturn { left: 12px; display: none; }
+  #banner { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.6); color: #f1e2b8; font-size: 40px; text-shadow: 0 3px 10px #000; }
+  #banner button { margin-top: 20px; position: static; font-size: 16px; padding: 10px 22px; }
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud"><div id="turn"></div><div id="msg"></div></div>
+<button id="endturn" class="btn">턴 종료</button>
+<button id="restart" class="btn">새 게임</button>
+<div id="banner"><div id="bannerText"></div><button class="btn" id="again">다시 하기</button></div>
+<script src="js/three.min.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
