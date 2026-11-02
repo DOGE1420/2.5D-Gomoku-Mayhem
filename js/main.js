@@ -595,7 +595,7 @@
     // 인스크립션 패: 큰 카드를 겹쳐서 부채꼴로, 평소엔 윗부분만 보이다가 패 쪽을 보면 위로 올라옴
     var up = handUp && inspectIdx < 0;
     var sc = 0.95, cw = 1.5 * sc;
-    var step = up ? 0.82 : 0.62;
+    var step = up ? 1.2 : 0.95;                // 카드 사이 간격 (카드 폭 1.43)
     var mid = (n - 1) / 2, d = i - mid;
     var y = -vh / 2 + 0.1 + (up ? 1.1 : 0) + (hov ? 0.3 : 0) + (sel ? 0.3 : 0) - d * d * 0.012;
     if (topGoal > 0.5) y = -vh / 2 - 3.2;      // 직부감: 패는 전부 화면 아래로 숨김
@@ -870,7 +870,7 @@
     raycaster.setFromCamera(pointer, camera);
     var hits = topGoal > 0.5 ? [] : raycaster.intersectObjects(cardMeshes, false);
     hoverCard = hits.length ? hits[0].object.userData.i : -1;
-    handUp = topGoal < 0.5 && (hoverCard >= 0 || (Math.abs(pointer.x) < 0.42 && pointer.y < -0.3));
+    handUp = topGoal < 0.5 && (hoverCard >= 0 || (Math.abs(pointer.x) < 0.5 && pointer.y < -0.3));
     hoverCell = null; hoverTable = false;
     if (hoverCard < 0 && raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
       var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
