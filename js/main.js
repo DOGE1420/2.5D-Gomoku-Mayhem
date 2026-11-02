@@ -50,11 +50,11 @@
 
   var scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
-  scene.fog = new THREE.Fog(0x000000, 16, 46);
+  scene.fog = new THREE.Fog(0x000000, 21, 54);
 
   var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
   scene.add(camera);
-  var CAM_BASE = new THREE.Vector3(0, 7.2, 16.5);
+  var CAM_BASE = new THREE.Vector3(0, 8.6, 21.5);
   var CAM_LOOK = new THREE.Vector3(0, 0.7, -0.4);
   var camDist = 1;
 
@@ -788,7 +788,7 @@
   /* ---------------- 맵 (배경 · 판 · 조명 교체) — js/config.js 의 maps ---------------- */
   var defTableTex = table.material.map, defBoardTex = boardPlane.material.map;
   var defCam = { pos: CAM_BASE.clone(), look: CAM_LOOK.clone() };
-  var backdrop = null, curMapIdx = 0, fogBase = { near: 16, far: 46 };
+  var backdrop = null, curMapIdx = 0, fogBase = { near: 21, far: 54 };
   var elNotice = document.getElementById('notice');
 
   function texFromImg(img, repeat) {
@@ -833,7 +833,7 @@
       var bg = m.background || '#000000';
       scene.background.set(bg);
       if (m.fog === null) scene.fog = null;
-      else { var F = m.fog || {}; fogBase.near = F.near != null ? F.near : 16; fogBase.far = F.far != null ? F.far : 46; scene.fog = new THREE.Fog(F.color || bg, fogBase.near, fogBase.far); }
+      else { var F = m.fog || {}; fogBase.near = F.near != null ? F.near : 21; fogBase.far = F.far != null ? F.far : 54; scene.fog = new THREE.Fog(F.color || bg, fogBase.near, fogBase.far); }
       // 조명 · 촛불
       hemi.color.set(L.hemiSky || '#3a2a1a'); hemi.groundColor.set(L.hemiGround || '#050403'); hemi.intensity = L.hemi != null ? L.hemi : 0.05;
       spot.color.set(L.spotColor || '#ff9a40'); spot.intensity = L.spot != null ? L.spot : 1.5; spot.angle = L.spotAngle || 0.62;
