@@ -49,7 +49,8 @@ window.GAME_CONFIG = {
   // 게임 규칙의 맵 6종(평원·여름·겨울·우주·사막·장마)마다 3D 장면의 분위기를 정합니다. 맵은 판마다 무작위로 정해지고
   // (기상 이변 카드로 바뀜) 해당 id 의 설정이 적용됩니다. 이미지를 쓰려면 항목에 board/table/backdrop/stones 를 추가하세요.
   maps: [
-    { id: 'classic', name: '평원' },                                   // 기본 촛불 방
+    { id: 'classic', name: '평원', room: true, background: '#060403', fog: { color: '#060403', near: 30, far: 110 },   // 오두막 방 (js/room.js)
+      light: { hemiSky: '#7a5a38', hemiGround: '#0c0805', hemi: 0.4, spot: 1.6 }, candle: { visible: true, color: '#ffa550', intensity: 1.3 } },
     { id: 'summer', name: '여름', background: '#150a03', fog: { color: '#150a03', near: 21, far: 54 },
       light: { hemiSky: '#8a6a3a', hemiGround: '#120a04', hemi: 0.16, spotColor: '#ffb050', spot: 1.9, spotAngle: 0.7 },
       candle: { visible: true, color: '#ff9a30', intensity: 1.4 } },

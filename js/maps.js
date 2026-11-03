@@ -35,7 +35,8 @@ function applyMap(m) {
     var ti = m.table && IMG[m.table];
     table.material.map = ti ? texFromImg(ti, m.tableRepeat || 6) : defTableTex;
     table.material.needsUpdate = true;
-    table.visible = !m.hideTable;
+    table.visible = !m.hideTable && !m.room;   // 방이 있으면 방의 테이블을 씀
+    setRoom(m.room);
     var di = m.backdrop && IMG[m.backdrop];
     if (di) {
       if (!backdrop) {
@@ -56,7 +57,7 @@ function applyMap(m) {
     var candleOn = C.visible !== false;
     candles.forEach(function (c) { c.body.visible = c.flame.visible = c.light.visible = candleOn; c.light.color.set(C.color || '#ffa550'); });
     candleBase = C.intensity != null ? C.intensity : 1.2;
-    stars.visible = m.stars !== false && !di;
+    stars.visible = m.stars !== false && !di && !m.room;
     stars.material.size = m.stars === 'bright' ? 2.6 : 1.8; starBase = m.stars === 'bright' ? 0.95 : 0.55;
     setPrecip(m.snow ? 'snow' : m.rain ? 'rain' : null);
     // 카메라

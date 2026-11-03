@@ -38,7 +38,7 @@ window.addEventListener('resize', resize);
 var clock = new THREE.Clock(), time = 0;
 function frame() {
   var dt = Math.min(0.05, clock.getDelta()); time += dt;
-  stepAnims(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepBurns(dt);
+  stepAnims(dt); stepRoom(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepBurns(dt);
 
   // 촛불 일렁임
   candles.forEach(function (c) {
