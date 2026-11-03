@@ -66,12 +66,15 @@ $('bgmMute').addEventListener('click', function () {
 // 메뉴·로비에서만 메뉴 곡을 틀고 게임 중에는 멈춤. 브라우저 정책상 첫 클릭 뒤에 재생이 시작됨
 var userGesture = false;
 function syncBgm() {
-  var want = userGesture && (curScreen === 'menu' || curScreen === 'lobby') && !bgmMuted && bgmVol > 0;
+  var want = (curScreen === 'menu' || curScreen === 'lobby') && !bgmMuted && bgmVol > 0;
   if (want) { var p = bgm.play(); if (p && p.catch) p.catch(function () {}); } else bgm.pause();
 }
+// 로드 즉시 재생을 시도하고, 브라우저가 막으면 첫 클릭·키 입력 때 바로 재생
+bgm.addEventListener('canplay', syncBgm); bgm.addEventListener('pause', function () { if (!userGesture && (curScreen === 'menu' || curScreen === 'lobby')) retry = true; });
+var retry = false;
 window.addEventListener('pointerdown', function () { if (!userGesture) { userGesture = true; syncBgm(); } }, true);
 window.addEventListener('keydown', function () { if (!userGesture) { userGesture = true; syncBgm(); } }, true);
-renderBgmUi();
+renderBgmUi(); syncBgm();
 
 /* ---------------- 메인 화면 버튼 ---------------- */
 var menuNoteKey = null, lobbyNoteKey = null;
