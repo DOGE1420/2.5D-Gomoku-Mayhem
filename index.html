@@ -57,7 +57,7 @@
   #menuBg, #menuBg2 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
   #menu::after, #lobby::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 38% 46% at 50% 50%, rgba(3,2,1,.93) 0%, rgba(3,2,1,.78) 55%, rgba(3,2,1,0) 100%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.7) 100%); }
   #menu > *:not(canvas), #lobby > *:not(canvas) { position: relative; z-index: 2; }
-  #menu h1 { font-size: 92px; letter-spacing: 8px; color: #efe6d0; text-shadow: 0 0 30px rgba(0,0,0,.9), 0 4px 0 #000; line-height: 1.05; }
+  #menu h1 { margin-bottom: 44px; font-size: 92px; letter-spacing: 8px; color: #efe6d0; text-shadow: 0 0 30px rgba(0,0,0,.9), 0 4px 0 #000; line-height: 1.05; }
   #menu .sub { margin: 14px 0 38px; font-size: 15px; color: #a89a78; letter-spacing: 2px; }
   .modes { gap: 2px; width: auto; align-items: center; }
   .mode-btn { display: block; background: none; border: 0; box-shadow: none; border-radius: 0; padding: 6px 26px; text-align: center; color: #d8ccb0; transition: color .1s, letter-spacing .15s; }
@@ -105,7 +105,7 @@
 </div>
 <div id="menu" class="screen show">
   <canvas id="menuBg"></canvas>
-  <h1 data-i18n="title"></h1><p class="sub" data-i18n="sub"></p>
+  <h1 data-i18n="title"></h1>
   <div class="modes">
     <button class="mode-btn" id="modeTut"><div class="mode-icon">📖</div><div class="mode-name" data-i18n="mode.tut"></div><div class="mode-desc" data-i18n="mode.tut.desc"></div></button>
     <button class="mode-btn" id="modeLocal"><div class="mode-icon">👥</div><div class="mode-name" data-i18n="mode.local"></div><div class="mode-desc" data-i18n="mode.local.desc"></div></button>
