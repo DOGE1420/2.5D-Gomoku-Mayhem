@@ -63,11 +63,19 @@ $('bgmMute').addEventListener('click', function () {
   try { localStorage.setItem('omok_bgm_muted', bgmMuted ? '1' : '0'); } catch (e) {}
   renderBgmUi(); syncBgm();
 });
-// 메뉴·로비에서만 메뉴 곡을 틀고 게임 중에는 멈춤. 브라우저 정책상 첫 클릭 뒤에 재생이 시작됨
+// 메뉴·로비는 메뉴 곡, 게임은 판마다 무작위 게임 곡 1곡. 브라우저 정책상 첫 클릭 뒤에 재생이 시작될 수 있음
 var userGesture = false;
+var BGM_MENU = 'assets/audio/bgm-menu.mp3', BGM_GAME = ['assets/audio/bgm-keycard.mp3', 'assets/audio/bgm-climax.mp3'], bgmTrack = BGM_MENU;
+function setBgmTrack(src, restart) {              // 곡이 바뀌거나 restart 면 처음부터
+  if (bgmTrack === src && !restart && bgm.getAttribute('src')) return;
+  bgmTrack = src; bgm.setAttribute('src', src); bgm.currentTime = 0;
+}
+function bgmNewGame() { setBgmTrack(BGM_GAME[Math.floor(Math.random() * BGM_GAME.length)], true); }   // 판마다 게임 곡 중 무작위 1곡
 function syncBgm() {
-  var want = (curScreen === 'menu' || curScreen === 'lobby') && !bgmMuted && bgmVol > 0;
-  if (want) { var p = bgm.play(); if (p && p.catch) p.catch(function () {}); } else { bgm.pause(); if (curScreen === 'game') bgm.currentTime = 0; }   // 게임에 들어가면 곡을 처음으로 되돌림
+  var game = curScreen === 'game';
+  if (!game && BGM_GAME.indexOf(bgmTrack) >= 0) setBgmTrack(BGM_MENU, true);    // 메인으로 돌아오면 처음부터
+  var want = !bgmMuted && bgmVol > 0;
+  if (want) { var p = bgm.play(); if (p && p.catch) p.catch(function () {}); } else bgm.pause();
 }
 // 로드 즉시 재생을 시도하고, 브라우저가 막으면 첫 클릭·키 입력 때 바로 재생
 bgm.addEventListener('canplay', syncBgm); bgm.addEventListener('pause', function () { if (!userGesture && (curScreen === 'menu' || curScreen === 'lobby')) retry = true; });
@@ -85,11 +93,11 @@ function endGameScreens() {                      // 진행 중이던 게임 화�
   ['counterBox', 'choiceBox', 'slotBox'].forEach(function (id) { $(id).classList.remove('show'); });
   $('banner').style.display = 'none';
 }
-function startLocal() { endGameScreens(); gameMode = 'local'; setMenuNote(null); showScreen('game'); reset(); }
+function startLocal() { endGameScreens(); gameMode = 'local'; setMenuNote(null); bgmNewGame(); showScreen('game'); reset(); }
 function showMenu() {
   endGameScreens(); gameMode = 'local'; reset({}); showScreen('menu');   // 빈 판을 배경으로 보여 줌
 }
-function restartGame() { if (gameMode === 'tutorial' && tut) tutStage(tut.step); else reset(); }
+function restartGame() { if (gameMode === 'tutorial' && tut) tutStage(tut.step); else { bgmNewGame(); syncBgm(); reset(); } }
 $('modeLocal').addEventListener('click', startLocal);
 $('modeTut').addEventListener('click', function () { setMenuNote(null); startTutorial(); });
 $('modeBot').addEventListener('click', function () { setMenuNote('note.bot'); });              // 봇 대전은 아직 없음 (버튼만)
