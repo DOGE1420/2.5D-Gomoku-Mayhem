@@ -67,7 +67,7 @@ $('bgmMute').addEventListener('click', function () {
 var userGesture = false;
 function syncBgm() {
   var want = (curScreen === 'menu' || curScreen === 'lobby') && !bgmMuted && bgmVol > 0;
-  if (want) { var p = bgm.play(); if (p && p.catch) p.catch(function () {}); } else bgm.pause();
+  if (want) { var p = bgm.play(); if (p && p.catch) p.catch(function () {}); } else { bgm.pause(); if (curScreen === 'game') bgm.currentTime = 0; }   // 게임에 들어가면 곡을 처음으로 되돌림
 }
 // 로드 즉시 재생을 시도하고, 브라우저가 막으면 첫 클릭·키 입력 때 바로 재생
 bgm.addEventListener('canplay', syncBgm); bgm.addEventListener('pause', function () { if (!userGesture && (curScreen === 'menu' || curScreen === 'lobby')) retry = true; });
