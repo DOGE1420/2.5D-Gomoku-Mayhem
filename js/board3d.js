@@ -334,7 +334,9 @@ function handleEvent(e) {
   return 0;
 }
 function onTurnChanged() {
-  tradeFirst = null; inspectIdx = -1; clearPlayed(); handDirty = true; setTopView(false, true);
+  tradeFirst = null; inspectIdx = -1; clearPlayed(); handDirty = true;
+  // 봇 차례에는 판을 보는 시점이 기본 (사용자가 직접 바꿀 수는 있음), 내 차례에는 카드 시점
+  botViewSet = !!botColor && G.current === botColor; setTopView(botViewSet, true);
 }
 function syncAll() {
   syncBoard(); syncMarkers(); syncMarkersExtra(); syncPeek(); syncS(); updateHUD(); updateTrait();

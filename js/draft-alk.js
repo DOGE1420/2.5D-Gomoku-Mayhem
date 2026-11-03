@@ -16,13 +16,20 @@ function syncPeek() {
 
 /* ---------------- 카드 뽑기 (3장 중 1장) ---------------- */
 var draftMeshes = [], draftIds = [], hoverDraft = -1;
+// 후보 카드 배치: 장수(3~4장)와 화면 폭에 맞춰 크기와 간격을 정함 (4장이어도 화면 밖으로 나가지 않게)
+function draftLayout(n) {
+  var gap = 1.09, usable = viewSize().vw * (5.5 / 6.5) * 0.94,   // 카드는 z=1 (화면에 더 가까움)이라 같은 폭이 더 크게 보임
+       sc = Math.min(1.5, usable / (((n - 1) * gap + 1) * 1.5));
+  return { sc: sc, step: gap * 1.5 * sc };
+}
 function openDraftUI(picks, kind, refresh, player) {
   closeDraftUI(); draftIds = picks.slice(); inspectIdx = -1; inspectLegend = false; hideLegendHint();
   var who = player === BLACK ? '⚫ 흑' : '⚪ 백';
   showDraftCaption(who + ' — ' + (kind === 'legend' ? '전설 카드를 고르세요 (상대에게는 비공개)' : '카드를 고르세요'), refresh || 0, onRerollClick);
   picks.forEach(function (id, i) {
     var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
-    m.userData.draftIdx = i; m.position.set((i - 1) * 2.4, -4.6, 1.0); m.scale.set(1.5, 1.5, 1);
+    var L = draftLayout(picks.length);
+    m.userData.draftIdx = i; m.position.set((i - (picks.length - 1) / 2) * L.step, -4.6, 1.0); m.scale.set(L.sc, L.sc, 1);
     handGroup.add(m); draftMeshes.push(m);
   });
   sfx('card');
@@ -38,8 +45,9 @@ function closeDraftUI() {
   draftMeshes = []; draftIds = []; hoverDraft = -1;
 }
 function stepDraft(k) {
+  var L = draftLayout(draftMeshes.length || 3);
   draftMeshes.forEach(function (m, i) {
-    var hov = hoverDraft === i, tx = (i - 1) * 2.45, ty = hov ? 0.32 : 0.1, ts = hov ? 1.62 : 1.5;
+    var hov = hoverDraft === i, tx = (i - (draftMeshes.length - 1) / 2) * L.step, ty = hov ? 0.32 : 0.1, ts = L.sc * (hov ? 1.08 : 1);
     m.position.x += (tx - m.position.x) * k; m.position.y += (ty - m.position.y) * k; m.position.z = 1.0 + (hov ? 0.1 : 0);
     var s = m.scale.x + (ts - m.scale.x) * k; m.scale.set(s, s, 1);
     var c = m.material.color.r + ((hov ? 1 : 0.8) - m.material.color.r) * k; m.material.color.setRGB(c, c, c);

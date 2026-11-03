@@ -8,7 +8,7 @@
 
 var botColor = 0, humanColor = 0;               // botColor 가 0 이면 봇전이 아님
 var BOT = { radius: 1, topN: 6, defense: 0.5, missChance: 0.4, cardChance: 0.5, delay: 0.65 };
-var botWait = 0, botRollKey = '', botWantCard = false, botPickKey = '';
+var botViewSet = false, botWait = 0, botRollKey = '', botWantCard = false, botPickKey = '';
 
 // 화면에 패를 보여 줄 사람 (봇전에서는 늘 사람, 로컬에서는 차례인 쪽)
 function viewer() { return botColor ? humanColor : G.current; }
@@ -17,7 +17,7 @@ function humanTurn() { return !botColor || G.current === humanColor; }
 function botStart(side) {                       // side: 'first' | 'second' | 'random'
   if (side === 'random') side = Math.random() < 0.5 ? 'first' : 'second';
   humanColor = side === 'first' ? Rules.BLACK : Rules.WHITE; botColor = Rules.other(humanColor);
-  botWait = 1; botRollKey = ''; botPickKey = '';
+  botWait = 1; botRollKey = ''; botPickKey = ''; botViewSet = false;
 }
 function botStop() { botColor = humanColor = 0; }
 
@@ -113,7 +113,7 @@ function botPlaceStone() {
   var order = botChooseStones();
   for (var i = 0; i < order.length; i++) {
     var res = Rules.place(G, order[i].r, order[i].c);
-    if (res.ok) { var evs = Rules.drain(G); setTopView(true, true); runEvents(evs); return true; }
+    if (res.ok) { var evs = Rules.drain(G); runEvents(evs); return true; }
   }
   return false;
 }
@@ -128,7 +128,7 @@ function botUseCard() {
   for (i = 0; i < idx.length; i++) {
     var id = h[idx[i]], res = Rules.useCard(G, idx[i]);
     if (!res.ok) continue;
-    var evs = Rules.drain(G); setTopView(true, true); botAfterUse(res, evs, B_SNAP(id)); return true;
+    var evs = Rules.drain(G); botAfterUse(res, evs, B_SNAP(id)); return true;
   }
   return false;
 }
@@ -156,7 +156,7 @@ function botUseLegend() {
   if (!res.ok) return false;
   if (res.choice) res = Rules.useLegend(G, G.hand[botColor].length ? 'cards' : 'stones');
   if (!res.ok) return false;
-  var evs = Rules.drain(G); setTopView(true, true); botAfterUse(res, evs, B_SNAP(id)); return true;
+  var evs = Rules.drain(G); botAfterUse(res, evs, B_SNAP(id)); return true;
 }
 
 /* ---------------- 대상 고르기 ---------------- */
@@ -216,6 +216,7 @@ function botTick(dt) {
     return;
   }
   if (G.startQueue || G.current !== me) return;
+  if (!botViewSet) { botViewSet = true; setTopView(true, true); }     // 봇 차례가 시작되면 판 시점으로 (한 번만)
   if (G.pending) { if (G.pending.forPlayer === me) { botPendingTarget(); botWait = BOT.delay; } return; }
   // 턴 시작: 전설 카드 → (50%) 카드 한 장 → 돌
   if (G.done === 0 && !G.used[me] && botLegendOk()) act = botUseLegend();
