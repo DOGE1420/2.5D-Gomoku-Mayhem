@@ -69,6 +69,7 @@
   function useLegend(G, choice) {
     if (!canUseLegend(G)) return { ok: false };
     var p = G.current, opp = other(p), id = G.lg.card[p];
+    if (G.lock[p]) { G.lock[p] = false; lgFinish(G, p); ev(G, { t: 'blocked', p: p, id: id }); return { ok: true, blocked: true }; }   // 봉쇄: 전설 카드도 무효
     switch (id) {
       case 'obelisk': G.pending = { type: 'sacrifice', forPlayer: p, legend: true, picks: [] }; return { ok: true, pending: true };
       case 'king': G.pending = { type: 'kingPick', forPlayer: p, legend: true }; return { ok: true, pending: true };

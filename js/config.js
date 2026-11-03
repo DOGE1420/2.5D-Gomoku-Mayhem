@@ -23,7 +23,6 @@ window.GAME_CONFIG = {
     trap: null,
     snipe: null,
     double: null,
-    peek: null,
     giant: null,
     weather: null,
     shield: null,

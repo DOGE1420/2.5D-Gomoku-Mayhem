@@ -100,7 +100,7 @@ console.log('[카드: 맞교환 · 감염 · 전세 역전]');
   ok(V.board[7][7] === WHITE && V.board[8][8] === BLACK && V.current === WHITE, '전세 역전: 색이 뒤바뀌고 턴 종료');
 }
 
-console.log('[카드: 함정 · 장벽 · 거대한 돌 · 투명한 돌 · 엿보기]');
+console.log('[카드: 함정 · 장벽 · 거대한 돌 · 운석 · 지진 · 봉쇄]');
 {
   const G = Rules.create({ rng: seeded(13) });
   G.hand[BLACK] = ['trap']; G.hand[WHITE] = [];
@@ -122,10 +122,19 @@ console.log('[카드: 함정 · 장벽 · 거대한 돌 · 투명한 돌 · 엿�
   Rules.target(T, 8, 7);
   ok(T.giants.length === 0 && T.board[7][7] === EMPTY && T.board[6][6] === EMPTY && T.board[8][8] === EMPTY && Rules.isBlockedForPlayer(T, 7, 7, BLACK), '폭파: 거대한 돌이 통째로 부서지고 그 자리는 2턴간 막힘');
   const X = Rules.create({ rng: seeded(16) });
-  X.hand[BLACK] = ['peek']; X.hand[WHITE] = ['bomb', 'wall'];
+  [[3,3],[3,4],[9,9],[10,2]].forEach(([r,c], i) => X.board[r][c] = i % 2 ? WHITE : BLACK);
+  X.hand[BLACK] = ['meteor'];
   Rules.useCard(X, 0);
-  ok(X.peek && X.peek.by === BLACK && X.peek.cards.length === 2, '엿보기: 상대 패 확인');
-  ok(!Rules.CARD_BY_ID.ghost && Rules.CARDS.length === 20, '투명한 돌 카드는 없음 (카드 20장)');
+  ok(Rules.countStones(X, BLACK) + Rules.countStones(X, WHITE) === 3, '운석: 무작위 돌 1개가 파괴됨');
+  const Q = Rules.create({ rng: seeded(17) });
+  [[3,3],[3,4],[9,9],[10,2],[5,5]].forEach(([r,c], i) => Q.board[r][c] = i % 2 ? WHITE : BLACK);
+  const qb = Rules.countStones(Q, BLACK), qw = Rules.countStones(Q, WHITE), qOld = JSON.stringify(Q.board);
+  Q.hand[BLACK] = ['earthquake']; Rules.useCard(Q, 0);
+  ok(Rules.countStones(Q, BLACK) === qb && Rules.countStones(Q, WHITE) === qw && JSON.stringify(Q.board) !== qOld, '지진: 돌 수는 그대로, 위치가 모두 바뀜');
+  const K = Rules.create({ rng: seeded(18), legends: false }); K.lg.card[WHITE] = 'latebloom'; K.lg.plies = 40; K.current = WHITE; K.lock[WHITE] = true;
+  const kr = Rules.useLegend(K);
+  ok(kr.ok && kr.blocked && K.lg.done[WHITE] && !K.lock[WHITE] && K.lg.big !== WHITE, '봉쇄: 전설 카드도 무효화');
+  ok(!Rules.CARD_BY_ID.peek && !Rules.CARD_BY_ID.ghost && Rules.CARDS.length === 19, '엿보기·투명한 돌 카드는 없음 (카드 19장)');
 }
 
 console.log('[카드: 알까기]');
@@ -386,7 +395,7 @@ console.log('[무작위 대국 — 오류·멈춤 확인]');
   ok(errors === 0, `무작위 ${games}판: 예외 ${errors}건`);
   ok(finished / games > 0.97, `끝까지 진행된 판 ${finished}/${games} (최대 ${maxSteps}스텝)`);
   ok(Object.keys(usedL).length >= 8, '사용된 전설 카드 종류 ' + Object.keys(usedL).length + '/11');
-  ok(Object.keys(used).length >= 19, '사용된 카드 종류 ' + Object.keys(used).length + '/20');
+  ok(Object.keys(used).length >= 19, '사용된 카드 종류 ' + Object.keys(used).length + '/19');
 }
 console.log(fails ? `\n실패 ${fails}건` : '\n모두 통과');
 process.exit(fails ? 1 : 0);

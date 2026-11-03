@@ -16,25 +16,24 @@
   // ends: 사용하면 턴이 끝남 / target: 사용 뒤 판에서 대상을 고름
   var CARDS = [
     { id: 'chain',      name: '연속 착수', cat: '공격',   weight: 10, desc: '이번 턴에 3번 착수\n(이번 턴 돌의\n2칸 안엔 못 둠)' },
-    { id: 'windmill',   name: '풍차',      cat: '공격',   weight: 10, target: true, desc: '내 돌 하나를 풍차로\n주변 8칸에\n상대가 못 둠' },
-    { id: 'alkkagi',    name: '알까기',    cat: '공격',   weight: 8,  desc: '흑·백이 한 번씩\n알까기로 새 돌 발사\n돌은 가까운 칸에 고정' },
-    { id: 'bomb',       name: '폭파',      cat: '방해',   weight: 5,  target: true, desc: '상대 돌 1개 제거\n그 자리는 2턴간\n아무도 못 둠' },
-    { id: 'trade',      name: '맞교환',    cat: '방해',   weight: 10, target: true, ends: true, desc: '맞닿은 흑·백 돌 한 쌍의\n색을 서로 바꿈\n(승리 줄이 되면 불가)' },
+    { id: 'windmill',   name: '풍차',      cat: '공격',   weight: 10, target: true, desc: '내 돌 하나를 풍차로\n만든다. 풍차가 된 돌은\n주변 8칸 안에 상대가\n두지 못한다.' },
+    { id: 'alkkagi',    name: '알까기',    cat: '공격',   weight: 8,  desc: '사용자 턴 기준으로\n두 턴간 알까기 모드에\n돌입한다.' },
+    { id: 'bomb',       name: '폭파',      cat: '방해',   weight: 5,  target: true, desc: '상대 돌 1개를 제거한다.\n해당 자리는 2턴간\n두지 못하게 된다.' },
+    { id: 'trade',      name: '맞교환',    cat: '방해',   weight: 10, target: true, ends: true, desc: '맞닿은 흑·백 돌 한 쌍의\n색을 서로 바꿈\n(승리 줄은 제외)' },
     { id: 'infection',  name: '감염',      cat: '방해',   weight: 8,  ends: true, desc: '맞닿은 상대 돌\n2개를 내 돌로\n(승리 줄은 제외)' },
     { id: 'reversal',   name: '전세 역전', cat: '희귀',   weight: 2,  ends: true, desc: '판의 흑·백을\n통째로 뒤바꿈\n(보호막 안은 그대로)' },
     { id: 'teleport',   name: '순간이동',  cat: '무작위', weight: 12, target: true, desc: '내 돌 1개를\n무작위 빈 칸으로 이동' },
-    { id: 'earthquake', name: '지진',      cat: '무작위', weight: 8,  desc: '모든 돌이 각자\n주변 빈 칸으로 흔들림' },
-    { id: 'meteor',     name: '운석',      cat: '무작위', weight: 5,  desc: '무작위 돌 1개가\n무작위 칸으로 날아감\n(내 돌일 수도!)' },
+    { id: 'earthquake', name: '지진',      cat: '무작위', weight: 8,  desc: '지진을 일으켜\n모든 돌의 위치를\n바꾼다.' },
+    { id: 'meteor',     name: '운석',      cat: '무작위', weight: 5,  desc: '무작위 돌 1개를\n파괴한다.' },
     { id: 'sixsense',   name: '식스센스',  cat: '규칙',   weight: 8,  desc: '승리 조건이\n영구히 6목으로' },
-    { id: 'wall',       name: '장벽',      cat: '지형',   weight: 7,  target: true, desc: '빈 칸에 영구 장벽\n(아무도 못 두고\n줄도 끊김)' },
-    { id: 'trap',       name: '함정',      cat: '지형',   weight: 10, target: true, desc: '빈 칸에 숨은 함정\n상대가 두면 돌이 사라지고\n나는 카드 1장' },
+    { id: 'wall',       name: '장벽',      cat: '지형',   weight: 7,  target: true, desc: '영구 장벽 하나를\n생성한다.' },
+    { id: 'trap',       name: '함정',      cat: '지형',   weight: 10, target: true, desc: '상대에게는 보이지 않는\n함정을 설치한다. 상대가\n함정 위에 착수 시 그 돌을\n파괴하고 나는 무작위\n일반 카드 한 장을 받는다.' },
     { id: 'snipe',      name: '저격',      cat: '방해',   weight: 4,  ends: true, desc: '상대 돌 무작위\n2개 제거' },
-    { id: 'double',     name: '1+1',       cat: '보급',   weight: 6,  desc: '무작위 카드\n2장 받기' },
-    { id: 'peek',       name: '엿보기',    cat: '정보',   weight: 6,  desc: '이번 턴 동안\n상대 패를 봄' },
-    { id: 'giant',      name: '거대한 돌', cat: '희귀',   weight: 3,  desc: '다음 착수 자리에 3×3\n중립 바위가 떨어짐\n(돌은 깨짐 · 폭파로 파괴)' },
+    { id: 'double',     name: '1+1',       cat: '보급',   weight: 6,  desc: '무작위 일반 카드\n2장 받는다.' },
+    { id: 'giant',      name: '거대한 돌', cat: '희귀',   weight: 3,  desc: '발동 후, 자신이 착수하는\n돌이 3x3 크기의\n중립 바위로 바뀜.' },
     { id: 'weather',    name: '기상 이변', cat: '지형',   weight: 4,  desc: '맵을 다른\n무작위 맵으로 바꿈' },
-    { id: 'shield',     name: '보호막',    cat: '수비',   weight: 7,  target: true, desc: '내 돌 주변 3×3 보호\n(상대의 다음 2턴)' },
-    { id: 'blockade',   name: '봉쇄',      cat: '수비',   weight: 3,  desc: '상대가 다음에\n쓰는 카드 1장 무효' }
+    { id: 'shield',     name: '보호막',    cat: '수비',   weight: 7,  target: true, desc: '내 돌 주변 3×3을\n보호한다.' },
+    { id: 'blockade',   name: '봉쇄',      cat: '수비',   weight: 3,  desc: '상대의 다음 카드를\n무효화 시킨다.' }
   ];
   var CARD_BY_ID = {};
   CARDS.forEach(function (c) { CARD_BY_ID[c.id] = c; });
@@ -484,18 +483,10 @@
       if (isStone(G.board[r][c])) { stones.push({ r: r, c: c, color: G.board[r][c], mill: isWindmill(G, r, c) }); occ[r * SIZE + c] = 1; }
       else if (G.board[r][c] === WALL) { walls.push({ r: r, c: c }); occ[r * SIZE + c] = 1; }
     }
-    var claimed = {}, order = shuffle(G, stones.map(function (_, i) { return i; })), np = [];
-    order.forEach(function (i) {
-      var s = stones[i], cand = [];
-      for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
-        if (!dr && !dc) continue;
-        var nr = s.r + dr, nc = s.c + dc, k = nr * SIZE + nc;
-        if (!inb(nr, nc) || occ[k] || claimed[k] || isCrater(G, nr, nc)) continue;
-        cand.push({ r: nr, c: nc, k: k });
-      }
-      if (cand.length) { var pk = cand[Math.floor(rnd(G) * cand.length)]; claimed[pk.k] = 1; np[i] = { r: pk.r, c: pk.c }; }
-      else np[i] = { r: s.r, c: s.c };
-    });
+    var np = [], cells = [];                                  // 모든 돌이 판 위의 무작위 칸으로 (돌이 있던 칸 + 빈 칸 중에서)
+    for (r = 0; r < SIZE; r++) for (c = 0; c < SIZE; c++) if (G.board[r][c] !== WALL && !isCrater(G, r, c)) cells.push({ r: r, c: c });
+    cells = shuffle(G, cells);
+    stones.forEach(function (s, i) { np[i] = cells[i]; });
     for (r = 0; r < SIZE; r++) for (c = 0; c < SIZE; c++) G.board[r][c] = EMPTY;
     walls.forEach(function (w) { G.board[w.r][w.c] = WALL; });
     G.windmills = [];
@@ -587,15 +578,10 @@
         var pool = listStones(G, 1).concat(listStones(G, 2)).filter(function (q) { return !isProtected(G, q.r, q.c); });
         if (!pool.length) return { ok: false, reason: 'noTarget' };
         var hit = pool[Math.floor(rnd(G) * pool.length)], victim = G.board[hit.r][hit.c];
-        var dest = pickRandomEmptyCell(G, victim);
-        if (!dest) return { ok: false, reason: 'noTarget' };
-        var mill = isWindmill(G, hit.r, hit.c);
-        G.board[hit.r][hit.c] = EMPTY; G.board[dest.r][dest.c] = victim;
-        moveMeta(G, hit.r, hit.c, dest.r, dest.c);
-        G.lastMove = { r: dest.r, c: dest.c };
-        pruneTraps(G); pruneCraters(G);
         spend(G, idx);
-        ev(G, { t: 'move', from: hit, to: dest, p: victim, why: 'meteor', mill: mill });
+        removeStoneAt(G, hit.r, hit.c); lgLose(G, victim, hit.r, hit.c);
+        pruneTraps(G);
+        ev(G, { t: 'remove', r: hit.r, c: hit.c, p: victim, why: 'meteor' });
         endIfBoardWin(G);
         return { ok: true };
       }
@@ -624,9 +610,6 @@
       }
       case 'double':
         spend(G, idx); grantRandomCard(G, p); grantRandomCard(G, p);
-        return { ok: true };
-      case 'peek':
-        spend(G, idx); G.peek = { by: p, cards: G.hand[opp].slice() }; ev(G, { t: 'peek', by: p, cards: G.peek.cards.slice() });
         return { ok: true };
       case 'giant':
         spend(G, idx); G.next.giant = p; ev(G, { t: 'next', what: 'giant', p: p });
