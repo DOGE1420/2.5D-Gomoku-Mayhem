@@ -5,7 +5,7 @@
 function syncPeek() {
   peekMeshes.forEach(function (m) { handGroup.remove(m); m.material.dispose(); });
   peekMeshes = [];
-  if (!G.peek || G.peek.by !== G.current) return;
+  if (!G.peek || G.peek.by !== viewer()) return;
   var vs = viewSize();
   G.peek.cards.forEach(function (id, i) {
     var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));

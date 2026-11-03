@@ -12,6 +12,7 @@ function showScreen(name) {
   curScreen = name;
   $('menu').classList.toggle('show', name === 'menu');
   $('lobby').classList.toggle('show', name === 'lobby');
+  $('side').classList.toggle('show', name === 'side');
   document.body.classList.toggle('in-game', name === 'game');
   $('tutBox').classList.toggle('show', name === 'game' && !!tut);
   syncBgm();
@@ -93,14 +94,19 @@ function endGameScreens() {                      // 진행 중이던 게임 화�
   ['counterBox', 'choiceBox', 'slotBox'].forEach(function (id) { $(id).classList.remove('show'); });
   $('banner').style.display = 'none';
 }
-function startLocal() { endGameScreens(); gameMode = 'local'; setMenuNote(null); bgmNewGame(); showScreen('game'); reset(); }
+function startLocal() { endGameScreens(); botStop(); gameMode = 'local'; setMenuNote(null); bgmNewGame(); showScreen('game'); reset(); }
 function showMenu() {
-  endGameScreens(); gameMode = 'local'; reset({}); showScreen('menu');   // 빈 판을 배경으로 보여 줌
+  endGameScreens(); botStop(); gameMode = 'local'; reset({}); showScreen('menu');   // 빈 판을 배경으로 보여 줌
 }
-function restartGame() { if (gameMode === 'tutorial' && tut) tutStage(tut.step); else { bgmNewGame(); syncBgm(); reset(); } }
+function restartGame() { if (gameMode === 'bot') { endGameScreens(); showScreen('side'); } else if (gameMode === 'tutorial' && tut) tutStage(tut.step); else { bgmNewGame(); syncBgm(); reset(); } }
 $('modeLocal').addEventListener('click', startLocal);
 $('modeTut').addEventListener('click', function () { setMenuNote(null); startTutorial(); });
-$('modeBot').addEventListener('click', function () { setMenuNote('note.bot'); });              // 봇 대전은 아직 없음 (버튼만)
+$('modeBot').addEventListener('click', function () { setMenuNote(null); showScreen('side'); });
+$('sideBack').addEventListener('click', function () { showScreen('menu'); });
+$('sideOptions').addEventListener('click', function (e) {
+  var b = e.target.closest('button[data-side]'); if (!b) return;
+  endGameScreens(); gameMode = 'bot'; botStart(b.dataset.side); bgmNewGame(); showScreen('game'); reset();
+});
 $('modeMp').addEventListener('click', function () { setLobbyNote(null); $('roomCodeBox').classList.remove('show'); $('joinCode').value = ''; setMenuNote(null); showScreen('lobby'); });
 $('backBtn').addEventListener('click', showMenu);
 $('bannerMenu').addEventListener('click', showMenu);
@@ -168,7 +174,7 @@ joinCode.addEventListener('keydown', function (e) {   // 영문 이외 자판은
 
 /* ---------------- 메인 화면 배경: 어둠 속에 흩어진 돌과 카드 ---------------- */
 var menuBg = (function () {
-  var items = null, W = 0, H = 0, cvs = [$('menuBg'), $('menuBg2')], last = 0;
+  var items = null, W = 0, H = 0, cvs = [$('menuBg'), $('menuBg2'), $('menuBg3')], last = 0;
   function seed(w, h) {
     items = []; var n = 46, s = 7;
     function rnd() { s = (s * 16807) % 2147483647; return s / 2147483647; }
@@ -191,7 +197,7 @@ var menuBg = (function () {
     g.strokeStyle = 'rgba(50,34,14,.8)'; g.lineWidth = Math.max(2, it.r * .045); g.beginPath(); g.arc(0, -h * .08, w * .24, 0, 6.2832); g.moveTo(-w * .22, h * .22); g.lineTo(w * .22, h * .22); g.stroke();
   }
   function draw(dt) {
-    var el = $('menu').classList.contains('show') ? cvs[0] : $('lobby').classList.contains('show') ? cvs[1] : null; if (!el) return;
+    var el = $('menu').classList.contains('show') ? cvs[0] : $('lobby').classList.contains('show') ? cvs[1] : $('side').classList.contains('show') ? cvs[2] : null; if (!el) return;
     var w = el.clientWidth, h = el.clientHeight; if (!w) return;
     if (el.width !== w || el.height !== h || !items) { el.width = w; el.height = h; seed(w, h); }
     var g = el.getContext('2d'); g.clearRect(0, 0, w, h);

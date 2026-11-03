@@ -22,9 +22,9 @@ function answerCounterUI(yes) {
 }
 // 카드: 1번 누르면 크게 확대, 확대된 카드를 한 번 더 누르면 발동
 function onCardClick(i) {
-  if (curScreen !== 'game' || G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
+  if (curScreen !== 'game' || !humanTurn() || G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
   if (inspectIdx !== i) { inspectIdx = i; inspectLegend = false; hideLegendHint(); sfx('card'); return; }
-  var mesh = cardMeshes[i], id = G.hand[G.current][i];
+  var mesh = cardMeshes[i], id = G.hand[viewer()][i];
   var snap = { id: id, x: mesh.position.x, y: mesh.position.y, s: mesh.scale.x };
   if (G.pending && !G.pending.legend && G.pending.handIndex === i) { cancelMode(); inspectIdx = -1; return; }   // 대기 중인 카드를 다시 누르면 취소
   var res = Rules.useCard(G, i), evs = Rules.drain(G);
@@ -34,10 +34,10 @@ function onCardClick(i) {
 }
 // 전설 칸(오른쪽 아래): 누르면 확대(조건 표시), 한 번 더 누르면 사용
 function onLegendClick() {
-  if (G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
+  if (!humanTurn() || G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
   if (!inspectLegend) { inspectLegend = true; inspectIdx = -1; sfx('card'); showLegendHint(); return; }
   var o = legendMeshes.filter(function (x) { return x.own; })[0]; if (!o) return;
-  var snap = { id: G.lg.card[G.current], x: o.m.position.x, y: o.m.position.y, s: o.m.scale.x };
+  var snap = { id: G.lg.card[viewer()], x: o.m.position.x, y: o.m.position.y, s: o.m.scale.x };
   if (G.pending && G.pending.legend) { cancelMode(); inspectLegend = false; hideLegendHint(); return; }
   if (!Rules.canUseLegend(G)) return;
   var res = Rules.useLegend(G), evs = Rules.drain(G);
@@ -56,7 +56,7 @@ function onLegendClick() {
 }
 // 판의 칸 (r=행, c=열): 직부감에서만 동작
 function onCell(r, c) {
-  if (curScreen !== 'game' || G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue || topGoal < 0.5 || topT < 0.85) return;
+  if (curScreen !== 'game' || !humanTurn() || G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue || topGoal < 0.5 || topT < 0.85) return;
   if (G.pending) {
     var res = Rules.target(G, r, c), evs = Rules.drain(G);
     if (!res.ok) return;
@@ -114,7 +114,7 @@ function updateHover() {
 dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch' && !(alkUI && alkUI.dragging)) return; setPointer(e); updateHover(); });
 // 알까기: 새 돌을 눌러 당겼다 놓으면 발사
 dom.addEventListener('pointerdown', function (e) {
-  if (curScreen !== 'game' || !G || !G.alk || G.alk.phase !== 'aim' || topT < 0.85 || busy > 0) return;
+  if (curScreen !== 'game' || !G || !G.alk || (botColor && G.alk.order[G.alk.idx] === botColor) || G.alk.phase !== 'aim' || topT < 0.85 || busy > 0) return;
   setPointer(e); updateHover();
   if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return;
   var s = G.alk.stones[G.alk.newIndex];

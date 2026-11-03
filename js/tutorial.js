@@ -25,7 +25,7 @@ function tutStage(step) {
   }
   handDirty = true; syncAll();
 }
-function startTutorial() { endGameScreens(); gameMode = 'tutorial'; bgmNewGame(); showScreen('game'); tutStage(1); }
+function startTutorial() { endGameScreens(); botStop(); gameMode = 'tutorial'; bgmNewGame(); showScreen('game'); tutStage(1); }
 // 흑이 돌을 둬서 턴이 넘어갈 때 (②단계): 백이 이길 칸이 남았는지 확인
 function tutOnTurn() {
   if (!tut || tut.step !== 2 || G.current !== Rules.WHITE) return;

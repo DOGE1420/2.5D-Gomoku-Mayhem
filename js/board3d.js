@@ -20,7 +20,7 @@ function updateHUD() {
 }
 function syncS() {
   S.turn = G.current; S.over = G.gameOver;
-  S.mode = G.pending ? G.pending.type : null; S.pendingIdx = G.pending ? G.pending.handIndex : -1;
+  S.mode = G.pending ? G.pending.type : null; S.pendingIdx = G.pending && humanTurn() ? G.pending.handIndex : -1;
 }
 
 /* ---------------- 판 위의 표시: 풍차 · 보호막 · 함정 · 구멍 ---------------- */
@@ -89,7 +89,7 @@ function syncMarkers() {
     ln.rotation.x = -Math.PI / 2; ln.position.set(p.x, 0.03, p.z); markerGroup.add(ln);
   });
   G.traps.forEach(function (tr) {                                     // 함정: 설치한 사람(= 지금 차례)에게만 보임
-    if (tr.owner !== G.current || G.board[tr.r][tr.c] !== EMPTY) return;
+    if (tr.owner !== viewer() || G.board[tr.r][tr.c] !== EMPTY) return;
     var p = cellAt(tr.r, tr.c), grp = new THREE.Group(); grp.position.set(p.x, 0.04, p.z);
     addBox(grp, 0.62, 0.03, 0.08, 0x8c4614, 0, 0, 0, 0.785); addBox(grp, 0.62, 0.03, 0.08, 0x8c4614, 0, 0, 0, -0.785);
     var rg = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.4, 20), new THREE.MeshBasicMaterial({ color: 0x8c4614, side: THREE.DoubleSide }));
@@ -317,7 +317,7 @@ function handleEvent(e) {
     case 'slot': return playSlot(e.reels, e.win);
     case 'handLost': handDirty = true; return 0;
     case 'counter': toast('🧘 무소유! 카드가 무효가 되었고 패 ' + e.n + '장을 버렸습니다', 3000); handDirty = true; sfx('boom'); return 0.4;
-    case 'counterAsk': showCounterBox(e.holder, e.user, e.id, answerCounterUI); return 0;
+    case 'counterAsk': if (botColor && e.holder === botColor) return 0.2; showCounterBox(e.holder, e.user, e.id, answerCounterUI); return 0;
     case 'king': sfx('magic'); toast('👑 왕으로 지정! 20턴 살아남으면 귀환합니다', 2600); return 0.3;
     case 'kingLost': toast('👑 왕이 쓰러졌습니다…', 2400); return 0.2;
     case 'kingReturn': handDirty = true; sfx('win'); toast('👑 왕의 귀환! 패가 가득 차고 새 전설 카드를 받았습니다', 3200); return 0.5;
@@ -325,7 +325,7 @@ function handleEvent(e) {
     case 'slothDone': return 0;
     case 'legendPicked': case 'start': case 'ability': handDirty = true; return 0;
     case 'turn': onTurnChanged(); tutOnTurn(); return 0.15;
-    case 'draft': openDraftUI(e.picks, e.kind, e.refresh, e.p); return 0.3;
+    case 'draft': if (botColor && e.p === botColor) return 0.3; openDraftUI(e.picks, e.kind, e.refresh, e.p); return 0.3;
     case 'alkTurn': startAlkUI(); return 0;
     case 'alkSnap': finishAlkUI(e.stones); return 0.4;
     case 'win': highlightLine(e.line, e.cells); sfx('win'); if (tutOnWin()) return 0; tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = t('banner.win', { who: t(e.p === BLACK ? 'who.black' : 'who.white') }); elBanner.style.display = 'flex'; }); return 0;

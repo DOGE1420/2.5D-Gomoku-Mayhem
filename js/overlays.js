@@ -19,7 +19,7 @@ function updateTrait() {
 // 전설 카드를 확대해서 볼 때: 사용 조건과 현재 진행 상황
 var elHint = document.getElementById('legendHint');
 function showLegendHint() {
-  var p = G.current, id = G.lg.card[p]; if (!id) return;
+  var p = viewer(), id = G.lg.card[p]; if (!id) return;
   var info = Rules.legendProgress(G, p), c = Rules.LEGEND_BY_ID[id];
   elHint.textContent = (info.done ? '이미 사용함' : '조건: ' + c.cond + '  —  현재: ' + info.text + (info.ok ? '  ✔ 사용 가능' : ''));
   elHint.classList.add('show'); elHint.classList.toggle('ok', !!info.ok && !info.done);
@@ -45,7 +45,7 @@ function askAllin(cb) {
   var box = document.getElementById('choiceBox'), acts = document.getElementById('choiceActions');
   document.getElementById('choiceText').textContent = '🎰 올인 — 무엇을 거시겠어요? 슬롯 3개가 같으면 2배!';
   acts.innerHTML = '';
-  [['패 전부 걸기 (' + G.hand[G.current].length + '장)', 'cards'], ['내 돌 3개 걸기', 'stones'], ['취소', null]].forEach(function (o) {
+  [['패 전부 걸기 (' + G.hand[viewer()].length + '장)', 'cards'], ['내 돌 3개 걸기', 'stones'], ['취소', null]].forEach(function (o) {
     var b = document.createElement('button'); b.className = 'btn'; b.textContent = o[0];
     b.onclick = function () { box.classList.remove('show'); cb(o[1]); };
     acts.appendChild(b);

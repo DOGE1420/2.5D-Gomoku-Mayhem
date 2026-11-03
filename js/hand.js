@@ -132,7 +132,7 @@ function cardTarget(i, n) {
 function rebuildHand() {
   cardMeshes.forEach(function (m) { handGroup.remove(m); m.material.dispose(); });
   cardMeshes = [];
-  var h = G.hand[G.current];
+  var h = G.hand[viewer()];
   h.forEach(function (id, i) {
     var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
     m.userData.i = i;
@@ -175,7 +175,7 @@ var legendMeshes = [], hoverLegend = false, inspectLegend = false;
 function rebuildLegend() {
   legendMeshes.forEach(function (o) { handGroup.remove(o.m); o.m.material.dispose(); });
   legendMeshes = [];
-  var lg = G.lg, cur = G.current, opp = Rules.other(cur);
+  var lg = G.lg, cur = viewer(), opp = Rules.other(cur);
   [cur, opp].forEach(function (p) {
     var id = lg.card[p]; if (!id) return;
     var own = p === cur, face = own || lg.done[p];
