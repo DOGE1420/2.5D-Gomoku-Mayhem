@@ -276,6 +276,9 @@ function legendGame(card, seed) {
   const r = Rules.useLegend(G, 'cards');
   const slot = Rules.drain(G).find(e => e.t === 'slot');
   ok(slot && slot.reels.length === 3 && (slot.win ? G.hand[BLACK].length === 4 : G.hand[BLACK].length === 0), '올인(패): 슬롯 3개 — ' + (slot.win ? '잭팟 → 패 2배' : '꽝 → 패 잃음'));
+  ok(!G.lg.done[BLACK] && !Rules.canUseLegend(G), '올인: 같은 턴에는 한 번만 (판마다가 아니라 턴마다)');
+  G.lgUsedThisTurn = false; G.hand[BLACK] = ['bomb']; G.current = BLACK;
+  ok(Rules.canUseLegend(G), '올인: 다음 턴에 다시 사용 가능');
   const S = legendGame('allin', 42); [[7,7],[8,8],[9,9]].forEach(([r,c]) => S.board[r][c] = BLACK);
   Rules.useLegend(S, 'stones'); Rules.target(S, 7, 7); Rules.target(S, 8, 8); Rules.target(S, 9, 9);
   const n = Rules.countStones(S, BLACK), s2 = Rules.drain(S).find(e => e.t === 'slot');

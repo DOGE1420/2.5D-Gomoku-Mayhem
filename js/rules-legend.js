@@ -56,13 +56,15 @@
   function canUseLegend(G) {
     var p = G.current, c = R.LEGEND_BY_ID[G.lg.card[p]];
     if (!c || c.react || G.lg.done[p]) return false;
+    if (c.id === 'allin' && G.lgUsedThisTurn) return false;     // 올인: 한 턴에 한 번
     if (G.gameOver || G.draft || G.pending || G.alk || G.counter || G.startQueue) return false;
     return legendProgress(G, p).ok;
   }
 
   /* ---------------- 사용 ---------------- */
   function lgFinish(G, p) {
-    G.lg.done[p] = true; G.lgUsedThisTurn = true;
+    if (G.lg.card[p] !== 'allin') G.lg.done[p] = true;     // 올인(도박)은 판마다 1번이 아니라 턴마다 1번
+    G.lgUsedThisTurn = true;
     ev(G, { t: 'legend', p: p, id: G.lg.card[p] });
   }
   // choice: 올인에서 'cards' | 'stones'
