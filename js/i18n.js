@@ -4,18 +4,11 @@
 
 var lang = 'ko';
 try { lang = localStorage.getItem('omok_lang') === 'en' ? 'en' : 'ko'; } catch (e) {}
-// 움직임 줄이기: 카드 불타는 연출을 짧은 페이드로, 파티클·화면 흔들림·카메라 움직임·눈비를 끔
-var reduceMotion = false;
-try {
-  var savedRM = localStorage.getItem('omok_reduce_motion');
-  reduceMotion = savedRM === null ? !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) : savedRM === '1';
-} catch (e) {}
 
 var I18N = {
   ko: {
     'title': '증강 오목', 'sub': '3수마다 카드 1장 · 턴마다 카드 1장 사용',
-    'lang.toggle': 'English', 'lang.aria': '언어 바꾸기', 'settings': '설정', 'settings.reduceMotion': '움직임 줄이기',
-    'settings.reduceMotion.desc': '카드 발동 연출을 움직임 없는 짧은 페이드로 바꾸고, 파티클·화면 흔들림·카메라 움직임·눈비를 끕니다.',
+    'lang.toggle': 'English', 'lang.aria': '언어 바꾸기', 'settings': '설정',
     'settings.bgm': '🎵 배경 음악', 'settings.bgmMute': '배경 음악 끄기/켜기',
     'mode.tut': '튜토리얼', 'mode.tut.desc': '1분 만에 규칙 익히기',
     'mode.local': '로컬 모드', 'mode.local.desc': '한 기기에서 둘이',
@@ -35,8 +28,7 @@ var I18N = {
   },
   en: {
     'title': 'Augmented Gomoku', 'sub': 'A card every 3 stones · one card per turn',
-    'lang.toggle': '한국어', 'lang.aria': 'Change language', 'settings': 'Settings', 'settings.reduceMotion': 'Reduce motion',
-    'settings.reduceMotion.desc': 'Replaces card effects with a short fade and turns off particles, screen shake, camera drift, snow and rain.',
+    'lang.toggle': '한국어', 'lang.aria': 'Change language', 'settings': 'Settings',
     'settings.bgm': '🎵 Music', 'settings.bgmMute': 'Mute / unmute music',
     'mode.tut': 'Tutorial', 'mode.tut.desc': 'Learn the rules in a minute',
     'mode.local': 'Local', 'mode.local.desc': 'Two players, one device',

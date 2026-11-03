@@ -58,7 +58,7 @@ function applyMap(m) {
     candleBase = C.intensity != null ? C.intensity : 1.2;
     stars.visible = m.stars !== false && !di;
     stars.material.size = m.stars === 'bright' ? 2.6 : 1.8; starBase = m.stars === 'bright' ? 0.95 : 0.55;
-    setPrecip(reduceMotion ? null : m.snow ? 'snow' : m.rain ? 'rain' : null);
+    setPrecip(m.snow ? 'snow' : m.rain ? 'rain' : null);
     // 카메라
     var cam = m.camera || {};
     CAM_BASE.fromArray(cam.pos || defCam.pos.toArray()); CAM_LOOK.fromArray(cam.look || defCam.look.toArray());

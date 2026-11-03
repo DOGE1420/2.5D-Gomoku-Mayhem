@@ -41,12 +41,6 @@ $('langBtn').addEventListener('click', function () {
 $('settingsBtn').addEventListener('click', function (e) { e.stopPropagation(); $('settingsPanel').classList.toggle('show'); });
 $('settingsPanel').addEventListener('click', function (e) { e.stopPropagation(); });
 document.addEventListener('click', function () { $('settingsPanel').classList.remove('show'); });
-$('reduceMotion').checked = reduceMotion;
-$('reduceMotion').addEventListener('change', function () {
-  reduceMotion = this.checked;
-  try { localStorage.setItem('omok_reduce_motion', reduceMotion ? '1' : '0'); } catch (e) {}
-  setPrecip(null); if (!reduceMotion) applyThemeFor(G.map);   // 눈·비를 끄거나 다시 켬
-});
 var bgm = $('bgm'), bgmVol = 40, bgmMuted = false;
 try { var sv = localStorage.getItem('omok_bgm_vol'); if (sv !== null) bgmVol = Math.max(0, Math.min(100, parseInt(sv, 10) || 0)); bgmMuted = localStorage.getItem('omok_bgm_muted') === '1'; } catch (e) {}
 function renderBgmUi() {
@@ -202,7 +196,7 @@ var menuBg = (function () {
     if (el.width !== w || el.height !== h || !items) { el.width = w; el.height = h; seed(w, h); }
     var g = el.getContext('2d'); g.clearRect(0, 0, w, h);
     items.forEach(function (it) {
-      if (!reduceMotion) it.a += it.va * dt;
+      it.a += it.va * dt;
       g.save(); g.translate(it.x, it.y); g.rotate(it.a); g.globalAlpha = it.d;
       if (it.kind === 'c') card(g, it); else stone(g, it);
       g.restore();

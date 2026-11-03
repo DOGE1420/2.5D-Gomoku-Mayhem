@@ -16,7 +16,6 @@ function stepAnims(dt) {
 }
 var partGeo = new THREE.SphereGeometry(0.07, 8, 8);
 function burst(pos, color, n) {
-  if (reduceMotion) n = Math.ceil(n / 4);
   for (var i = 0; i < n; i++) {
     var m = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color: color, transparent: true }));
     m.position.copy(pos);

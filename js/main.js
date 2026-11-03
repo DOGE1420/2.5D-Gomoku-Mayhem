@@ -51,14 +51,13 @@ function frame() {
   // 카메라: 앉은 시점(마우스 시차) ↔ 직부감 부드럽게 전환
   topT += (topGoal - topT) * (1 - Math.pow(0.002, dt));
   if (Math.abs(topGoal - topT) < 0.0008) topT = topGoal;
-  var pm = reduceMotion ? 0 : 1; parX += (mouseN.x * 0.9 * pm - parX) * 0.06; parY += (mouseN.y * 0.5 * pm - parY) * 0.06;
+  parX += (mouseN.x * 0.9 - parX) * 0.06; parY += (mouseN.y * 0.5 - parY) * 0.06;
   var k = 1 - topT;
   camera.position.set(
     (CAM_BASE.x * camDist + parX * k) * k,
     (CAM_BASE.y * camDist + parY * k) * k + topH * topT,
     (CAM_BASE.z * camDist) * k + topDz * topT);
   camera.up.set(0, k, -topT).normalize();
-  if (reduceMotion) camShake = 0;
   if (camShake > 0) { camera.position.x += (Math.random() - 0.5) * camShake * 0.35; camera.position.y += (Math.random() - 0.5) * camShake * 0.25; camShake = Math.max(0, camShake - dt * 2.2); }
   camera.lookAt(CAM_LOOK.x * k, CAM_LOOK.y * k, CAM_LOOK.z * k + topDz * topT);
   if (scene.fog) { scene.fog.near = fogBase.near + 30 * topT; scene.fog.far = fogBase.far + 70 * topT; }
