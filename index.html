@@ -71,6 +71,8 @@
   #topControls { position: fixed; top: 12px; right: 12px; z-index: 30; display: flex; gap: 8px; align-items: flex-start; }
   body.in-game #topControls { right: 104px; }
   #topControls .btn { position: static; }
+  .ic { width: 1.15em; height: 1.15em; vertical-align: -0.2em; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; filter: url(#rough); overflow: visible; }
+  .reel .ic { width: 1em; height: 1em; vertical-align: middle; }
   #settingsPanel { position: absolute; top: 44px; right: 0; width: 290px; padding: 14px 16px; text-align: left; background: rgba(24,15,6,.97); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 8px; box-shadow: 0 10px 30px #000; display: none; }
   #settingsPanel.show { display: block; } #settingsPanel .title { font-size: 16px; margin-bottom: 10px; }
   #settingsPanel label.row { display: flex; gap: 8px; align-items: center; cursor: pointer; } #settingsPanel .desc { margin: 6px 0 12px; font-size: 12px; color: #b9a67a; line-height: 1.45; }
@@ -93,22 +95,22 @@
 <body>
 <div id="game"></div>
 <div id="topControls">
-  <button id="settingsBtn" class="btn" aria-label="설정">⚙️</button>
+  <button id="settingsBtn" class="btn" aria-label="설정" data-ico="settings"></button>
   <button id="langBtn" class="btn">English</button>
   <div id="settingsPanel">
     <div class="title" data-i18n="settings"></div>
     <div data-i18n="settings.bgm"></div>
-    <div class="vol"><button class="btn" id="bgmMute" aria-label="">🔊</button><input type="range" id="bgmVolume" min="0" max="100" step="5" value="40"><span id="volValue">40%</span></div>
+    <div class="vol"><button class="btn" id="bgmMute" aria-label=""></button><input type="range" id="bgmVolume" min="0" max="100" step="5" value="40"><span id="volValue">40%</span></div>
   </div>
 </div>
 <div id="menu" class="screen show">
   <canvas id="menuBg"></canvas>
   <h1 data-i18n="title"></h1>
   <div class="modes">
-    <button class="mode-btn" id="modeTut"><div class="mode-icon">📖</div><div class="mode-name" data-i18n="mode.tut"></div><div class="mode-desc" data-i18n="mode.tut.desc"></div></button>
-    <button class="mode-btn" id="modeLocal"><div class="mode-icon">👥</div><div class="mode-name" data-i18n="mode.local"></div><div class="mode-desc" data-i18n="mode.local.desc"></div></button>
-    <button class="mode-btn" id="modeBot"><div class="mode-icon">🤖</div><div class="mode-name" data-i18n="mode.bot"></div><div class="mode-desc" data-i18n="mode.bot.desc"></div></button>
-    <button class="mode-btn" id="modeMp"><div class="mode-icon">🌐</div><div class="mode-name" data-i18n="mode.mp"></div><div class="mode-desc" data-i18n="mode.mp.desc"></div></button>
+    <button class="mode-btn" id="modeTut"><div class="mode-icon" data-ico="book"></div><div class="mode-name" data-i18n="mode.tut"></div><div class="mode-desc" data-i18n="mode.tut.desc"></div></button>
+    <button class="mode-btn" id="modeLocal"><div class="mode-icon" data-ico="people"></div><div class="mode-name" data-i18n="mode.local"></div><div class="mode-desc" data-i18n="mode.local.desc"></div></button>
+    <button class="mode-btn" id="modeBot"><div class="mode-icon" data-ico="bot"></div><div class="mode-name" data-i18n="mode.bot"></div><div class="mode-desc" data-i18n="mode.bot.desc"></div></button>
+    <button class="mode-btn" id="modeMp"><div class="mode-icon" data-ico="globe"></div><div class="mode-name" data-i18n="mode.mp"></div><div class="mode-desc" data-i18n="mode.mp.desc"></div></button>
   </div>
   <p id="menuNote"></p>
 </div>
@@ -145,16 +147,16 @@
 <div id="hud"><div id="turn"></div></div>
 <button id="endturn" class="btn">턴 종료</button>
 <button id="restart" class="btn" data-i18n="btn.restart">새 게임</button>
-<button id="viewbtn" class="btn">🔍 판 보기</button>
+<button id="viewbtn" class="btn"></button>
 <select id="mapSel" class="btn"></select>
 <div id="notice"></div>
 <div id="trait"></div>
 <div id="toast"></div>
 <div id="legendHint"></div>
-<div id="draftCap"><div id="draftCapText"></div><button id="reroll" class="btn">🔄 다시 뽑기</button></div>
-<div id="counterBox" class="box"><div id="counterText"></div><div><button id="counterYes" class="btn">🧘 막기</button><button id="counterNo" class="btn">넘기기</button></div></div>
+<div id="draftCap"><div id="draftCapText"></div><button id="reroll" class="btn"></button></div>
+<div id="counterBox" class="box"><div id="counterText"></div><div><button id="counterYes" class="btn" data-ico="zen"> 막기</button><button id="counterNo" class="btn">넘기기</button></div></div>
 <div id="choiceBox" class="box"><div id="choiceText"></div><div id="choiceActions"></div></div>
-<div id="slotBox" class="box"><div class="reels"><span class="reel">🍒</span><span class="reel">🍋</span><span class="reel">🔔</span></div><div id="slotResult"></div></div>
+<div id="slotBox" class="box"><div class="reels"><span class="reel" data-ico="cherry"></span><span class="reel" data-ico="lemon"></span><span class="reel" data-ico="bell"></span></div><div id="slotResult"></div></div>
 <div id="banner"><div id="bannerText"></div><button class="btn" id="again" data-i18n="btn.again">다시 하기</button><button class="btn" id="bannerMenu" data-i18n="btn.menu">메뉴로</button></div>
 <script src="js/three.min.js"></script>
 <script src="js/config.js"></script>
@@ -162,6 +164,7 @@
 <script src="js/rules-legend.js"></script>
 <script src="js/rules-world.js"></script>
 <script src="js/setup.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/stones.js"></script>

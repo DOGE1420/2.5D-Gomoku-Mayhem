@@ -24,7 +24,7 @@ function draftLayout(n) {
 }
 function openDraftUI(picks, kind, refresh, player) {
   closeDraftUI(); draftIds = picks.slice(); inspectIdx = -1; inspectLegend = false; hideLegendHint();
-  var who = player === BLACK ? '⚫ 흑' : '⚪ 백';
+  var who = player === BLACK ? '[[black]] 흑' : '[[white]] 백';
   showDraftCaption(who + ' — ' + (kind === 'legend' ? '전설 카드를 고르세요 (상대에게는 비공개)' : '카드를 고르세요'), refresh || 0, onRerollClick);
   picks.forEach(function (id, i) {
     var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));

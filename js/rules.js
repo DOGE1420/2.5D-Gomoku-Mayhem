@@ -54,22 +54,22 @@
   var LEGEND_BY_ID = {}; LEGENDS.forEach(function (c) { c.legend = true; LEGEND_BY_ID[c.id] = c; });
   // 시작 능력 5종: 판마다 무작위 1개가 양쪽에 똑같이 적용
   var ABILITIES = [
-    { id: 'umbrella', icon: '☂️', name: '자연재해 면역',  desc: '맵 자연재해가 일어나지 않음 (맵은 다음 단계)' },
-    { id: 'pouch',    icon: '🎒', name: '넉넉한 주머니',  desc: '패를 5장까지 쥘 수 있음' },
-    { id: 'clover',   icon: '🍀', name: '행운',           desc: '카드를 4장 중에서 고름' },
-    { id: 'sturdy',   icon: '🏰', name: '단단한 시작',    desc: '처음 둔 돌 3개는 카드 효과로부터 영구 보호' },
-    { id: 'retry',    icon: '🔁', name: '재도전',         desc: '다시 뽑기를 3번 쓸 수 있음' }
+    { id: 'umbrella', icon: 'umbrella', name: '자연재해 면역',  desc: '맵 자연재해가 일어나지 않음 (맵은 다음 단계)' },
+    { id: 'pouch',    icon: 'pouch', name: '넉넉한 주머니',  desc: '패를 5장까지 쥘 수 있음' },
+    { id: 'clover',   icon: 'clover', name: '행운',           desc: '카드를 4장 중에서 고름' },
+    { id: 'sturdy',   icon: 'castle', name: '단단한 시작',    desc: '처음 둔 돌 3개는 카드 효과로부터 영구 보호' },
+    { id: 'retry',    icon: 'retry', name: '재도전',         desc: '다시 뽑기를 3번 쓸 수 있음' }
   ];
   var ABILITY_BY_ID = {}; ABILITIES.forEach(function (c) { ABILITY_BY_ID[c.id] = c; });
   var H = {};   // rules-legend.js 가 채우는 훅
   // 맵: 판마다 무작위 하나. 라운드 = 흑·백이 한 번씩 둔 것 (백의 턴이 끝날 때 1 증가). 효과는 js/rules-world.js
   var MAP_LIST = [
-    { id: 'classic', icon: '🏞️', name: '평원', short: '자연재해 없음', desc: '아무 일도 없는 기본 맵.' },
-    { id: 'summer',  icon: '☀️', name: '여름', short: '5라운드마다 흑·백 돌 1개씩 녹음', desc: '5라운드마다 흑돌·백돌이 하나씩 무작위로 녹아 사라집니다.' },
-    { id: 'winter',  icon: '❄️', name: '겨울', short: '5라운드마다 돌 1개가 2라운드 동안 얼음', desc: '5라운드마다 무작위 돌 하나가 2라운드 동안 얼음(누구의 돌도 아님, 줄이 끊김)이 됩니다. 녹으면 원래 주인에게 돌아갑니다.' },
-    { id: 'space',   icon: '🌌', name: '우주', short: '웜홀: 판의 양 끝이 반대편과 연결', desc: '판의 왼쪽·오른쪽 끝, 위·아래 끝이 이어져 줄이 반대편으로 넘어가도 이어집니다.' },
-    { id: 'desert',  icon: '🏜️', name: '사막', short: '8라운드부터 4라운드마다 모래폭풍', desc: '8라운드부터 4라운드마다 모래폭풍이 모든 돌을 무작위 방향으로 한 칸씩 밉니다(승리 줄이 되는 이동은 없음).' },
-    { id: 'rain',    icon: '🌧️', name: '장마', short: '알까기 미끄러움 · 지진 때 쓰나미', desc: '알까기가 더 미끄럽고, 지진 카드가 2배로 자주 나오며, 지진 때 쓰나미가 한쪽 가장자리 3줄의 돌을 쓸어 갑니다.' }
+    { id: 'classic', icon: 'plain', name: '평원', short: '자연재해 없음', desc: '아무 일도 없는 기본 맵.' },
+    { id: 'summer',  icon: 'sun', name: '여름', short: '5라운드마다 흑·백 돌 1개씩 녹음', desc: '5라운드마다 흑돌·백돌이 하나씩 무작위로 녹아 사라집니다.' },
+    { id: 'winter',  icon: 'snow', name: '겨울', short: '5라운드마다 돌 1개가 2라운드 동안 얼음', desc: '5라운드마다 무작위 돌 하나가 2라운드 동안 얼음(누구의 돌도 아님, 줄이 끊김)이 됩니다. 녹으면 원래 주인에게 돌아갑니다.' },
+    { id: 'space',   icon: 'space', name: '우주', short: '웜홀: 판의 양 끝이 반대편과 연결', desc: '판의 왼쪽·오른쪽 끝, 위·아래 끝이 이어져 줄이 반대편으로 넘어가도 이어집니다.' },
+    { id: 'desert',  icon: 'cactus', name: '사막', short: '8라운드부터 4라운드마다 모래폭풍', desc: '8라운드부터 4라운드마다 모래폭풍이 모든 돌을 무작위 방향으로 한 칸씩 밉니다(승리 줄이 되는 이동은 없음).' },
+    { id: 'rain',    icon: 'rain', name: '장마', short: '알까기 미끄러움 · 지진 때 쓰나미', desc: '알까기가 더 미끄럽고, 지진 카드가 2배로 자주 나오며, 지진 때 쓰나미가 한쪽 가장자리 3줄의 돌을 쓸어 갑니다.' }
   ];
   var MAP_BY_ID = {}; MAP_LIST.forEach(function (m) { MAP_BY_ID[m.id] = m; });
   var ZONE_START = 15, ZONE_EVERY = 5, ZONE_MAX = 3;   // 자기장(모든 맵): 15라운드부터 5라운드마다 바깥 한 줄씩, 최대 3줄(9×9까지), 1라운드 전에 예고

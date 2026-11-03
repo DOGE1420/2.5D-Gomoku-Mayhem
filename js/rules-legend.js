@@ -217,7 +217,7 @@
     if (run.passPending && !G.gameOver) C.passTurn(G);
   }
   // 🎰 슬롯머신: 릴 3개가 같은 그림이면 잭팟(50%). 결과를 먼저 정하고 화면은 릴이 돌다 멈추는 연출만 보여 줌
-  var SLOT = ['🍒', '🍋', '🔔', '💎', '7️⃣'];
+  var SLOT = ['cherry', 'lemon', 'bell', 'diamond', 'seven'];
   function spinSlot(G, p) {
     var win = C.rnd(G) < 0.5, reels;
     if (win) { var s = SLOT[Math.floor(C.rnd(G) * SLOT.length)]; reels = [s, s, s]; }

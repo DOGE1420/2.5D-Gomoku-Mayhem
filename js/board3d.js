@@ -11,11 +11,11 @@ function updateHUD() {
   var who = function (p) { return t(p === BLACK ? 'who.black' : 'who.white'); };
   var tx = G.alk ? t('turn.alk', { who: who(G.alk.order[G.alk.idx]) }) : t(G.current === BLACK ? 'turn.black' : 'turn.white');
   var b = [];                                   // 작은 상태 표시만
-  if (G.next.giant === G.current) b.push('🪨');
-  if (G.winOver[G.current]) b.push('🐢4목');
-  if (G.lock[G.current]) b.push('🚫');
+  if (G.next.giant === G.current) b.push('[[rock]]');
+  if (G.winOver[G.current]) b.push('[[turtle]]4목');
+  if (G.lock[G.current]) b.push('[[forbid]]');
   if (G.winLength === 6) b.push('6목');
-  elTurn.textContent = tx + (b.length ? '  ' + b.join(' ') : '');
+  elTurn.innerHTML = H(tx + (b.length ? '  ' + b.join(' ') : ''));
   elEnd.style.display = 'none';
 }
 function syncS() {
@@ -41,7 +41,9 @@ var darkMesh = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.MeshBas
 darkMesh.rotation.x = -Math.PI / 2; darkMesh.position.y = 0.5; darkMesh.visible = false; scene.add(darkMesh);
 function crownSprite() {
   var cv = document.createElement('canvas'); cv.width = cv.height = 128; var g = cv.getContext('2d');
-  g.font = '92px ' + EMOJI_FONT; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('👑', 64, 70);
+  g.fillStyle = '#e0b030'; g.strokeStyle = '#3a2408'; g.lineWidth = 6; g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(18, 92); g.lineTo(12, 44); g.lineTo(40, 66); g.lineTo(64, 28); g.lineTo(88, 66); g.lineTo(116, 44); g.lineTo(110, 92); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = '#c0392b'; [[64, 74], [38, 78], [90, 78]].forEach(function (q) { g.beginPath(); g.arc(q[0], q[1], 5, 0, 7); g.fill(); });
   var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false }));
   sp.scale.set(0.8, 0.8, 1); return sp;
 }
@@ -273,14 +275,14 @@ function handleEvent(e) {
     case 'thaw': dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0x9ad0ff, 12); addStoneMesh(e.r, e.c, e.owner, true); sfx('place'); return 0.4;
     case 'zone':
       for (var zr = 0; zr < N; zr++) for (var zc = 0; zc < N; zc++) if (Rules.ringOf(zr, zc) === e.zone - 1) { if (meshes[zr][zc]) dropMesh(zr, zc); addWallMesh(zr, zc, true); }
-      sfx('boom'); camShake = 1; toast(e.n ? '⚡ 자기장이 줄어듭니다 — 바깥 줄의 돌 ' + e.n + '개가 사라졌습니다' : '⚡ 자기장이 줄어듭니다 (바깥 줄은 이제 둘 수 없음)', 3000); return 0.8;
-    case 'zoneWarn': toast('⚡ 다음 라운드에 자기장이 줄어듭니다 (바깥 한 줄)', 3000); sfx('card'); return 0.2;
+      sfx('boom'); camShake = 1; toast(e.n ? '[[bolt]] 자기장이 줄어듭니다 — 바깥 줄의 돌 ' + e.n + '개가 사라졌습니다' : '[[bolt]] 자기장이 줄어듭니다 (바깥 줄은 이제 둘 수 없음)', 3000); return 0.8;
+    case 'zoneWarn': toast('[[bolt]] 다음 라운드에 자기장이 줄어듭니다 (바깥 한 줄)', 3000); sfx('card'); return 0.2;
     case 'disaster': {
       var who = e.owner === BLACK ? '흑' : '백';
-      var msg = e.kind === 'melt' ? '☀️ 더위로 돌 ' + e.n + '개가 녹아 사라졌습니다'
-        : e.kind === 'freeze' ? '❄️ ' + who + '의 돌 하나가 얼어붙었습니다 (2라운드)'
-        : e.kind === 'sandstorm' ? '🏜️ 모래폭풍! 돌 ' + e.n + '개가 ' + e.dir + '으로 밀렸습니다'
-        : '🌊 쓰나미! ' + e.dir + ' 가장자리 3줄의 돌 ' + e.n + '개가 휩쓸려 갔습니다';
+      var msg = e.kind === 'melt' ? '[[sun]] 더위로 돌 ' + e.n + '개가 녹아 사라졌습니다'
+        : e.kind === 'freeze' ? '[[snow]] ' + who + '의 돌 하나가 얼어붙었습니다 (2라운드)'
+        : e.kind === 'sandstorm' ? '[[cactus]] 모래폭풍! 돌 ' + e.n + '개가 ' + e.dir + '으로 밀렸습니다'
+        : '[[wave]] 쓰나미! ' + e.dir + ' 가장자리 3줄의 돌 ' + e.n + '개가 휩쓸려 갔습니다';
       toast(msg, 3000); return 0.2;
     }
     case 'map': applyThemeFor(e.id); return 0;
@@ -301,7 +303,7 @@ function handleEvent(e) {
     case 'blocked': sfx('boom'); return 0.3;
     case 'weather': {
       var mp = Rules.MAP_BY_ID[e.map]; applyThemeFor(e.map);
-      toast('🌦️ 기상 이변! 맵이 ' + mp.icon + ' ' + mp.name + '(으)로 바뀌었습니다 — ' + mp.short, 3400); sfx('magic'); return 0.8;
+      toast('[[weather]] 기상 이변! 맵이 ' + '[[' + mp.icon + ']] ' + mp.name + '(으)로 바뀌었습니다 — ' + mp.short, 3400); sfx('magic'); return 0.8;
     }
     case 'gain': case 'overflow': case 'spend': handDirty = true; if (e.t === 'gain') sfx('card'); return 0;
     case 'tradeFirst': tradeFirst = { r: e.r, c: e.c }; sfx('card'); return 0;
@@ -312,16 +314,16 @@ function handleEvent(e) {
       toast((lc ? lc.name : '전설 카드') + ' 발동!', 2400); return 0.2;
     }
     case 'legendPick': sfx('card'); return 0;
-    case 'dark': toast('🙈 3턴 동안 판이 어두워져 돌이 보이지 않습니다', 3000); sfx('magic'); return 0.3;
-    case 'coin': toast(e.win ? '🪙 동전: 앞면! 상대의 가장 긴 줄이 사라집니다' : '🪙 동전: 뒷면… 내 가장 긴 줄이 사라집니다', 2800); sfx('card'); return 0.6;
+    case 'dark': toast('[[blind]] 3턴 동안 판이 어두워져 돌이 보이지 않습니다', 3000); sfx('magic'); return 0.3;
+    case 'coin': toast(e.win ? '[[coin]] 동전: 앞면! 상대의 가장 긴 줄이 사라집니다' : '[[coin]] 동전: 뒷면… 내 가장 긴 줄이 사라집니다', 2800); sfx('card'); return 0.6;
     case 'slot': return playSlot(e.reels, e.win);
     case 'handLost': handDirty = true; return 0;
-    case 'counter': toast('🧘 무소유! 카드가 무효가 되었고 패 ' + e.n + '장을 버렸습니다', 3000); handDirty = true; sfx('boom'); return 0.4;
+    case 'counter': toast('[[zen]] 무소유! 카드가 무효가 되었고 패 ' + e.n + '장을 버렸습니다', 3000); handDirty = true; sfx('boom'); return 0.4;
     case 'counterAsk': if (botColor && e.holder === botColor) return 0.2; showCounterBox(e.holder, e.user, e.id, answerCounterUI); return 0;
-    case 'king': sfx('magic'); toast('👑 왕으로 지정! 20턴 살아남으면 귀환합니다', 2600); return 0.3;
-    case 'kingLost': toast('👑 왕이 쓰러졌습니다…', 2400); return 0.2;
-    case 'kingReturn': handDirty = true; sfx('win'); toast('👑 왕의 귀환! 패가 가득 차고 새 전설 카드를 받았습니다', 3200); return 0.5;
-    case 'rule': if (e.turtle) toast('🐢 이제 한쪽은 4목으로도 승리합니다', 2600); else toast('👁️ 이제 6목이 되어야 승리합니다', 2600); return 0.2;
+    case 'king': sfx('magic'); toast('[[crown]] 왕으로 지정! 20턴 살아남으면 귀환합니다', 2600); return 0.3;
+    case 'kingLost': toast('[[crown]] 왕이 쓰러졌습니다…', 2400); return 0.2;
+    case 'kingReturn': handDirty = true; sfx('win'); toast('[[crown]] 왕의 귀환! 패가 가득 차고 새 전설 카드를 받았습니다', 3200); return 0.5;
+    case 'rule': if (e.turtle) toast('[[turtle]] 이제 한쪽은 4목으로도 승리합니다', 2600); else toast('[[eye]] 이제 6목이 되어야 승리합니다', 2600); return 0.2;
     case 'slothDone': return 0;
     case 'legendPicked': case 'start': case 'ability': handDirty = true; return 0;
     case 'turn': onTurnChanged(); tutOnTurn(); return 0.15;

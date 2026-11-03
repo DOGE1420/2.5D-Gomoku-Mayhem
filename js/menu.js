@@ -21,11 +21,11 @@ function showScreen(name) {
 /* ---------------- 번역 ---------------- */
 function applyStaticI18n() {
   document.documentElement.lang = lang; document.title = t('title');
-  document.querySelectorAll('[data-i18n]').forEach(function (el) { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n]').forEach(function (el) { el.innerHTML = H(t(el.dataset.i18n)); });
   document.querySelectorAll('[data-i18n-ph]').forEach(function (el) { el.placeholder = t(el.dataset.i18nPh); });
   $('langBtn').textContent = t('lang.toggle'); $('langBtn').setAttribute('aria-label', t('lang.aria'));
   $('bgmMute').setAttribute('aria-label', t('settings.bgmMute'));
-  setTopView(topGoal > 0.5, true);                    // 판 보기 / 카드 보기 버튼
+  applyIcons(); setTopView(topGoal > 0.5, true);      // 판 보기 / 카드 보기 버튼
   if (menuNoteKey) $('menuNote').textContent = t(menuNoteKey);
   if (lobbyNoteKey) $('lobbyStatus').textContent = t(lobbyNoteKey);
   if (typeof updateHUD === 'function' && G) updateHUD();
@@ -45,7 +45,7 @@ var bgm = $('bgm'), bgmVol = 40, bgmMuted = false;
 try { var sv = localStorage.getItem('omok_bgm_vol'); if (sv !== null) bgmVol = Math.max(0, Math.min(100, parseInt(sv, 10) || 0)); bgmMuted = localStorage.getItem('omok_bgm_muted') === '1'; } catch (e) {}
 function renderBgmUi() {
   $('bgmVolume').value = bgmVol; $('volValue').textContent = bgmVol + '%';
-  $('bgmMute').textContent = (bgmMuted || bgmVol === 0) ? '🔇' : '🔊';
+  $('bgmMute').innerHTML = ico((bgmMuted || bgmVol === 0) ? 'mute' : 'volume');
   bgm.volume = bgmMuted ? 0 : bgmVol / 100;
 }
 $('bgmVolume').addEventListener('input', function () {

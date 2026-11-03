@@ -78,7 +78,7 @@ var topT = 0, topGoal = 0, topH = 30, topDz = 2, parX = 0, parY = 0;
 var elViewBtn = document.getElementById('viewbtn');
 function setTopView(on, quiet) {
   topGoal = on ? 1 : 0;
-  elViewBtn.textContent = t(on ? 'btn.viewCards' : 'btn.viewBoard');
+  elViewBtn.innerHTML = H(t(on ? 'btn.viewCards' : 'btn.viewBoard'));
 }
 var mouseN = { x: 0, y: 0 };
 
