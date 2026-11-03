@@ -1,13 +1,16 @@
-/* 봇 AI — 1단계 (원본 증강 오목의 봇 난이도 1 알고리즘)
- * 돌: 기존 돌 바로 옆(반경 1)만 후보 → 줄 점수(공격 + 수비×가중치)가 높은 상위 6곳 중 무작위. 40%는 상대 위협을 못 보고(수비 0.1) 넘어감
- * 카드: 50% 확률로 쓸 수 있는 카드 중 무작위 1장, 대상도 무작위 / 뽑기도 무작위
+/* 봇 — 화면 연결 (언제 무엇을 할지 · 연출). 두뇌(돌 · 카드 선택 알고리즘)는 js/bot-ai.js 의 BotAI, 단계별 설정은 BOT_LEVELS
+ * 1·3단계: 돌은 단순 점수, 카드는 50% 확률로 무작위 사용 / 5단계~: 패턴 인식 + 상황에 맞는 카드 사용 / 7·10·20: 수 읽기
  * 전설 카드: 조건이 맞고 쓸 만하면 턴 시작에 발동 / 무소유 대응 · 알까기 발사 · 거대한 돌 자리 선택 포함
  * 규칙 엔진(Rules)만 호출하고, 연출은 사람이 쓸 때와 같은 흐름(runEvents · 카드 타는 연출)을 탐.
  */
 'use strict';
 
 var botColor = 0, humanColor = 0;               // botColor 가 0 이면 봇전이 아님
-var BOT = { radius: 1, topN: 6, defense: 0.5, missChance: 0.4, cardChance: 0.5, delay: 0.65 };
+var BOT = { cardChance: 0.5, delay: 0.65 };
+var botLevel = 1, botPlan = null;
+try { var savedLv = parseInt(localStorage.getItem('omok_bot_level'), 10); if (BOT_LEVELS[savedLv]) botLevel = savedLv; } catch (e) {}
+function botCfg() { return BOT_LEVELS[botLevel] || BOT_LEVELS[1]; }
+function botSetLevel(n) { botLevel = BOT_LEVELS[n] ? n : 1; try { localStorage.setItem('omok_bot_level', String(botLevel)); } catch (e) {} }
 var botViewSet = false, botWait = 0, botRollKey = '', botWantCard = false, botPickKey = '';
 
 // 화면에 패를 보여 줄 사람 (봇전에서는 늘 사람, 로컬에서는 차례인 쪽)
@@ -98,15 +101,10 @@ function botChooseStones() {                     // 우선순위대로 후보 �
     if (mine.length) order.push(mine[0]);
     else { var th = bWinCells(opp).filter(function (q) { return Rules.canPlace(G, q.r, q.c); }); if (th.length) order.push(th[0]); }
   }
-  if (G.next.giant === me) { var g = bGiantCell(all, me); if (g) order.push(g); }
-  var cands = bAnyStone() ? all.filter(function (q) { return bNearStone(q.r, q.c, BOT.radius); }) : all.filter(function (q) { return q.r === 7 && q.c === 7; });
-  if (!cands.length) cands = all;
-  var defense = Math.random() < BOT.missChance ? 0.1 : BOT.defense;
-  var scored = cands.map(function (q) { return { r: q.r, c: q.c, s: bCellScore(q.r, q.c, me, defense) }; }).sort(function (a, b) { return b.s - a.s; });
-  var pool = scored.slice(0, Math.min(BOT.topN, scored.length)), first = bPick(pool);
-  order.push(first);
-  scored.forEach(function (q) { order.push(q); });                 // 거부되면 점수순으로 다음 자리
-  all.forEach(function (q) { order.push(q); });
+  if (G.next.giant === me) { var g = BotAI.bestGiantCell(G, me); if (g) order.push(g); }       // 거대한 돌은 가장 많이 깨는 자리에
+  var pick = BotAI.chooseMove(G, me, botCfg());                                                   // 단계별 알고리즘 (js/bot-ai.js)
+  if (pick) order.push(pick);
+  all.map(function (q) { return { r: q.r, c: q.c, s: bCellScore(q.r, q.c, me, 1) }; }).sort(function (a, b) { return b.s - a.s; }).forEach(function (q) { order.push(q); });
   return order;
 }
 function botPlaceStone() {
@@ -123,12 +121,21 @@ var B_SNAP = function (id) { return { id: id, x: 0, y: 0, s: 1.75 }; };
 function botAfterUse(res, evs, snap) { afterUse(res, evs, snap); }
 function botUseCard() {
   var h = G.hand[botColor], idx = [], i, j, t;
+  if (botCfg().smartCards) {                                      // 5단계~: 상황을 보고 쓸 카드와 대상을 정함
+    var choice = BotAI.chooseCard(G, botColor);
+    if (!choice) return false;
+    var id0 = h[choice.idx], r0 = Rules.useCard(G, choice.idx);
+    if (!r0.ok) return false;
+    botPlan = { targets: choice.targets ? choice.targets.slice() : null };
+    botAfterUse(r0, Rules.drain(G), B_SNAP(id0)); return true;
+  }
   for (i = 0; i < h.length; i++) idx.push(i);
   for (i = idx.length - 1; i > 0; i--) { j = bRnd(i + 1); t = idx[i]; idx[i] = idx[j]; idx[j] = t; }
   for (i = 0; i < idx.length; i++) {
     var id = h[idx[i]], res = Rules.useCard(G, idx[i]);
     if (!res.ok) continue;
-    var evs = Rules.drain(G); botAfterUse(res, evs, B_SNAP(id)); return true;
+    botPlan = null;
+    botAfterUse(res, Rules.drain(G), B_SNAP(id)); return true;
   }
   return false;
 }
@@ -148,7 +155,7 @@ function botLegendOk() {                          // 전설 카드를 지금 쓸
   }
   if (id === 'chicken') return bLongestRun(opp).len > bLongestRun(p).len || bWinCells(opp).length > 0;
   if (id === 'mirror') return ['chain', 'windmill', 'bomb', 'shield', 'trap', 'wall', 'blockade', 'infection', 'sixsense'].indexOf(G.lg.lastCard[opp]) >= 0;
-  if (id === 'allin') return bLongestRun(opp).len >= 4 && bLongestRun(p).len < 3;   // 크게 밀릴 때만
+  if (id === 'allin') return BotAI.longestEval(G, p) < -800;                       // 크게 밀릴 때만
   return true;
 }
 function botUseLegend() {
@@ -165,7 +172,12 @@ function botPendingTarget() {
   for (var r = 0; r < Rules.SIZE; r++) for (var c = 0; c < Rules.SIZE; c++) if (Rules.isValidTarget(G, r, c)) cands.push({ r: r, c: c });
   if (!cands.length) { cancelMode(); return; }
   var pick;
-  if (t.type === 'sacrifice' || t.type === 'wager') {                // 덜 중요한 돌(주변에 내 돌이 적은 돌, 가장 긴 줄은 마지막)부터
+  if (botPlan && !t.legend) {                                          // 미리 정해 둔 대상 (5단계~)
+    var pl = botPlan.targets;
+    if (pl) { if (!pl.length) { cancelMode(); botPlan = null; return; } pick = pl.shift(); cands = [pick]; }
+  }
+  if (pick) { /* 정해 둔 대상 */ }
+  else if (t.type === 'sacrifice' || t.type === 'wager') {                // 덜 중요한 돌(주변에 내 돌이 적은 돌, 가장 긴 줄은 마지막)부터
     var run = bLongestRun(me).cells, chosen = (t.picks || []).map(function (q) { return q.r + ',' + q.c; });
     var score = function (q) {
       var n = 0; for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) if ((dr || dc) && Rules.inb(q.r + dr, q.c + dc) && G.board[q.r + dr][q.c + dc] === me) n++;
@@ -176,8 +188,9 @@ function botPendingTarget() {
     pick = cands.slice().sort(function (a, b) { return score(a) - score(b); })[0];
   } else pick = bPick(cands);
   var res = Rules.target(G, pick.r, pick.c), evs = Rules.drain(G);
-  if (!res.ok) { cancelMode(); return; }
+  if (!res.ok) { cancelMode(); botPlan = null; return; }
   if (!res.resolved) { runEvents(evs); return; }
+  botPlan = null;
   busy++; burnPlayed(function () { busy--; runEvents(evs); });
 }
 
@@ -203,7 +216,8 @@ function botTick(dt) {
   var me = botColor, act = false;
   if (G.draft) {
     if (G.draft.player !== me) return;
-    var res = Rules.pickDraft(G, bPick(G.draft.picks));
+    var dpicks = G.draft.picks, dchoice = botCfg().smartCards ? BotAI.pickDraft(G, dpicks, me, G.draft.kind) : bPick(dpicks);
+    var res = Rules.pickDraft(G, dchoice);
     if (res.ok) { var e0 = Rules.drain(G); closeDraftUI(); runEvents(e0); botWait = BOT.delay; }
     return;
   }

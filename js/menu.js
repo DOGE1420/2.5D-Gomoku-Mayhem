@@ -13,6 +13,7 @@ function showScreen(name) {
   $('menu').classList.toggle('show', name === 'menu');
   $('lobby').classList.toggle('show', name === 'lobby');
   $('side').classList.toggle('show', name === 'side');
+  $('level').classList.toggle('show', name === 'level');
   document.body.classList.toggle('in-game', name === 'game');
   $('tutBox').classList.toggle('show', name === 'game' && !!tut);
   syncBgm();
@@ -25,7 +26,7 @@ function applyStaticI18n() {
   document.querySelectorAll('[data-i18n-ph]').forEach(function (el) { el.placeholder = t(el.dataset.i18nPh); });
   $('langBtn').textContent = t('lang.toggle'); $('langBtn').setAttribute('aria-label', t('lang.aria'));
   $('bgmMute').setAttribute('aria-label', t('settings.bgmMute'));
-  applyIcons(); setTopView(topGoal > 0.5, true);      // 판 보기 / 카드 보기 버튼
+  renderLevelButtons(); applyIcons(); setTopView(topGoal > 0.5, true);      // 판 보기 / 카드 보기 버튼
   if (menuNoteKey) $('menuNote').textContent = t(menuNoteKey);
   if (lobbyNoteKey) $('lobbyStatus').textContent = t(lobbyNoteKey);
   if (typeof updateHUD === 'function' && G) updateHUD();
@@ -95,8 +96,17 @@ function showMenu() {
 function restartGame() { if (gameMode === 'bot') { endGameScreens(); showScreen('side'); } else if (gameMode === 'tutorial' && tut) tutStage(tut.step); else { bgmNewGame(); syncBgm(); reset(); } }
 $('modeLocal').addEventListener('click', startLocal);
 $('modeTut').addEventListener('click', function () { setMenuNote(null); startTutorial(); });
-$('modeBot').addEventListener('click', function () { setMenuNote(null); showScreen('side'); });
-$('sideBack').addEventListener('click', function () { showScreen('menu'); });
+function botLevelName(n) { return n === 20 ? t('bot.ultimate') : t('bot.lv', { n: n }); }
+function renderLevelButtons() {
+  $('levelOptions').innerHTML = BOT_LEVEL_LIST.map(function (n) { return '<button class="mode-btn" data-level="' + n + '"><div class="mode-name">' + botLevelName(n) + '</div></button>'; }).join('');
+}
+$('modeBot').addEventListener('click', function () { setMenuNote(null); showScreen('level'); });
+$('levelBack').addEventListener('click', function () { showScreen('menu'); });
+$('levelOptions').addEventListener('click', function (e) {
+  var b = e.target.closest('button[data-level]'); if (!b) return;
+  botSetLevel(parseInt(b.dataset.level, 10)); showScreen('side');
+});
+$('sideBack').addEventListener('click', function () { showScreen(gameMode === 'bot' ? 'menu' : 'level'); });
 $('sideOptions').addEventListener('click', function (e) {
   var b = e.target.closest('button[data-side]'); if (!b) return;
   endGameScreens(); gameMode = 'bot'; botStart(b.dataset.side); bgmNewGame(); showScreen('game'); reset();
@@ -168,7 +178,7 @@ joinCode.addEventListener('keydown', function (e) {   // 영문 이외 자판은
 
 /* ---------------- 메인 화면 배경: 어둠 속에 흩어진 돌과 카드 ---------------- */
 var menuBg = (function () {
-  var items = null, W = 0, H = 0, cvs = [$('menuBg'), $('menuBg2'), $('menuBg3')], last = 0;
+  var items = null, W = 0, H = 0, cvs = [$('menuBg'), $('menuBg2'), $('menuBg3'), $('menuBg4')], last = 0;
   function seed(w, h) {
     items = []; var n = 46, s = 7;
     function rnd() { s = (s * 16807) % 2147483647; return s / 2147483647; }
@@ -191,7 +201,7 @@ var menuBg = (function () {
     g.strokeStyle = 'rgba(50,34,14,.8)'; g.lineWidth = Math.max(2, it.r * .045); g.beginPath(); g.arc(0, -h * .08, w * .24, 0, 6.2832); g.moveTo(-w * .22, h * .22); g.lineTo(w * .22, h * .22); g.stroke();
   }
   function draw(dt) {
-    var el = $('menu').classList.contains('show') ? cvs[0] : $('lobby').classList.contains('show') ? cvs[1] : $('side').classList.contains('show') ? cvs[2] : null; if (!el) return;
+    var el = $('menu').classList.contains('show') ? cvs[0] : $('lobby').classList.contains('show') ? cvs[1] : $('side').classList.contains('show') ? cvs[2] : $('level').classList.contains('show') ? cvs[3] : null; if (!el) return;
     var w = el.clientWidth, h = el.clientHeight; if (!w) return;
     if (el.width !== w || el.height !== h || !items) { el.width = w; el.height = h; seed(w, h); }
     var g = el.getContext('2d'); g.clearRect(0, 0, w, h);

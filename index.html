@@ -53,10 +53,10 @@
   .mode-btn.soon { opacity: .72; }
 
   /* 메인 화면: 어두운 배경에 흩어진 돌과 카드, 가운데 큰 제목과 글자만 있는 메뉴 */
-  #menu, #lobby, #side { background: #050302; overflow: hidden; }
-  #menuBg, #menuBg2, #menuBg3 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
-  #menu::after, #lobby::after, #side::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 38% 46% at 50% 50%, rgba(3,2,1,.93) 0%, rgba(3,2,1,.78) 55%, rgba(3,2,1,0) 100%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.7) 100%); }
-  #menu > *:not(canvas), #lobby > *:not(canvas), #side > *:not(canvas) { position: relative; z-index: 2; }
+  #menu, #lobby, #side, #level { background: #050302; overflow: hidden; }
+  #menuBg, #menuBg2, #menuBg3, #menuBg4 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  #menu::after, #lobby::after, #side::after, #level::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 38% 46% at 50% 50%, rgba(3,2,1,.93) 0%, rgba(3,2,1,.78) 55%, rgba(3,2,1,0) 100%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.7) 100%); }
+  #menu > *:not(canvas), #lobby > *:not(canvas), #side > *:not(canvas), #level > *:not(canvas) { position: relative; z-index: 2; }
   #menu h1 { margin-bottom: 44px; font-size: 92px; letter-spacing: 8px; color: #efe6d0; text-shadow: 0 0 30px rgba(0,0,0,.9), 0 4px 0 #000; line-height: 1.05; }
   #menu .sub { margin: 14px 0 38px; font-size: 15px; color: #a89a78; letter-spacing: 2px; }
   .modes { gap: 2px; width: auto; align-items: center; }
@@ -85,7 +85,7 @@
   .code-input { width: 200px; text-align: center; font: inherit; font-size: 26px; letter-spacing: 8px; text-transform: uppercase; padding: 8px 6px; background: rgba(0,0,0,.45); color: #f1e2b8; border: 1px solid #8a6a3a; border-radius: 6px; }
   .code-input::placeholder { font-size: 14px; letter-spacing: 0; color: #8a7a56; }
   #roomCodeBox { display: none; margin-top: 10px; } #roomCodeBox.show { display: block; } #roomCodeValue { display: block; font-size: 34px; letter-spacing: 8px; color: #ffe08a; }
-  #backBtn { left: 12px; top: 12px; z-index: 25; } .screen #lobbyBack, .screen #sideBack { position: absolute; left: 12px; top: 12px; }
+  #backBtn { left: 12px; top: 12px; z-index: 25; } .screen #lobbyBack, .screen #sideBack, .screen #levelBack { position: absolute; left: 12px; top: 12px; }
   #tutBox { position: fixed; left: 50%; top: 62px; transform: translateX(-50%); width: min(640px, 90vw); padding: 12px 18px; background: rgba(20,12,4,.93); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 8px; text-align: center; display: none; z-index: 18; line-height: 1.5; font-size: 15px; }
   #tutBox.show { display: block; } #tutBtn { position: static; margin-top: 10px; display: none; }
   #banner { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.6); color: #f1e2b8; font-size: 40px; text-shadow: 0 3px 10px #000; }
@@ -113,6 +113,11 @@
     <button class="mode-btn" id="modeMp"><div class="mode-icon" data-ico="globe"></div><div class="mode-name" data-i18n="mode.mp"></div><div class="mode-desc" data-i18n="mode.mp.desc"></div></button>
   </div>
   <p id="menuNote"></p>
+</div>
+<div id="level" class="screen">
+  <canvas id="menuBg4"></canvas>
+  <button class="btn" id="levelBack" data-i18n="back"></button>
+  <div class="modes" id="levelOptions"></div>
 </div>
 <div id="side" class="screen">
   <canvas id="menuBg3"></canvas>
@@ -180,6 +185,7 @@
 <script src="js/maps.js"></script>
 <script src="js/menu.js"></script>
 <script src="js/tutorial.js"></script>
+<script src="js/bot-ai.js"></script>
 <script src="js/bot.js"></script>
 <script src="js/main.js"></script>
 </body>
