@@ -72,7 +72,7 @@ function playSlot(reels, win) {
 function showDraftCaption(text, refresh, onReroll) {
   document.getElementById('draftCapText').textContent = '';           // 안내 문구는 표시하지 않음 (다시 뽑기 버튼만)
   var b = document.getElementById('reroll');
-  b.style.display = refresh > 0 ? 'inline-block' : 'none'; b.textContent = '🔄 다시 뽑기 (' + refresh + '회 남음)';
+  b.style.display = refresh > 0 ? 'inline-block' : 'none'; b.textContent = t('reroll', { n: refresh });
   b.onclick = onReroll;
   document.getElementById('draftCap').classList.add('show');
 }

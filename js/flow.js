@@ -22,7 +22,7 @@ function answerCounterUI(yes) {
 }
 // 카드: 1번 누르면 크게 확대, 확대된 카드를 한 번 더 누르면 발동
 function onCardClick(i) {
-  if (G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
+  if (curScreen !== 'game' || G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue) return;
   if (inspectIdx !== i) { inspectIdx = i; inspectLegend = false; hideLegendHint(); sfx('card'); return; }
   var mesh = cardMeshes[i], id = G.hand[G.current][i];
   var snap = { id: id, x: mesh.position.x, y: mesh.position.y, s: mesh.scale.x };
@@ -56,7 +56,7 @@ function onLegendClick() {
 }
 // 판의 칸 (r=행, c=열): 직부감에서만 동작
 function onCell(r, c) {
-  if (G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue || topGoal < 0.5 || topT < 0.85) return;
+  if (curScreen !== 'game' || G.gameOver || busy > 0 || G.draft || G.alk || G.counter || G.startQueue || topGoal < 0.5 || topT < 0.85) return;
   if (G.pending) {
     var res = Rules.target(G, r, c), evs = Rules.drain(G);
     if (!res.ok) return;
@@ -78,7 +78,7 @@ var topT = 0, topGoal = 0, topH = 30, topDz = 2, parX = 0, parY = 0;
 var elViewBtn = document.getElementById('viewbtn');
 function setTopView(on, quiet) {
   topGoal = on ? 1 : 0;
-  elViewBtn.textContent = on ? '🎴 카드 보기' : '🔍 판 보기';
+  elViewBtn.textContent = t(on ? 'btn.viewCards' : 'btn.viewBoard');
 }
 var mouseN = { x: 0, y: 0 };
 
@@ -114,7 +114,7 @@ function updateHover() {
 dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch' && !(alkUI && alkUI.dragging)) return; setPointer(e); updateHover(); });
 // 알까기: 새 돌을 눌러 당겼다 놓으면 발사
 dom.addEventListener('pointerdown', function (e) {
-  if (!G || !G.alk || G.alk.phase !== 'aim' || topT < 0.85 || busy > 0) return;
+  if (curScreen !== 'game' || !G || !G.alk || G.alk.phase !== 'aim' || topT < 0.85 || busy > 0) return;
   setPointer(e); updateHover();
   if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return;
   var s = G.alk.stones[G.alk.newIndex];
@@ -130,6 +130,7 @@ window.addEventListener('pointerup', function (e) {
   aimBand.visible = aimDir.visible = false;
 });
 dom.addEventListener('click', function (e) {
+  if (curScreen !== 'game') return;
   ac(); if (actx && actx.state === 'suspended') actx.resume();
   if (G.alk) return;                                                       // 알까기 중에는 클릭 대신 당기기
   setPointer(e); updateHover();
@@ -147,9 +148,10 @@ dom.addEventListener('click', function (e) {
   if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; handUp = false; }
 });
 window.addEventListener('keydown', function (e) {
+  if (curScreen !== 'game') return;
   if (e.key === 'Escape') { if (inspectLegend) { inspectLegend = false; hideLegendHint(); } else if (inspectIdx >= 0) inspectIdx = -1; else if (G.pending) cancelMode(); }
   else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
 });
 elViewBtn.addEventListener('click', function () { setTopView(topGoal < 0.5); });
-document.getElementById('restart').addEventListener('click', function () { reset(); });
-document.getElementById('again').addEventListener('click', function () { reset(); });
+document.getElementById('restart').addEventListener('click', function () { restartGame(); });
+document.getElementById('again').addEventListener('click', function () { $('banner').style.display = 'none'; restartGame(); });

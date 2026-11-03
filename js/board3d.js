@@ -8,14 +8,14 @@ var elBanner = document.getElementById('banner');
 function setMsg() { /* 상단 안내 문구는 표시하지 않음 (차례만 보여줌) */ }
 function updateHUD() {
   if (!G) return;
-  var who = function (p) { return p === BLACK ? '⚫ 흑' : '⚪ 백'; };
-  var t = G.alk ? ('🪀 ' + who(G.alk.order[G.alk.idx]) + ' 알까기') : (who(G.current) + ' 차례');
+  var who = function (p) { return t(p === BLACK ? 'who.black' : 'who.white'); };
+  var tx = G.alk ? t('turn.alk', { who: who(G.alk.order[G.alk.idx]) }) : t(G.current === BLACK ? 'turn.black' : 'turn.white');
   var b = [];                                   // 작은 상태 표시만
   if (G.next.giant === G.current) b.push('🪨');
   if (G.winOver[G.current]) b.push('🐢4목');
   if (G.lock[G.current]) b.push('🚫');
   if (G.winLength === 6) b.push('6목');
-  elTurn.textContent = t + (b.length ? '  ' + b.join(' ') : '');
+  elTurn.textContent = tx + (b.length ? '  ' + b.join(' ') : '');
   elEnd.style.display = 'none';
 }
 function syncS() {
@@ -324,12 +324,12 @@ function handleEvent(e) {
     case 'rule': if (e.turtle) toast('🐢 이제 한쪽은 4목으로도 승리합니다', 2600); else toast('👁️ 이제 6목이 되어야 승리합니다', 2600); return 0.2;
     case 'slothDone': return 0;
     case 'legendPicked': case 'start': case 'ability': handDirty = true; return 0;
-    case 'turn': onTurnChanged(); return 0.15;
+    case 'turn': onTurnChanged(); tutOnTurn(); return 0.15;
     case 'draft': openDraftUI(e.picks, e.kind, e.refresh, e.p); return 0.3;
     case 'alkTurn': startAlkUI(); return 0;
     case 'alkSnap': finishAlkUI(e.stones); return 0.4;
-    case 'win': highlightLine(e.line, e.cells); sfx('win'); tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = (e.p === BLACK ? '⚫ 흑' : '⚪ 백') + ' 승리!'; elBanner.style.display = 'flex'; }); return 0;
-    case 'draw': tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = '무승부'; elBanner.style.display = 'flex'; }); return 0;
+    case 'win': highlightLine(e.line, e.cells); sfx('win'); if (tutOnWin()) return 0; tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = t('banner.win', { who: t(e.p === BLACK ? 'who.black' : 'who.white') }); elBanner.style.display = 'flex'; }); return 0;
+    case 'draw': tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = t('banner.draw'); elBanner.style.display = 'flex'; }); return 0;
   }
   return 0;
 }

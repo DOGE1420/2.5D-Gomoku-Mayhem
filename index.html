@@ -24,7 +24,7 @@
   #notice { position: fixed; left: 12px; bottom: 10px; max-width: 70%; padding: 6px 10px; background: rgba(40,20,10,.85); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 12px; display: none; pointer-events: none; }
   #endturn { left: 12px; display: none; }
   /* 보조 화면 */
-  #trait { position: fixed; left: 12px; top: 12px; padding: 7px 12px; background: rgba(42,29,18,.85); color: #e8d9b5; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 13px; display: none; cursor: help; }
+  #trait { position: fixed; left: 12px; top: 56px; padding: 7px 12px; background: rgba(42,29,18,.85); color: #e8d9b5; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 13px; display: none; cursor: help; }
   #toast { position: fixed; left: 50%; top: 60px; transform: translateX(-50%); padding: 9px 18px; background: rgba(20,12,4,.9); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 6px; font-size: 15px; opacity: 0; pointer-events: none; transition: opacity .3s; text-shadow: 0 1px 4px #000; max-width: 80%; text-align: center; }
   #toast.show { opacity: 1; }
   #legendHint { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 8px 16px; background: rgba(20,12,4,.92); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 6px; font-size: 14px; display: none; pointer-events: none; max-width: 86%; text-align: center; }
@@ -35,16 +35,91 @@
   .box.show { display: block; } .box .btn, #draftCap .btn { position: static; margin: 10px 6px 0; }
   #slotBox .reels { display: flex; gap: 10px; justify-content: center; } #slotBox .reel { width: 74px; height: 86px; line-height: 86px; font-size: 46px; background: #f1e2b8; border: 3px solid #6b4f2e; border-radius: 8px; color: #000; }
   #slotBox .reel.spin { filter: blur(1.5px); } #slotResult { margin-top: 12px; font-size: 20px; min-height: 26px; } #slotResult.win { color: #ffe08a; } #slotResult.lose { color: #c98a7a; }
+  /* 메인 화면 · 로비 · 설정 · 튜토리얼 */
+  body:not(.in-game) #hud, body:not(.in-game) #restart, body:not(.in-game) #viewbtn, body:not(.in-game) #trait, body:not(.in-game) #vignette2 { display: none !important; }
+  body:not(.in-game) #backBtn { display: none; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #f1e2b8; z-index: 20;
+    background: radial-gradient(ellipse 70% 65% at 50% 50%, rgba(0,0,0,.35), rgba(0,0,0,.82)); text-shadow: 0 2px 10px #000; }
+  .screen.show { display: flex; }
+  .screen h1 { margin: 0; font-size: 56px; letter-spacing: 4px; font-weight: normal; color: #f1e2b8; text-shadow: 0 0 24px rgba(255,170,70,.45), 0 3px 10px #000; }
+  .screen .sub { margin: 8px 0 28px; color: #c9b88f; font-size: 16px; }
+  .modes { display: flex; flex-direction: column; gap: 12px; width: min(440px, 88vw); }
+  .mode-btn { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 4px 12px; text-align: left; padding: 14px 18px; cursor: pointer; font: inherit; color: #f1e2b8;
+    background: linear-gradient(180deg, rgba(58,41,23,.92), rgba(32,21,11,.94)); border: 1px solid #8a6a3a; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.6); transition: transform .12s, border-color .12s, background .12s; }
+  .mode-btn:hover { transform: translateY(-2px); border-color: #e0b04a; background: linear-gradient(180deg, rgba(78,56,30,.95), rgba(44,29,14,.96)); }
+  .mode-btn .mode-icon { grid-row: 1 / span 2; font-size: 30px; text-align: center; }
+  .mode-btn .mode-name { font-size: 20px; } .mode-btn .mode-desc { font-size: 13px; color: #c9b88f; grid-column: 2; }
+  .mode-btn .badge { grid-row: 1 / span 2; grid-column: 3; font-size: 12px; padding: 3px 9px; border: 1px solid #8a6a3a; border-radius: 999px; color: #d8c391; background: rgba(0,0,0,.35); }
+  .mode-btn.soon { opacity: .72; }
+  #menuNote, #lobbyStatus { min-height: 22px; margin-top: 16px; color: #e0b0a0; font-size: 14px; max-width: 88vw; }
+  #topControls { position: fixed; top: 12px; right: 12px; z-index: 30; display: flex; gap: 8px; align-items: flex-start; }
+  body.in-game #topControls { right: 104px; }
+  #topControls .btn { position: static; }
+  #settingsPanel { position: absolute; top: 44px; right: 0; width: 290px; padding: 14px 16px; text-align: left; background: rgba(24,15,6,.97); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 8px; box-shadow: 0 10px 30px #000; display: none; }
+  #settingsPanel.show { display: block; } #settingsPanel .title { font-size: 16px; margin-bottom: 10px; }
+  #settingsPanel label.row { display: flex; gap: 8px; align-items: center; cursor: pointer; } #settingsPanel .desc { margin: 6px 0 12px; font-size: 12px; color: #b9a67a; line-height: 1.45; }
+  #settingsPanel .vol { display: flex; gap: 8px; align-items: center; margin-top: 6px; } #settingsPanel input[type=range] { flex: 1; accent-color: #d6aa32; }
+  #settingsPanel .vol button { position: static; padding: 4px 9px; } #volValue { width: 40px; text-align: right; font-size: 13px; }
+  #lobbyBody { display: flex; flex-direction: column; gap: 12px; align-items: center; width: min(400px, 88vw); }
+  .first-pick { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; } .first-pick .lbl { color: #c9b88f; margin-right: 4px; }
+  .first-pick button { position: static; padding: 6px 12px; } .first-pick button[aria-checked=true] { background: #5a3f1c; border-color: #e0b04a; }
+  #lobby .btn.static, .screen .btn.static { position: static; padding: 10px 22px; font-size: 15px; }
+  .code-input { width: 200px; text-align: center; font: inherit; font-size: 26px; letter-spacing: 8px; text-transform: uppercase; padding: 8px 6px; background: rgba(0,0,0,.45); color: #f1e2b8; border: 1px solid #8a6a3a; border-radius: 6px; }
+  .code-input::placeholder { font-size: 14px; letter-spacing: 0; color: #8a7a56; }
+  #roomCodeBox { display: none; margin-top: 10px; } #roomCodeBox.show { display: block; } #roomCodeValue { display: block; font-size: 34px; letter-spacing: 8px; color: #ffe08a; }
+  #backBtn { left: 12px; top: 12px; z-index: 25; } .screen #lobbyBack { position: absolute; left: 12px; top: 12px; }
+  #tutBox { position: fixed; left: 50%; top: 62px; transform: translateX(-50%); width: min(640px, 90vw); padding: 12px 18px; background: rgba(20,12,4,.93); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 8px; text-align: center; display: none; z-index: 18; line-height: 1.5; font-size: 15px; }
+  #tutBox.show { display: block; } #tutBtn { position: static; margin-top: 10px; display: none; }
   #banner { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.6); color: #f1e2b8; font-size: 40px; text-shadow: 0 3px 10px #000; }
-  #banner button { margin-top: 20px; position: static; font-size: 16px; padding: 10px 22px; }
+  #banner button { margin: 20px 6px 0; position: static; font-size: 16px; padding: 10px 22px; }
 </style>
 </head>
 <body>
 <div id="game"></div>
+<div id="topControls">
+  <button id="settingsBtn" class="btn" aria-label="설정">⚙️</button>
+  <button id="langBtn" class="btn">English</button>
+  <div id="settingsPanel">
+    <div class="title" data-i18n="settings"></div>
+    <label class="row"><input type="checkbox" id="reduceMotion"><span data-i18n="settings.reduceMotion"></span></label>
+    <p class="desc" data-i18n="settings.reduceMotion.desc"></p>
+    <div data-i18n="settings.bgm"></div>
+    <div class="vol"><button class="btn" id="bgmMute" aria-label="">🔊</button><input type="range" id="bgmVolume" min="0" max="100" step="5" value="40"><span id="volValue">40%</span></div>
+  </div>
+</div>
+<div id="menu" class="screen show">
+  <h1 data-i18n="title"></h1><p class="sub" data-i18n="sub"></p>
+  <div class="modes">
+    <button class="mode-btn" id="modeTut"><div class="mode-icon">📖</div><div class="mode-name" data-i18n="mode.tut"></div><div class="mode-desc" data-i18n="mode.tut.desc"></div></button>
+    <button class="mode-btn" id="modeLocal"><div class="mode-icon">👥</div><div class="mode-name" data-i18n="mode.local"></div><div class="mode-desc" data-i18n="mode.local.desc"></div></button>
+    <button class="mode-btn soon" id="modeBot"><div class="mode-icon">🤖</div><div class="mode-name" data-i18n="mode.bot"></div><div class="mode-desc" data-i18n="mode.bot.desc"></div><span class="badge" data-i18n="mode.bot.soon"></span></button>
+    <button class="mode-btn" id="modeMp"><div class="mode-icon">🌐</div><div class="mode-name" data-i18n="mode.mp"></div><div class="mode-desc" data-i18n="mode.mp.desc"></div></button>
+  </div>
+  <p id="menuNote"></p>
+</div>
+<div id="lobby" class="screen">
+  <button class="btn" id="lobbyBack" data-i18n="back"></button>
+  <div id="lobbyBody">
+    <div class="first-pick" role="radiogroup"><span class="lbl" data-i18n="first"></span><span id="firstOptions">
+      <button class="btn" role="radio" data-first="random" aria-checked="true" data-i18n="first.random"></button>
+      <button class="btn" role="radio" data-first="me" aria-checked="false" data-i18n="first.me"></button>
+      <button class="btn" role="radio" data-first="opp" aria-checked="false" data-i18n="first.opp"></button></span></div>
+    <button class="btn static" id="createRoom" data-i18n="room.create"></button>
+    <div data-i18n="or"></div>
+    <input class="code-input" id="joinCode" data-i18n-ph="room.code" lang="en" inputmode="text" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false">
+    <button class="btn static" id="joinRoom" data-i18n="room.join"></button>
+  </div>
+  <div id="roomCodeBox"><span data-i18n="room.codeLabel"></span><span id="roomCodeValue"></span></div>
+  <div id="lobbyStatus"></div>
+</div>
+<button id="backBtn" class="btn" data-i18n="back">← 메뉴로</button>
+<div id="tutBox"><div id="tutText"></div><button id="tutBtn" class="btn"></button></div>
+<audio id="bgm" loop preload="auto" src="assets/audio/bgm-menu.mp3"></audio>
+
 <div id="vignette"></div>
 <div id="hud"><div id="turn"></div></div>
 <button id="endturn" class="btn">턴 종료</button>
-<button id="restart" class="btn">새 게임</button>
+<button id="restart" class="btn" data-i18n="btn.restart">새 게임</button>
 <button id="viewbtn" class="btn">🔍 판 보기</button>
 <select id="mapSel" class="btn"></select>
 <div id="notice"></div>
@@ -55,13 +130,14 @@
 <div id="counterBox" class="box"><div id="counterText"></div><div><button id="counterYes" class="btn">🧘 막기</button><button id="counterNo" class="btn">넘기기</button></div></div>
 <div id="choiceBox" class="box"><div id="choiceText"></div><div id="choiceActions"></div></div>
 <div id="slotBox" class="box"><div class="reels"><span class="reel">🍒</span><span class="reel">🍋</span><span class="reel">🔔</span></div><div id="slotResult"></div></div>
-<div id="banner"><div id="bannerText"></div><button class="btn" id="again">다시 하기</button></div>
+<div id="banner"><div id="bannerText"></div><button class="btn" id="again" data-i18n="btn.again">다시 하기</button><button class="btn" id="bannerMenu" data-i18n="btn.menu">메뉴로</button></div>
 <script src="js/three.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/rules.js"></script>
 <script src="js/rules-legend.js"></script>
 <script src="js/rules-world.js"></script>
 <script src="js/setup.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/stones.js"></script>
 <script src="js/fx.js"></script>
@@ -73,6 +149,8 @@
 <script src="js/draft-alk.js"></script>
 <script src="js/flow.js"></script>
 <script src="js/maps.js"></script>
+<script src="js/menu.js"></script>
+<script src="js/tutorial.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

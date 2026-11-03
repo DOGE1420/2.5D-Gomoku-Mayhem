@@ -51,13 +51,14 @@ function frame() {
   // 카메라: 앉은 시점(마우스 시차) ↔ 직부감 부드럽게 전환
   topT += (topGoal - topT) * (1 - Math.pow(0.002, dt));
   if (Math.abs(topGoal - topT) < 0.0008) topT = topGoal;
-  parX += (mouseN.x * 0.9 - parX) * 0.06; parY += (mouseN.y * 0.5 - parY) * 0.06;
+  var pm = reduceMotion ? 0 : 1; parX += (mouseN.x * 0.9 * pm - parX) * 0.06; parY += (mouseN.y * 0.5 * pm - parY) * 0.06;
   var k = 1 - topT;
   camera.position.set(
     (CAM_BASE.x * camDist + parX * k) * k,
     (CAM_BASE.y * camDist + parY * k) * k + topH * topT,
     (CAM_BASE.z * camDist) * k + topDz * topT);
   camera.up.set(0, k, -topT).normalize();
+  if (reduceMotion) camShake = 0;
   if (camShake > 0) { camera.position.x += (Math.random() - 0.5) * camShake * 0.35; camera.position.y += (Math.random() - 0.5) * camShake * 0.25; camShake = Math.max(0, camShake - dt * 2.2); }
   camera.lookAt(CAM_LOOK.x * k, CAM_LOOK.y * k, CAM_LOOK.z * k + topDz * topT);
   if (scene.fog) { scene.fog.near = fogBase.near + 30 * topT; scene.fog.far = fogBase.far + 70 * topT; }
@@ -84,11 +85,11 @@ function frame() {
 }
 
 // 테스트/디버그용 접근
-window.__game = { onLegendClick: onLegendClick, answerCounter: answerCounterUI, onReroll: onRerollClick, get G() { return G; }, get S() { return S; }, Rules: Rules, onCardClick: onCardClick, onCell: onCell, onDraftClick: onDraftClick, cancelMode: cancelMode, sync: function () { syncAll(); rebuildHand(); }, runEvents: runEvents, setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, played: function () { return playedMesh ? playedMesh.userData.id : null; }, cardCanvas: function (id) { return cardTexture(id).image; }, reset: reset, busy: function () { return busy; }, draftOpen: function () { return draftMeshes.length; }, meshGrid: function () { return meshes.map(function (row) { return row.map(function (m) { return !m ? 0 : m.userData.kind === 'wall' ? 3 : m.userData.color; }); }); }, markers: function () { return markerGroup.children.length; }, alkUI: function () { return alkUI; } };
+window.__game = { showScreen: showScreen, startLocal: startLocal, startTutorial: startTutorial, tut: function () { return tut; }, screen: function () { return curScreen; }, onLegendClick: onLegendClick, answerCounter: answerCounterUI, onReroll: onRerollClick, get G() { return G; }, get S() { return S; }, Rules: Rules, onCardClick: onCardClick, onCell: onCell, onDraftClick: onDraftClick, cancelMode: cancelMode, sync: function () { syncAll(); rebuildHand(); }, runEvents: runEvents, setTopView: setTopView, view: function () { return topT; }, inspect: function () { return inspectIdx; }, played: function () { return playedMesh ? playedMesh.userData.id : null; }, cardCanvas: function (id) { return cardTexture(id).image; }, reset: reset, busy: function () { return busy; }, draftOpen: function () { return draftMeshes.length; }, meshGrid: function () { return meshes.map(function (row) { return row.map(function (m) { return !m ? 0 : m.userData.kind === 'wall' ? 3 : m.userData.color; }); }); }, markers: function () { return markerGroup.children.length; }, alkUI: function () { return alkUI; } };
 
 resize(); frame();
 buildMapSelect();
 var fontReady = (document.fonts && document.fonts.load) ? Promise.all([document.fonts.load('40px GameFont', '가나다 연속 착수'), document.fonts.load('21px GameFont', '공격 턴 유지')]).catch(function () {}) : Promise.resolve();
 Promise.all([loadCardAssets(), applyMap(getMaps()[curMapIdx]), fontReady]).then(function () {
-  texCache = {}; reset(); showAssetNotice();
+  texCache = {}; reset({}); showAssetNotice(); applyStaticI18n(); showScreen('menu');
 });
