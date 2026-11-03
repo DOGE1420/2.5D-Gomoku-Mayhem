@@ -51,6 +51,22 @@
   .mode-btn .mode-name { font-size: 20px; } .mode-btn .mode-desc { font-size: 13px; color: #c9b88f; grid-column: 2; }
   .mode-btn .badge { grid-row: 1 / span 2; grid-column: 3; font-size: 12px; padding: 3px 9px; border: 1px solid #8a6a3a; border-radius: 999px; color: #d8c391; background: rgba(0,0,0,.35); }
   .mode-btn.soon { opacity: .72; }
+
+  /* 메인 화면: 어두운 배경에 흩어진 돌과 카드, 가운데 큰 제목과 글자만 있는 메뉴 */
+  #menu, #lobby { background: #050302; overflow: hidden; }
+  #menuBg, #menuBg2 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  #menu::after, #lobby::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 38% 46% at 50% 50%, rgba(3,2,1,.93) 0%, rgba(3,2,1,.78) 55%, rgba(3,2,1,0) 100%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.7) 100%); }
+  #menu > *:not(canvas), #lobby > *:not(canvas) { position: relative; z-index: 2; }
+  #menu h1 { font-size: 92px; letter-spacing: 8px; color: #efe6d0; text-shadow: 0 0 30px rgba(0,0,0,.9), 0 4px 0 #000; line-height: 1.05; }
+  #menu .sub { margin: 14px 0 38px; font-size: 15px; color: #a89a78; letter-spacing: 2px; }
+  .modes { gap: 2px; width: auto; align-items: center; }
+  .mode-btn { display: block; background: none; border: 0; box-shadow: none; border-radius: 0; padding: 6px 26px; text-align: center; color: #d8ccb0; transition: color .1s, letter-spacing .15s; }
+  .mode-btn:hover { transform: none; background: none; color: #fff; letter-spacing: 3px; }
+  .mode-btn:hover .mode-name::before { content: '▸ '; } .mode-btn:hover .mode-name::after { content: ' ◂'; }
+  .mode-btn .mode-icon, .mode-btn .mode-desc { display: none; }
+  .mode-btn .mode-name { font-size: 28px; display: inline; }
+  .mode-btn .badge { display: inline; margin-left: 10px; font-size: 12px; padding: 0; border: 0; background: none; color: #7d704f; vertical-align: middle; }
+  .mode-btn.soon { opacity: .55; }
   #menuNote, #lobbyStatus { min-height: 22px; margin-top: 16px; color: #e0b0a0; font-size: 14px; max-width: 88vw; }
   #topControls { position: fixed; top: 12px; right: 12px; z-index: 30; display: flex; gap: 8px; align-items: flex-start; }
   body.in-game #topControls { right: 104px; }
@@ -88,6 +104,7 @@
   </div>
 </div>
 <div id="menu" class="screen show">
+  <canvas id="menuBg"></canvas>
   <h1 data-i18n="title"></h1><p class="sub" data-i18n="sub"></p>
   <div class="modes">
     <button class="mode-btn" id="modeTut"><div class="mode-icon">📖</div><div class="mode-name" data-i18n="mode.tut"></div><div class="mode-desc" data-i18n="mode.tut.desc"></div></button>
@@ -98,6 +115,7 @@
   <p id="menuNote"></p>
 </div>
 <div id="lobby" class="screen">
+  <canvas id="menuBg2"></canvas>
   <button class="btn" id="lobbyBack" data-i18n="back"></button>
   <div id="lobbyBody">
     <div class="first-pick" role="radiogroup"><span class="lbl" data-i18n="first"></span><span id="firstOptions">

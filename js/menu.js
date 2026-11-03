@@ -154,3 +154,43 @@ joinCode.addEventListener('keydown', function (e) {   // 영문 이외 자판은
   el.value = codeToLatin(el.value.slice(0, a) + (m[1] || m[2]) + el.value.slice(b));
   el.setSelectionRange(Math.min(a + 1, el.value.length), Math.min(a + 1, el.value.length));
 });
+
+/* ---------------- 메인 화면 배경: 어둠 속에 흩어진 돌과 카드 ---------------- */
+var menuBg = (function () {
+  var items = null, W = 0, H = 0, cvs = [$('menuBg'), $('menuBg2')], last = 0;
+  function seed(w, h) {
+    items = []; var n = 46, s = 7;
+    function rnd() { s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for (var i = 0; i < n; i++) {
+      var kind = rnd() < 0.55 ? (rnd() < 0.5 ? 'b' : 'w') : 'c', big = rnd() < 0.3;
+      items.push({ kind: kind, x: rnd() * w, y: rnd() * h, r: (big ? 60 + rnd() * 60 : 22 + rnd() * 32), a: rnd() * 6.28, va: (rnd() - 0.5) * 0.12, d: 0.16 + rnd() * 0.3 });
+    }
+  }
+  function stone(g, it) {
+    var r = it.r, black = it.kind === 'b';
+    var gr = g.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r);
+    if (black) { gr.addColorStop(0, '#5a5047'); gr.addColorStop(.35, '#1d1814'); gr.addColorStop(1, '#050403'); }
+    else { gr.addColorStop(0, '#9a8f78'); gr.addColorStop(.5, '#6a604d'); gr.addColorStop(1, '#2a2519'); }
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, 6.2832); g.fill();
+  }
+  function card(g, it) {
+    var w = it.r * 1.3, h = it.r * 1.85;
+    g.fillStyle = '#7a6746'; g.fillRect(-w / 2, -h / 2, w, h);
+    g.strokeStyle = '#6a5026'; g.lineWidth = Math.max(2, it.r * .05); g.strokeRect(-w / 2 + it.r * .09, -h / 2 + it.r * .09, w - it.r * .18, h - it.r * .18);
+    g.strokeStyle = 'rgba(50,34,14,.8)'; g.lineWidth = Math.max(2, it.r * .045); g.beginPath(); g.arc(0, -h * .08, w * .24, 0, 6.2832); g.moveTo(-w * .22, h * .22); g.lineTo(w * .22, h * .22); g.stroke();
+  }
+  function draw(dt) {
+    var el = $('menu').classList.contains('show') ? cvs[0] : $('lobby').classList.contains('show') ? cvs[1] : null; if (!el) return;
+    var w = el.clientWidth, h = el.clientHeight; if (!w) return;
+    if (el.width !== w || el.height !== h || !items) { el.width = w; el.height = h; seed(w, h); }
+    var g = el.getContext('2d'); g.clearRect(0, 0, w, h);
+    items.forEach(function (it) {
+      if (!reduceMotion) it.a += it.va * dt;
+      g.save(); g.translate(it.x, it.y); g.rotate(it.a); g.globalAlpha = it.d;
+      if (it.kind === 'c') card(g, it); else stone(g, it);
+      g.restore();
+    });
+  }
+  function loop(ts) { draw(Math.min(0.1, (ts - last) / 1000 || 0)); last = ts; requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+})();
