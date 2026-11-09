@@ -373,6 +373,7 @@ function cardTexture(id) {
   if (paperImg) g.drawImage(paperImg, 0, 0, W, H);
   else if (CARD_PAPER_STYLE === 'old') oldPaper(g, W, H);
   else if (CARD_PAPER_STYLE === 'wanted') wantedPaper(g, W, H);
+  else if (CARD_PAPER_STYLE === 'fiber') fiberPaper(g, W, H);
   else {
   var grad = g.createLinearGradient(0, 0, W * 0.4, H);
   grad.addColorStop(0, '#d8c697'); grad.addColorStop(0.55, '#c9b483'); grad.addColorStop(1, '#b89f6a');
@@ -443,7 +444,7 @@ function cardTexture(id) {
 /* ---------- 종이 시안: 오래된 종이 (누런 황갈색, 얼룩·알갱이·갈색 점, 주름 없음) ----------
  * CARD_PAPER_STYLE = 'old' 로 바꾸면 모든 카드에 적용. 카드의 가장자리 모양(roughRectPts)과 잉크 테두리·글자·그림은 건드리지 않고 종이 바탕만 바꿈. */
 var CARD_USED = false;                  // true 면 '손때 탄' 질감을 더함 (손가락 자국 · 기름기 · 쓸려 닳은 자리) — 현재는 'wanted' 종이에서만
-var CARD_PAPER_STYLE = 'classic';       // 'classic'(원래) | 'old' | 'wanted'(현상 수배지)
+var CARD_PAPER_STYLE = 'classic';       // 'classic'(원래) | 'old' | 'wanted'(현상 수배지) | 'fiber'(섬유지)
 function cloudRGB(g, W, H, nw, nh, alpha, rgb) {
   var n = document.createElement('canvas'); n.width = nw; n.height = nh; var ng = n.getContext('2d'), img = ng.createImageData(nw, nh);
   for (var i = 0; i < nw * nh; i++) { var v = Math.random(); img.data[i * 4] = rgb[0]; img.data[i * 4 + 1] = rgb[1]; img.data[i * 4 + 2] = rgb[2]; img.data[i * 4 + 3] = Math.round(v * v * 255 * alpha); }
@@ -470,6 +471,27 @@ function oldPaper(g, W, H) {
   for (i = 0; i < 14; i++) { g.fillStyle = 'rgba(150,84,30,' + rnd(0.15, 0.3) + ')'; g.beginPath(); g.arc(rnd(0, W), rnd(0, H), rnd(1.5, 3.4), 0, 7); g.fill(); }  // 주황빛 점
   var vg = g.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.74);                  // 가장자리는 조금 더 짙게
   vg.addColorStop(0, 'rgba(60,34,10,0)'); vg.addColorStop(1, 'rgba(60,34,10,0.5)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+}
+
+// 섬유지(수제 종이): 밝은 크림색 바탕에 길고 가는 섬유가 얽혀 있고, 가장자리 쪽이 누렇게 바램. 주름·접힘 없음
+function fiberPaper(g, W, H) {
+  var i, base = g.createLinearGradient(0, 0, W * 0.3, H);
+  base.addColorStop(0, '#e2d0a8'); base.addColorStop(0.5, '#dac79c'); base.addColorStop(1, '#cdb78a');
+  g.fillStyle = base; g.fillRect(0, 0, W, H);
+  cloudRGB(g, W, H, 4, 6, 0.3, [246, 238, 216]); cloudRGB(g, W, H, 9, 13, 0.26, [248, 240, 220]); cloudRGB(g, W, H, 24, 36, 0.16, [244, 234, 210]);                // 밝게 비치는 곳
+  cloudRGB(g, W, H, 5, 8, 0.28, [170, 132, 72]); cloudRGB(g, W, H, 14, 21, 0.2, [164, 126, 66]); cloudRGB(g, W, H, 40, 60, 0.12, [150, 114, 58]);                // 누렇게 바랜 곳
+  for (i = 0; i < 6000; i++) { g.fillStyle = (i % 2 ? 'rgba(120,92,52,' : 'rgba(252,246,226,') + rnd(0.03, 0.1) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(0.8, 2), rnd(0.8, 2)); }
+  for (i = 0; i < 900; i++) {                                                                      // 길고 가는 섬유: 구불구불, 밝은 것과 옅은 갈색 섞임
+    var x = rnd(-10, W), y = rnd(-10, H), a = rnd(0, 6.28), len = rnd(12, 64), steps = Math.floor(len / 6) + 2;
+    g.strokeStyle = (i % 3 ? 'rgba(252,246,228,' : 'rgba(132,100,56,') + (i % 3 ? rnd(0.14, 0.4) : rnd(0.07, 0.2)) + ')'; g.lineWidth = rnd(0.5, 1.5);
+    g.beginPath(); g.moveTo(x, y);
+    for (var st = 0; st < steps; st++) { a += rnd(-0.5, 0.5); x += Math.cos(a) * 6; y += Math.sin(a) * 6; g.lineTo(x, y); }
+    g.stroke();
+  }
+  for (i = 0; i < 22; i++) { g.fillStyle = 'rgba(86,58,26,' + rnd(0.25, 0.55) + ')'; g.beginPath(); g.arc(rnd(0, W), rnd(0, H), rnd(0.6, 1.6), 0, 7); g.fill(); }      // 드문 짙은 점
+  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);                 // 가장자리 어둡게 (원래 카드와 같은 정도)
+  vg.addColorStop(0, 'rgba(50,28,8,0)'); vg.addColorStop(1, 'rgba(50,28,8,0.58)');
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
 }
 
