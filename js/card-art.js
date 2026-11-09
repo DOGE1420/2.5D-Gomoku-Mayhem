@@ -473,7 +473,7 @@ function oldPaper(g, W, H) {
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
 }
 
-// 현상 수배지: 싸구려 거친 종이(누런 신문용지 느낌), 네 번 접었다 편 희미한 접힘 선, 압정 구멍, 손때와 먼지, 번져서 고르지 않은 인쇄
+// 현상 수배지: 싸구려 거친 종이(누런 신문용지 느낌), 압정 구멍, 손때와 먼지, 번져서 고르지 않은 인쇄
 function wantedPaper(g, W, H) {
   var i, base = g.createLinearGradient(0, 0, W * 0.3, H);
   base.addColorStop(0, '#d9bf86'); base.addColorStop(0.5, '#cfb178'); base.addColorStop(1, '#c0a06a');
@@ -484,11 +484,6 @@ function wantedPaper(g, W, H) {
     var fx = rnd(0, W), fy = rnd(0, H), fa = rnd(0, 6.28), fl = rnd(4, 14);
     g.strokeStyle = (i % 3 ? 'rgba(88,60,26,' : 'rgba(250,234,190,') + rnd(0.05, 0.15) + ')'; g.lineWidth = rnd(0.6, 1.3); g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + Math.cos(fa) * fl, fy + Math.sin(fa) * fl); g.stroke();
   }
-  [[W * 0.5, 0, W * 0.5, H], [0, H * 0.5, W, H * 0.5], [W * 0.25, 0, W * 0.25, H], [0, H * 0.25, W, H * 0.25]].forEach(function (l, n) {           // 접었다 편 자국: 어두운 선 + 밝은 선
-    var k = n < 2 ? 1 : 0.55;
-    g.strokeStyle = 'rgba(78,52,22,' + 0.2 * k + ')'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.stroke();
-    g.strokeStyle = 'rgba(252,238,200,' + 0.22 * k + ')'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(l[0] + (l[0] === l[2] ? 2 : 0), l[1] + (l[1] === l[3] ? 2 : 0)); g.lineTo(l[2] + (l[0] === l[2] ? 2 : 0), l[3] + (l[1] === l[3] ? 2 : 0)); g.stroke();
-  });
   for (i = 0; i < 9; i++) {                                                                      // 손때·먼지 얼룩
     var sx = rnd(20, W - 20), sy = rnd(30, H - 30), sr = rnd(20, 60), sg = g.createRadialGradient(sx, sy, 2, sx, sy, sr);
     sg.addColorStop(0, 'rgba(92,62,26,' + rnd(0.08, 0.18) + ')'); sg.addColorStop(1, 'rgba(92,62,26,0)'); g.fillStyle = sg; g.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
