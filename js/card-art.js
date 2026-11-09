@@ -498,9 +498,9 @@ function fiberPaper(g, W, H) {
 // 현상 수배지: 싸구려 거친 종이(누런 신문용지 느낌), 압정 구멍, 손때와 먼지, 번져서 고르지 않은 인쇄
 function wantedPaper(g, W, H) {
   var i, base = g.createLinearGradient(0, 0, W * 0.3, H);
-  base.addColorStop(0, '#d9bf86'); base.addColorStop(0.5, '#cfb178'); base.addColorStop(1, '#c0a06a');
+  base.addColorStop(0, '#bfa26a'); base.addColorStop(0.5, '#b4955d'); base.addColorStop(1, '#a58650');
   g.fillStyle = base; g.fillRect(0, 0, W, H);
-  cloudRGB(g, W, H, 5, 8, 0.28, [150, 108, 52]); cloudRGB(g, W, H, 13, 20, 0.22, [140, 98, 44]); cloudRGB(g, W, H, 34, 51, 0.14, [130, 90, 40]); cloudRGB(g, W, H, 6, 9, 0.22, [236, 214, 160]);
+  cloudRGB(g, W, H, 5, 8, 0.28, [150, 108, 52]); cloudRGB(g, W, H, 13, 20, 0.22, [140, 98, 44]); cloudRGB(g, W, H, 34, 51, 0.14, [130, 90, 40]); cloudRGB(g, W, H, 6, 9, 0.16, [214, 190, 134]);
   for (i = 0; i < 14000; i++) { g.fillStyle = (i % 2 ? 'rgba(104,74,34,' : 'rgba(244,226,176,') + rnd(0.04, 0.17) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(1, 3.2), rnd(1, 3.2)); }   // 거친 펄프 알갱이
   for (i = 0; i < 700; i++) {                                                                   // 굵은 섬유 부스러기
     var fx = rnd(0, W), fy = rnd(0, H), fa = rnd(0, 6.28), fl = rnd(4, 14);
@@ -516,8 +516,8 @@ function wantedPaper(g, W, H) {
     g.fillStyle = 'rgba(30,18,6,0.75)'; g.beginPath(); g.arc(p[0], p[1], 3.4, 0, 7); g.fill(); g.strokeStyle = 'rgba(255,240,200,0.3)'; g.lineWidth = 1; g.beginPath(); g.arc(p[0], p[1], 4.4, 0.4, 3.6); g.stroke();
   });
   if (CARD_USED) usedPaper(g, W, H);
-  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);               // 가장자리 어둡게 (원래 카드와 같은 정도)
-  vg.addColorStop(0, 'rgba(50,28,8,0)'); vg.addColorStop(1, 'rgba(50,28,8,0.62)');
+  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.24, W / 2, H / 2, H * 0.7);                // 가장자리 어둡게 (원래 카드보다 조금 더 짙게)
+  vg.addColorStop(0, 'rgba(46,26,8,0.12)'); vg.addColorStop(1, 'rgba(40,22,6,0.74)');
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
 }
 // 인쇄가 고르지 않게: 잉크에 종이색 점이 군데군데 박혀 얼룩덜룩함 (글자·그림은 읽히는 정도로만)
@@ -537,14 +537,14 @@ function usedPaper(g, W, H) {
   });
   for (i = 0; i < 4; i++) {                                                                      // 쓸려 닳은 자리: 매끈하고 밝게
     var x = [W * 0.5, W * 0.18, W * 0.82, W * 0.5][i], y = [H * 0.93, H * 0.7, H * 0.72, H * 0.07][i], r = rnd(50, 80), gr = g.createRadialGradient(x, y, 2, x, y, r);
-    gr.addColorStop(0, 'rgba(236,214,160,0.3)'); gr.addColorStop(1, 'rgba(236,214,160,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+    gr.addColorStop(0, 'rgba(206,182,128,0.26)'); gr.addColorStop(1, 'rgba(206,182,128,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
   for (i = 0; i < 40; i++) { var sx = rnd(20, W - 20), sy = rnd(H * 0.5, H - 20), sa = rnd(-0.5, 0.5), sl = rnd(8, 26); g.strokeStyle = 'rgba(248,232,190,' + rnd(0.1, 0.3) + ')'; g.lineWidth = rnd(0.6, 1.2); g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + Math.cos(sa) * sl, sy + Math.sin(sa) * sl); g.stroke(); }   // 쓸린 자국
 }
 // 손때 탄 질감 (잉크 위): 손 닿는 아래쪽·모서리 쪽 잉크가 살짝 쓸려 옅어짐 (글자는 읽히게 약하게)
 function usedInk(g, W, H) {
   [[W * 0.5, H * 0.95, 90], [W * 0.2, H * 0.92, 60], [W * 0.8, H * 0.9, 60]].forEach(function (p) {
-    var gr = g.createRadialGradient(p[0], p[1], 2, p[0], p[1], p[2]); gr.addColorStop(0, 'rgba(214,188,132,0.3)'); gr.addColorStop(1, 'rgba(214,188,132,0)'); g.fillStyle = gr; g.fillRect(p[0] - p[2], p[1] - p[2], p[2] * 2, p[2] * 2);
+    var gr = g.createRadialGradient(p[0], p[1], 2, p[0], p[1], p[2]); gr.addColorStop(0, 'rgba(190,166,116,0.16)'); gr.addColorStop(1, 'rgba(190,166,116,0)'); g.fillStyle = gr; g.fillRect(p[0] - p[2], p[1] - p[2], p[2] * 2, p[2] * 2);
   });
 }
 
