@@ -438,7 +438,7 @@ function cardTexture(id) {
   return (texCache[id] = toTex(cv));
 }
 
-/* ---------- 종이 시안: 오래된 종이 (가운데는 밝은 크림색, 가장자리로 갈수록 갈색·주황으로 탐, 구겨진 잔 주름) ----------
+/* ---------- 종이 시안: 오래된 종이 (누런 황갈색, 얼룩·알갱이·갈색 점, 주름 없음) ----------
  * CARD_PAPER_STYLE = 'old' 로 바꾸면 모든 카드에 적용. 카드의 가장자리 모양(roughRectPts)과 잉크 테두리·글자·그림은 건드리지 않고 종이 바탕만 바꿈. */
 var CARD_PAPER_STYLE = 'classic';       // 'classic'(원래) | 'old'
 function cloudRGB(g, W, H, nw, nh, alpha, rgb) {
@@ -447,26 +447,27 @@ function cloudRGB(g, W, H, nw, nh, alpha, rgb) {
   ng.putImageData(img, 0, 0); g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(n, 0, 0, W, H); g.restore();
 }
 function oldPaper(g, W, H) {
-  g.fillStyle = '#e6d3a8'; g.fillRect(0, 0, W, H);
-  var i, c = g.createRadialGradient(W / 2, H * 0.48, H * 0.12, W / 2, H / 2, H * 0.78);          // 가운데는 밝은 크림, 가장자리는 짙은 갈색 (가장자리가 타들어 간 듯)
-  c.addColorStop(0, 'rgba(244,232,200,0.9)'); c.addColorStop(0.45, 'rgba(236,220,184,0.55)'); c.addColorStop(0.72, 'rgba(190,140,78,0.5)'); c.addColorStop(1, 'rgba(96,56,18,0.85)');
-  g.fillStyle = c; g.fillRect(0, 0, W, H);
-  var side = g.createLinearGradient(0, 0, W, 0); side.addColorStop(0, 'rgba(150,92,36,0.28)'); side.addColorStop(0.16, 'rgba(150,92,36,0)'); side.addColorStop(0.84, 'rgba(150,92,36,0)'); side.addColorStop(1, 'rgba(150,92,36,0.34)');
-  g.fillStyle = side; g.fillRect(0, 0, W, H);
-  cloudRGB(g, W, H, 5, 8, 0.2, [196, 150, 88]); cloudRGB(g, W, H, 16, 24, 0.16, [200, 152, 90]); cloudRGB(g, W, H, 6, 9, 0.2, [246, 236, 210]);   // 은은한 얼룩덜룩함
-  for (i = 0; i < 5200; i++) { g.fillStyle = (i % 3 ? 'rgba(120,80,36,' : 'rgba(252,242,214,') + rnd(0.03, 0.1) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(0.8, 2.2), rnd(0.8, 2.2)); }
-  for (i = 0; i < 46; i++) {                                                                      // 주황빛 곰팡이 점
-    var fx = rnd(0, W), fy = rnd(0, H), fr = rnd(1, 3.2), edgeK = Math.min(1, Math.abs(fx - W / 2) / (W / 2) + Math.abs(fy - H / 2) / (H / 2) * 0.4);
-    g.fillStyle = 'rgba(196,112,44,' + (0.18 + 0.3 * edgeK) * rnd(0.6, 1) + ')'; g.beginPath(); g.arc(fx, fy, fr, 0, 7); g.fill();
+  // 누렇게 바랜 황갈색 종이: 은은히 밝고 어두운 얼룩(구름), 거친 섬유 결, 군데군데 짙은 갈색 점, 번진 물자국. 주름·접힘은 없음.
+  var i, base = g.createLinearGradient(0, 0, W * 0.35, H);
+  base.addColorStop(0, '#d6b67c'); base.addColorStop(0.5, '#cba96d'); base.addColorStop(1, '#bd9858');
+  g.fillStyle = base; g.fillRect(0, 0, W, H);
+  cloudRGB(g, W, H, 4, 6, 0.5, [118, 78, 30]); cloudRGB(g, W, H, 8, 12, 0.42, [124, 82, 32]); cloudRGB(g, W, H, 20, 30, 0.3, [120, 80, 30]); cloudRGB(g, W, H, 52, 78, 0.18, [112, 74, 28]);    // 짙게 얼룩진 곳
+  cloudRGB(g, W, H, 5, 8, 0.32, [238, 214, 160]); cloudRGB(g, W, H, 14, 21, 0.22, [240, 218, 166]);                                                                                  // 바래서 옅어진 곳
+  for (i = 0; i < 6; i++) {                                                                       // 번진 물자국: 안쪽은 옅고 가장자리 둘레가 살짝 진한 고리
+    var wx = rnd(30, W - 30), wy = rnd(40, H - 40), wr = rnd(28, 80);
+    g.fillStyle = 'rgba(120,76,28,0.06)'; g.beginPath(); g.ellipse(wx, wy, wr, wr * rnd(0.6, 0.95), rnd(0, 3), 0, 7); g.fill();
+    g.strokeStyle = 'rgba(110,68,24,' + rnd(0.07, 0.15) + ')'; g.lineWidth = rnd(2, 5); g.beginPath(); g.ellipse(wx, wy, wr, wr * rnd(0.6, 0.95), rnd(0, 3), rnd(0, 2), rnd(3.5, 6.3)); g.stroke();
   }
-  for (i = 0; i < 120; i++) {                                                                     // 구겨졌던 잔 주름: 가늘게 갈라진 선 + 바로 옆의 밝은 선
-    var x = rnd(0, W), y = rnd(0, H), a = rnd(0, 6.28), pts = [[x, y]], steps = Math.floor(rnd(4, 10));
-    for (var st = 0; st < steps; st++) { a += rnd(-0.8, 0.8); x += Math.cos(a) * rnd(5, 12); y += Math.sin(a) * rnd(5, 12); pts.push([x, y]); }
-    g.lineWidth = 0.8; g.strokeStyle = 'rgba(118,76,32,' + rnd(0.1, 0.24) + ')'; g.beginPath(); pts.forEach(function (q, k) { if (k) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.stroke();
-    g.lineWidth = 1; g.strokeStyle = 'rgba(255,246,222,' + rnd(0.1, 0.22) + ')'; g.beginPath(); pts.forEach(function (q, k) { if (k) g.lineTo(q[0] + 1, q[1] + 1); else g.moveTo(q[0] + 1, q[1] + 1); }); g.stroke();
+  for (i = 0; i < 9000; i++) { g.fillStyle = (i % 3 ? 'rgba(96,62,22,' : 'rgba(246,226,176,') + rnd(0.04, 0.16) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(0.8, 2.6), rnd(0.8, 2.6)); }   // 거친 종이 알갱이
+  for (i = 0; i < 380; i++) {                                                                     // 짧은 섬유
+    var fx = rnd(0, W), fy = rnd(0, H), fa = rnd(0, 6.28), fl = rnd(3, 11);
+    g.strokeStyle = (i % 2 ? 'rgba(92,58,20,' : 'rgba(248,230,184,') + rnd(0.05, 0.14) + ')'; g.lineWidth = rnd(0.5, 0.9); g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + Math.cos(fa) * fl, fy + Math.sin(fa) * fl); g.stroke();
   }
-  g.strokeStyle = 'rgba(255,245,215,0.16)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H * 0.46); g.lineTo(W, H * 0.5); g.stroke();   // 접힌 자국 (원래 카드와 같은 위치)
-  g.strokeStyle = 'rgba(80,50,20,0.16)'; g.beginPath(); g.moveTo(0, H * 0.46 + 3); g.lineTo(W, H * 0.5 + 3); g.stroke();
+  for (i = 0; i < 80; i++) { g.fillStyle = 'rgba(74,42,14,' + rnd(0.25, 0.6) + ')'; g.beginPath(); g.arc(rnd(0, W), rnd(0, H), rnd(0.7, 2), 0, 7); g.fill(); }   // 짙은 갈색 점
+  for (i = 0; i < 14; i++) { g.fillStyle = 'rgba(150,84,30,' + rnd(0.15, 0.3) + ')'; g.beginPath(); g.arc(rnd(0, W), rnd(0, H), rnd(1.5, 3.4), 0, 7); g.fill(); }  // 주황빛 점
+  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.74);                  // 가장자리는 조금 더 짙게
+  vg.addColorStop(0, 'rgba(60,34,10,0)'); vg.addColorStop(1, 'rgba(60,34,10,0.5)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
 }
 
 // 전설 카드 뒷면 (상대가 쥔 전설 카드: 무엇인지 모름)
