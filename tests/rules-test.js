@@ -226,7 +226,7 @@ function legendGame(card, seed) {
   [[7,7],[8,8],[9,9]].forEach(([r,c], i) => { G.current = BLACK; G.done = 0; G.needed = 1; G.placed = []; Rules.place(G, r, c); });
   if (G.draft) Rules.pickDraft(G, G.draft.picks[0]);        // 3번째 돌에서 카드 뽑기가 열림
   G.current = BLACK; G.done = 0; G.needed = 1; G.placed = [];
-  ok(G.lg.far[BLACK] >= 3 && Rules.canUseLegend(G), '실명: 멀리 3번 두면 사용 가능');
+  ok(Rules.canUseLegend(G), '실명: 조건 없이 사용 가능');
   Rules.useLegend(G);
   ok(Rules.isDark(G), '실명: 판이 어두워짐');
   for (let i = 0; i < 4; i++) { Rules.core.passTurn(G); }

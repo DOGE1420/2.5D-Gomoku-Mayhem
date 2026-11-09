@@ -36,7 +36,7 @@
       case 'obelisk': { var n = countStones(G, p); r = { ok: n >= 3 && countStones(G, opp) > 0, text: '내 돌 ' + Math.min(n, 3) + '/3' }; break; }
       case 'nothing': r = { ok: false, text: '내 패 ' + G.hand[p].length + '장 · 상대가 카드를 쓸 때 대응' }; break;
       case 'latebloom': r = { ok: lg.plies >= 40, text: '판에 둔 수 ' + Math.min(lg.plies, 40) + '/40' }; break;
-      case 'blind': r = { ok: lg.far[p] >= 3 && !R.isDark(G), text: '멀리 둔 수 ' + Math.min(lg.far[p], 3) + '/3' }; break;
+      case 'blind': r = { ok: !R.isDark(G), text: R.isDark(G) ? '이미 어두운 중' : '조건 없음' }; break;
       case 'clown': r = { ok: lg.lost[p] >= 3, text: '잃은 돌 ' + Math.min(lg.lost[p], 3) + '/3' }; break;
       case 'sloth': r = { ok: G.hand[p].length > 0, text: '패 ' + G.hand[p].length + '장' }; break;
       case 'mirror': { var lc = lg.lastCard[opp]; var cd = lc && R.CARD_BY_ID[lc]; r = { ok: !!lc, text: lc ? '베낄 카드: ' + (cd ? cd.name : lc) : '상대가 아직 카드를 쓰지 않음' }; break; }
