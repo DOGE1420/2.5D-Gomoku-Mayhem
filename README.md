@@ -150,6 +150,7 @@ Three.js(r128)를 `js/`에 포함해서 **빌드·설치 없이** `index.html`�
 | `js/menu.js` | 메인 화면 · 설정 · BGM · 멀티플레이 로비 · 방 코드 입력 변환 |
 | `js/tutorial.js` | 튜토리얼 3단계 |
 | `js/bot-ai.js` | 봇 두뇌 (원본 알고리즘 이식): 단계별 돌 선택 · 패턴 인식 · 수 읽기 · 카드 사용 판단 · 뽑기 |
+| `js/bot-worker.js` | 얼티밋 봇이 읽는 동안 화면이 멈추지 않게 하는 작업 스레드 (http/https 로 열 때만. `file://` 직접 열기에서는 브라우저가 막아 생각 시간을 줄여 그 자리에서 계산) |
 | `js/bot.js` | 봇 화면 연결: 차례 진행 · 카드/전설 사용 연출 · 대상 고르기 · 알까기 · 무소유 대응 |
 | `js/main.js` | 시작 · 초기화 · 메인 루프 |
 | `js/three.min.js` | Three.js r128 (MIT, `js/THREE-LICENSE`) |

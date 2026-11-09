@@ -20,9 +20,9 @@ function humanTurn() { return !botColor || G.current === humanColor; }
 function botStart(side) {                       // side: 'first' | 'second' | 'random'
   if (side === 'random') side = Math.random() < 0.5 ? 'first' : 'second';
   humanColor = side === 'first' ? Rules.BLACK : Rules.WHITE; botColor = Rules.other(humanColor);
-  botWait = 1; botRollKey = ''; botPickKey = ''; botViewSet = false;
+  botWait = 1; botRollKey = ''; botPickKey = ''; botViewSet = false; botThinking = false; botJob++;
 }
-function botStop() { botColor = humanColor = 0; }
+function botStop() { botColor = humanColor = 0; botThinking = false; botJob++; }
 
 function bRnd(n) { return Math.floor(Math.random() * n); }
 function bPick(list) { return list[bRnd(list.length)]; }
@@ -92,7 +92,7 @@ function bGiantCell(cands, me) {                 // 거대한 돌: 상대 돌을
   });
   return best;
 }
-function botChooseStones() {                     // 우선순위대로 후보 목록을 돌려줌 (앞에서부터 시도)
+function botChooseStones(pre) {                 // 우선순위대로 후보 목록을 돌려줌 (앞에서부터 시도). pre: 미리(작업 스레드에서) 계산한 추천 자리
   var me = botColor, opp = Rules.other(me), all = bLegalCells();
   if (!all.length) return [];
   var order = [];
@@ -102,13 +102,42 @@ function botChooseStones() {                     // 우선순위대로 후보 �
     else { var th = bWinCells(opp).filter(function (q) { return Rules.canPlace(G, q.r, q.c); }); if (th.length) order.push(th[0]); }
   }
   if (G.next.giant === me) { var g = BotAI.bestGiantCell(G, me); if (g) order.push(g); }       // 거대한 돌은 가장 많이 깨는 자리에
-  var pick = BotAI.chooseMove(G, me, botCfg());                                                   // 단계별 알고리즘 (js/bot-ai.js)
+  var cfg0 = botCfg();
+  if (cfg0.ultimate && pre === undefined) cfg0 = Object.assign({}, cfg0, { timeMs: 900 });         // 작업 스레드를 못 쓰는 환경(file://)에서는 화면이 덜 멈추게 생각 시간을 줄임
+  var pick = pre !== undefined ? pre : BotAI.chooseMove(G, me, cfg0);                         // 단계별 알고리즘 (js/bot-ai.js)
   if (pick) order.push(pick);
   all.map(function (q) { return { r: q.r, c: q.c, s: bCellScore(q.r, q.c, me, 1) }; }).sort(function (a, b) { return b.s - a.s; }).forEach(function (q) { order.push(q); });
   return order;
 }
+// 얼티밋은 한 수에 몇 초를 읽으므로 작업 스레드(js/bot-worker.js)에서 계산해 화면이 멈추지 않게 함.
+// (file:// 로 직접 연 경우처럼 작업 스레드를 못 만들면 예전처럼 그 자리에서 계산)
+var botWorker = null, botThinking = false, botJob = 0, botJobG = null;
+function botEnsureWorker() {
+  if (botWorker !== null) return botWorker;
+  try {
+    botWorker = new Worker('js/bot-worker.js');
+    botWorker.onmessage = function (e) {
+      var d = e.data;
+      if (!botThinking || d.job !== botJob) return;
+      botThinking = false;
+      if (botJobG !== G || !botColor || G.current !== botColor || G.gameOver) return;      // 그 사이 판이 바뀜
+      botWait = BOT.delay; botPlaceWith(d.error ? undefined : d.pick);
+    };
+    botWorker.onerror = function () { botWorker = false; if (botThinking) { botThinking = false; botWait = 0; } };
+  } catch (e) { botWorker = false; }
+  return botWorker;
+}
 function botPlaceStone() {
-  var order = botChooseStones();
+  var cfg = botCfg();
+  if (cfg.ultimate && botEnsureWorker()) {
+    botThinking = true; botJobG = G; var job = ++botJob;
+    try { botWorker.postMessage({ job: job, G: JSON.parse(JSON.stringify(G)), me: botColor, cfg: cfg }); return true; }
+    catch (e) { botThinking = false; botWorker = false; }
+  }
+  return botPlaceWith(undefined);
+}
+function botPlaceWith(pre) {
+  var order = botChooseStones(pre);
   for (var i = 0; i < order.length; i++) {
     var res = Rules.place(G, order[i].r, order[i].c);
     if (res.ok) { var evs = Rules.drain(G); runEvents(evs); return true; }
@@ -210,6 +239,7 @@ function botCounterYes(cardId) {
 
 /* ---------------- 매 프레임: 봇이 할 일이 있으면 한 가지씩 ---------------- */
 function botTick(dt) {
+  if (botThinking) return;
   if (!botColor || curScreen !== 'game' || !G || G.gameOver || busy > 0) return;
   if ((botWait -= dt) > 0) return;
   var me = botColor, act = false;

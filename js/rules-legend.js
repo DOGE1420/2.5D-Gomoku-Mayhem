@@ -298,4 +298,4 @@
   R.useLegend = useLegend;
   R.answerCounter = answerCounter;
   R.countStones = countStones;
-})(typeof window !== 'undefined' ? window.Rules : require('./rules.js'));
+})(typeof window !== 'undefined' ? window.Rules : (typeof require === 'function' ? require('./rules.js') : self.Rules));

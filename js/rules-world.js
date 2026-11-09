@@ -99,4 +99,4 @@
     }
   };
   R.H.tsunami = tsunami;
-})(typeof window !== 'undefined' ? window.Rules : require('./rules.js'));
+})(typeof window !== 'undefined' ? window.Rules : (typeof require === 'function' ? require('./rules.js') : self.Rules));
