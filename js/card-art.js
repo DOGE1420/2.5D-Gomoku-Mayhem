@@ -443,8 +443,8 @@ function cardTexture(id) {
 
 /* ---------- 종이 시안: 오래된 종이 (누런 황갈색, 얼룩·알갱이·갈색 점, 주름 없음) ----------
  * CARD_PAPER_STYLE = 'old' 로 바꾸면 모든 카드에 적용. 카드의 가장자리 모양(roughRectPts)과 잉크 테두리·글자·그림은 건드리지 않고 종이 바탕만 바꿈. */
-var CARD_USED = false;                  // true 면 '손때 탄' 질감을 더함 (손가락 자국 · 기름기 · 쓸려 닳은 자리) — 현재는 'wanted' 종이에서만
-var CARD_PAPER_STYLE = 'classic';       // 'classic'(원래) | 'old' | 'wanted'(현상 수배지) | 'fiber'(섬유지)
+var CARD_USED = true;                   // true 면 '손때 탄' 질감을 더함 (손가락 자국 · 기름기 · 쓸려 닳은 자리) — 현재는 'wanted' 종이에서만
+var CARD_PAPER_STYLE = 'wanted';        // 'classic'(원래) | 'old' | 'wanted'(현상 수배지) | 'fiber'(섬유지)
 function cloudRGB(g, W, H, nw, nh, alpha, rgb) {
   var n = document.createElement('canvas'); n.width = nw; n.height = nh; var ng = n.getContext('2d'), img = ng.createImageData(nw, nh);
   for (var i = 0; i < nw * nh; i++) { var v = Math.random(); img.data[i * 4] = rgb[0]; img.data[i * 4 + 1] = rgb[1]; img.data[i * 4 + 2] = rgb[2]; img.data[i * 4 + 3] = Math.round(v * v * 255 * alpha); }
