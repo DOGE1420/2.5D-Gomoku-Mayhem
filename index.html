@@ -18,7 +18,6 @@
   @media (max-width: 600px) { #turn { font-size: 15px; } .btn { padding: 6px 10px; } #hud { padding: 0 92px 0 104px; } #mapSel { left: 12px; right: auto; top: 12px; max-width: 84px; font-size: 12px; } #endturn { top: 52px; } }
   .btn { position: fixed; top: 12px; padding: 8px 14px; background: #2a1d12; color: #e8d9b5; border: 1px solid #6b4f2e; border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px; }
   .btn:hover { background: #3a2917; }
-  #viewbtn { right: 12px; top: 52px; }
   #mapSel { right: 92px; display: none; }
   #notice { position: fixed; left: 12px; bottom: 10px; max-width: 70%; padding: 6px 10px; background: rgba(40,20,10,.85); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 12px; display: none; pointer-events: none; }
   #endturn { left: 12px; display: none; }
@@ -35,8 +34,8 @@
   #slotBox .reels { display: flex; gap: 10px; justify-content: center; } #slotBox .reel { width: 74px; height: 86px; line-height: 86px; font-size: 46px; background: #f1e2b8; border: 3px solid #6b4f2e; border-radius: 8px; color: #000; }
   #slotBox .reel.spin { filter: blur(1.5px); } #slotResult { margin-top: 12px; font-size: 20px; min-height: 26px; } #slotResult.win { color: #ffe08a; } #slotResult.lose { color: #c98a7a; }
   /* 메인 화면 · 로비 · 설정 · 튜토리얼 */
-  body:not(.in-game) #hud, body:not(.in-game) #viewbtn, body:not(.in-game) #trait, body:not(.in-game) #vignette2 { display: none !important; }
-  #settingsPanel .srow.game-only { display: none; } body.in-game #settingsPanel .srow.game-only { display: flex; } body.in-game.in-tut #giveUpBtn { display: none; }
+  body:not(.in-game) #hud, body:not(.in-game) #trait, body:not(.in-game) #vignette2 { display: none !important; }
+  #settingsPanel .srow.game-only { display: none; } body.in-game #settingsPanel .srow.game-only { display: flex; flex-direction: column; align-items: stretch; } #settingsPanel .srow.game-only .btn { width: 100%; text-align: center; } body.in-game.in-tut #giveUpBtn { display: none; }
   #settingsPanel .srow { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; } #settingsPanel .srow .btn { position: static; padding: 6px 12px; }
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #f1e2b8; z-index: 20;
     background: radial-gradient(ellipse 70% 65% at 50% 50%, rgba(0,0,0,.35), rgba(0,0,0,.82)); text-shadow: 0 2px 10px #000; }
@@ -93,7 +92,7 @@
   /* ---------- 모바일 (폰 · 태블릿): 손가락으로 누르기 쉽게, 좁은 화면에 맞게 ---------- */
   @media (pointer: coarse) {
     .btn { padding: 10px 14px; font-size: 15px; min-height: 40px; }
-    #topControls .btn, #viewbtn { min-width: 44px; }
+    #topControls .btn { min-width: 44px; }
     #settingsPanel .srow .btn, #settingsPanel .vol button { padding: 9px 14px; min-height: 40px; }
     #settingsPanel input[type=range] { height: 32px; }
     .mode-btn { padding: 12px 28px; } .mode-btn .mode-name { font-size: 30px; }
@@ -101,7 +100,6 @@
   }
   @media (max-width: 700px) {
     #topControls { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
-    #viewbtn { top: calc(max(10px, env(safe-area-inset-top)) + 48px); right: max(10px, env(safe-area-inset-right)); }
     #trait { left: max(10px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 48px); font-size: 12px; padding: 6px 9px; }
     #hud { top: max(12px, env(safe-area-inset-top)); padding: 0 64px 0 12px; } #turn { font-size: 16px; }
     #settingsPanel { width: min(290px, calc(100vw - 20px)); }
@@ -181,7 +179,6 @@
 <div id="vignette"></div>
 <div id="hud"><div id="turn"></div></div>
 <button id="endturn" class="btn">턴 종료</button>
-<button id="viewbtn" class="btn"></button>
 <select id="mapSel" class="btn"></select>
 <div id="notice"></div>
 <div id="trait"></div>

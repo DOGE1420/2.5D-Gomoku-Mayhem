@@ -75,10 +75,8 @@ var groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 var hoverCell = null, hoverTable = false, hitPoint = new THREE.Vector3(), camShake = 0;
 // 시점: 0 = 앉은 시점(시네마틱), 1 = 직부감(판 전체). 테이블/버튼/V키로 전환
 var topT = 0, topGoal = 0, topH = 30, topDz = 2, parX = 0, parY = 0;
-var elViewBtn = document.getElementById('viewbtn');
 function setTopView(on, quiet) {
   topGoal = on ? 1 : 0;
-  elViewBtn.innerHTML = H(t(on ? 'btn.viewCards' : 'btn.viewBoard'));
 }
 var mouseN = { x: 0, y: 0 };
 
@@ -152,5 +150,4 @@ window.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') { if (inspectLegend) { inspectLegend = false; hideLegendHint(); } else if (inspectIdx >= 0) inspectIdx = -1; else if (G.pending) cancelMode(); }
   else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
 });
-elViewBtn.addEventListener('click', function () { setTopView(topGoal < 0.5); });
 document.getElementById('again').addEventListener('click', function () { $('banner').style.display = 'none'; restartGame(); });
