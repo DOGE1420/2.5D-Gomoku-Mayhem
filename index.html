@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>증강 오목 3D 프로토타입</title>
 <style>
   @font-face { font-family: 'GameFont'; src: url('assets/fonts/HeoSangGothicB.ttf') format('truetype'); font-display: block; }
@@ -10,15 +10,14 @@
   /* 터치 시 파란 하이라이트·선택·길게 누르기 메뉴·더블탭 확대 방지 */
   * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
   body { -webkit-user-select: none; user-select: none; }
-  #game { position: fixed; inset: 0; touch-action: manipulation; }
-  canvas { display: block; outline: none; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+  #game { position: fixed; inset: 0; touch-action: none; }
+  canvas { display: block; outline: none; touch-action: none; -webkit-user-select: none; user-select: none; }
   #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 75% 70% at 50% 46%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 78%, rgba(0,0,0,.9) 100%); }
   #hud { position: fixed; top: 12px; left: 0; right: 0; padding: 0 190px; box-sizing: border-box; text-align: center; color: #e8d9b5; pointer-events: none; text-shadow: 0 2px 6px #000; }
   #turn { font-size: 20px; letter-spacing: 1px; }
   @media (max-width: 600px) { #turn { font-size: 15px; } .btn { padding: 6px 10px; } #hud { padding: 0 92px 0 104px; } #mapSel { left: 12px; right: auto; top: 12px; max-width: 84px; font-size: 12px; } #endturn { top: 52px; } }
   .btn { position: fixed; top: 12px; padding: 8px 14px; background: #2a1d12; color: #e8d9b5; border: 1px solid #6b4f2e; border-radius: 4px; cursor: pointer; font: inherit; font-size: 13px; }
   .btn:hover { background: #3a2917; }
-  #restart { right: 12px; }
   #viewbtn { right: 12px; top: 52px; }
   #mapSel { right: 92px; display: none; }
   #notice { position: fixed; left: 12px; bottom: 10px; max-width: 70%; padding: 6px 10px; background: rgba(40,20,10,.85); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 4px; font-size: 12px; display: none; pointer-events: none; }
@@ -30,14 +29,15 @@
   #legendHint { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); padding: 8px 16px; background: rgba(20,12,4,.92); color: #e8c9a0; border: 1px solid #6b4f2e; border-radius: 6px; font-size: 14px; display: none; pointer-events: none; max-width: 86%; text-align: center; }
   #legendHint.show { display: block; } #legendHint.ok { color: #ffe08a; border-color: #d6aa32; }
   #draftCap { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); display: none; text-align: center; color: #f1e2b8; text-shadow: 0 2px 8px #000; }
-  #draftCap.show { display: block; } #draftCapText { display: none; }
+  #draftCap.show { display: block; } #draftCap .btn { white-space: nowrap; } #draftCapText { display: none; }
   .box { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 18px 22px; background: rgba(24,15,6,.96); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 8px; display: none; text-align: center; max-width: 80%; box-shadow: 0 10px 40px #000; }
   .box.show { display: block; } .box .btn, #draftCap .btn { position: static; margin: 10px 6px 0; }
   #slotBox .reels { display: flex; gap: 10px; justify-content: center; } #slotBox .reel { width: 74px; height: 86px; line-height: 86px; font-size: 46px; background: #f1e2b8; border: 3px solid #6b4f2e; border-radius: 8px; color: #000; }
   #slotBox .reel.spin { filter: blur(1.5px); } #slotResult { margin-top: 12px; font-size: 20px; min-height: 26px; } #slotResult.win { color: #ffe08a; } #slotResult.lose { color: #c98a7a; }
   /* 메인 화면 · 로비 · 설정 · 튜토리얼 */
-  body:not(.in-game) #hud, body:not(.in-game) #restart, body:not(.in-game) #viewbtn, body:not(.in-game) #trait, body:not(.in-game) #vignette2 { display: none !important; }
-  body:not(.in-game) #backBtn { display: none; }
+  body:not(.in-game) #hud, body:not(.in-game) #viewbtn, body:not(.in-game) #trait, body:not(.in-game) #vignette2 { display: none !important; }
+  #settingsPanel .srow.game-only { display: none; } body.in-game #settingsPanel .srow.game-only { display: flex; } body.in-game.in-tut #giveUpBtn { display: none; }
+  #settingsPanel .srow { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; } #settingsPanel .srow .btn { position: static; padding: 6px 12px; }
   .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #f1e2b8; z-index: 20;
     background: radial-gradient(ellipse 70% 65% at 50% 50%, rgba(0,0,0,.35), rgba(0,0,0,.82)); text-shadow: 0 2px 10px #000; }
   .screen.show { display: flex; }
@@ -69,7 +69,6 @@
   .mode-btn.soon { opacity: .55; }
   #menuNote, #lobbyStatus { min-height: 22px; margin-top: 16px; color: #e0b0a0; font-size: 14px; max-width: 88vw; }
   #topControls { position: fixed; top: 12px; right: 12px; z-index: 30; display: flex; gap: 8px; align-items: flex-start; }
-  body.in-game #topControls { right: 104px; }
   #topControls .btn { position: static; }
   .ic { width: 1.15em; height: 1.15em; vertical-align: -0.2em; fill: none; stroke: currentColor; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; filter: url(#rough); overflow: visible; }
   .reel .ic { width: 1em; height: 1em; vertical-align: middle; }
@@ -85,20 +84,52 @@
   .code-input { width: 200px; text-align: center; font: inherit; font-size: 26px; letter-spacing: 8px; text-transform: uppercase; padding: 8px 6px; background: rgba(0,0,0,.45); color: #f1e2b8; border: 1px solid #8a6a3a; border-radius: 6px; }
   .code-input::placeholder { font-size: 14px; letter-spacing: 0; color: #8a7a56; }
   #roomCodeBox { display: none; margin-top: 10px; } #roomCodeBox.show { display: block; } #roomCodeValue { display: block; font-size: 34px; letter-spacing: 8px; color: #ffe08a; }
-  #backBtn { left: 12px; top: 12px; z-index: 25; } .screen #lobbyBack, .screen #sideBack, .screen #levelBack { position: absolute; left: 12px; top: 12px; }
+  .screen #lobbyBack, .screen #sideBack, .screen #levelBack { position: absolute; left: 12px; top: 12px; }
   #tutBox { position: fixed; left: 50%; top: 62px; transform: translateX(-50%); width: min(640px, 90vw); padding: 12px 18px; background: rgba(20,12,4,.93); color: #f1e2b8; border: 1px solid #b8901c; border-radius: 8px; text-align: center; display: none; z-index: 18; line-height: 1.5; font-size: 15px; }
   #tutBox.show { display: block; } #tutBtn { position: static; margin-top: 10px; display: none; }
   #banner { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,.6); color: #f1e2b8; font-size: 40px; text-shadow: 0 3px 10px #000; }
   #banner button { margin: 20px 6px 0; position: static; font-size: 16px; padding: 10px 22px; }
+
+  /* ---------- 모바일 (폰 · 태블릿): 손가락으로 누르기 쉽게, 좁은 화면에 맞게 ---------- */
+  @media (pointer: coarse) {
+    .btn { padding: 10px 14px; font-size: 15px; min-height: 40px; }
+    #topControls .btn, #viewbtn { min-width: 44px; }
+    #settingsPanel .srow .btn, #settingsPanel .vol button { padding: 9px 14px; min-height: 40px; }
+    #settingsPanel input[type=range] { height: 32px; }
+    .mode-btn { padding: 12px 28px; } .mode-btn .mode-name { font-size: 30px; }
+    .box .btn, #draftCap .btn { padding: 12px 18px; }
+  }
+  @media (max-width: 700px) {
+    #topControls { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
+    #viewbtn { top: calc(max(10px, env(safe-area-inset-top)) + 48px); right: max(10px, env(safe-area-inset-right)); }
+    #trait { left: max(10px, env(safe-area-inset-left)); top: calc(max(10px, env(safe-area-inset-top)) + 48px); font-size: 12px; padding: 6px 9px; }
+    #hud { top: max(12px, env(safe-area-inset-top)); padding: 0 64px 0 12px; } #turn { font-size: 16px; }
+    #settingsPanel { width: min(290px, calc(100vw - 20px)); }
+    #toast { top: calc(max(10px, env(safe-area-inset-top)) + 96px); max-width: 90vw; font-size: 13px; padding: 8px 12px; }
+    #legendHint { max-width: 92vw; font-size: 13px; bottom: max(14px, env(safe-area-inset-bottom)); }
+    #draftCap { bottom: max(18px, env(safe-area-inset-bottom)); }
+    .box { max-width: 92vw; padding: 14px 16px; }
+    #slotBox .reel { width: 58px; height: 70px; line-height: 70px; font-size: 38px; }
+    #menu h1 { font-size: clamp(40px, 15vw, 84px); letter-spacing: 3px; white-space: nowrap; }
+    .mode-btn .mode-name { font-size: 26px; }
+    #tutBox { top: calc(max(10px, env(safe-area-inset-top)) + 48px); font-size: 14px; padding: 10px 12px; }
+    .screen #lobbyBack, .screen #sideBack, .screen #levelBack { left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); }
+    .code-input { font-size: 22px; letter-spacing: 5px; width: 180px; }
+  }
+  @media (max-height: 480px) and (orientation: landscape) {
+    #menu h1 { font-size: 52px; margin-bottom: 14px; } .mode-btn { padding: 4px 22px; } .mode-btn .mode-name { font-size: 22px; }
+    #tutBox, #toast { top: 52px; } #trait { top: 50px; }
+  }
 </style>
 </head>
 <body>
 <div id="game"></div>
 <div id="topControls">
   <button id="settingsBtn" class="btn" aria-label="설정" data-ico="settings"></button>
-  <button id="langBtn" class="btn">English</button>
   <div id="settingsPanel">
     <div class="title" data-i18n="settings"></div>
+    <div class="srow"><span data-i18n="settings.lang"></span><button id="langBtn" class="btn">English</button></div>
+    <div class="srow game-only" id="gameRows"><button id="giveUpBtn" class="btn" data-i18n="settings.giveup"></button><button id="menuBtn" class="btn" data-i18n="settings.menu"></button></div>
     <div data-i18n="settings.bgm"></div>
     <div class="vol"><button class="btn" id="bgmMute" aria-label=""></button><input type="range" id="bgmVolume" min="0" max="100" step="5" value="40"><span id="volValue">40%</span></div>
   </div>
@@ -144,14 +175,12 @@
   <div id="roomCodeBox"><span data-i18n="room.codeLabel"></span><span id="roomCodeValue"></span></div>
   <div id="lobbyStatus"></div>
 </div>
-<button id="backBtn" class="btn" data-i18n="back">← 메뉴로</button>
 <div id="tutBox"><div id="tutText"></div><button id="tutBtn" class="btn"></button></div>
 <audio id="bgm" loop preload="auto" src="assets/audio/bgm-menu.mp3"></audio>
 
 <div id="vignette"></div>
 <div id="hud"><div id="turn"></div></div>
 <button id="endturn" class="btn">턴 종료</button>
-<button id="restart" class="btn" data-i18n="btn.restart">새 게임</button>
 <button id="viewbtn" class="btn"></button>
 <select id="mapSel" class="btn"></select>
 <div id="notice"></div>

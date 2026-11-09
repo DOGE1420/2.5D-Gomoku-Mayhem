@@ -115,10 +115,12 @@ function cardTarget(i, n) {
   if (inspectIdx === i) return { x: 0, y: 0.0, z: 0.9, rz: 0, s: 1.75, tint: 1 };   // 자세히 보기: 화면 중앙에 크게
   // 인스크립션 패: 큰 카드를 겹쳐서 부채꼴로, 평소엔 윗부분만 보이다가 패 쪽을 보면 위로 올라옴
   var up = handUp && inspectIdx < 0;
-  var sc = 0.95, cw = 1.5 * sc;
+  var sc = 0.95;
   var step = up ? 1.2 : 0.95;                // 카드 사이 간격 (카드 폭 1.43)
-  var mid = (n - 1) / 2, d = i - mid;
-  var y = -vh / 2 + 0.1 + (up ? 1.1 : 0) + (hov ? 0.3 : 0) + (sel ? 0.3 : 0) - d * d * 0.012;
+  var total = (n - 1) * step + 1.5 * sc, avail = vw * 0.94;       // 좁은 화면(폰)에서는 패 전체가 폭에 들어오게 줄임
+  if (total > avail) { var f = avail / total; sc *= f; step *= f; }
+  var mid = (n - 1) / 2, d = i - mid, lift = IS_TOUCH ? (camera.aspect < 0.95 ? 0.9 : 0.5) : 0;      // 터치는 마우스 올리기가 없으니 처음부터 카드가 더 보이게
+  var y = -vh / 2 + 0.1 + lift + (up ? 1.1 : 0) + (hov ? 0.3 : 0) + (sel ? 0.3 : 0) - d * d * 0.012;
   if (topGoal > 0.5) y = -vh / 2 - 3.2;      // 직부감: 패는 전부 화면 아래로 숨김
   return {
     x: d * step,                         // 화면 아래 중앙
@@ -189,10 +191,11 @@ function rebuildLegend() {
 function legendSlotTarget(o) {
   var vs = viewSize(), hov = o.own && hoverLegend;
   if (o.own && inspectLegend) return { x: 0, y: 0, z: 0.9, rz: 0, s: 1.75, tint: 1 };            // 자세히 보기: 화면 중앙에 크게
-  var sc = o.own ? 0.6 : 0.42, ch = 2.25 * sc;
+  var portrait = camera.aspect < 0.95, sc = (o.own ? 0.6 : 0.42) * (portrait ? 0.82 : 1), ch = 2.25 * sc;
   var y = o.own ? -vs.vh / 2 + ch / 2 + 0.25 + (hov ? 0.25 : 0) : -vs.vh / 2 + 1.75 + ch / 2;
+  if (portrait) y = -vs.vh / 2 + 3.25 + ch / 2 + (hov ? 0.25 : 0);                                // 세로 화면: 패 위쪽에 두어 패와 겹치지 않게 (내 것은 오른쪽, 상대 것은 왼쪽)
   if (topGoal > 0.5) y = -vs.vh / 2 - 3.2;                                                         // 직부감: 패와 함께 숨김
-  return { x: vs.vw / 2 - 0.8, y: y, z: hov ? 0.3 : 0.05, rz: o.own ? -0.04 : 0.05, s: sc * (hov ? 1.08 : 1), tint: o.done ? 0.5 : (o.own ? (hov ? 1 : 0.9) : 0.75) };
+  return { x: portrait && !o.own ? -(vs.vw / 2 - 0.6) : vs.vw / 2 - (portrait ? 0.6 : 0.8), y: y, z: hov ? 0.3 : 0.05, rz: o.own ? -0.04 : 0.05, s: sc * (hov ? 1.08 : 1), tint: o.done ? 0.5 : (o.own ? (hov ? 1 : 0.9) : 0.75) };
 }
 function stepLegend(k) {
   legendMeshes.forEach(function (o) {

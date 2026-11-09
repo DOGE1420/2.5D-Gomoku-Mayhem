@@ -330,15 +330,15 @@ function handleEvent(e) {
     case 'draft': if (botColor && e.p === botColor) return 0.3; openDraftUI(e.picks, e.kind, e.refresh, e.p); return 0.3;
     case 'alkTurn': startAlkUI(); return 0;
     case 'alkSnap': finishAlkUI(e.stones); return 0.4;
-    case 'win': highlightLine(e.line, e.cells); sfx('win'); if (tutOnWin()) return 0; tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = t('banner.win', { who: t(e.p === BLACK ? 'who.black' : 'who.white') }); elBanner.style.display = 'flex'; }); return 0;
+    case 'win': highlightLine(e.line, e.cells); sfx('win'); if (tutOnWin()) return 0; tween(0.9, function () {}, function () { document.getElementById('bannerText').innerHTML = H(t('banner.win', { who: t(e.p === BLACK ? 'who.black' : 'who.white') })); elBanner.style.display = 'flex'; }); return 0;
+    case 'resign': sfx('boom'); tween(0.5, function () {}, function () { document.getElementById('bannerText').innerHTML = H(t('banner.resign', { who: t(e.p === BLACK ? 'who.black' : 'who.white'), winner: t(e.winner === BLACK ? 'who.black' : 'who.white') })); elBanner.style.display = 'flex'; }); return 0;
     case 'draw': tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = t('banner.draw'); elBanner.style.display = 'flex'; }); return 0;
   }
   return 0;
 }
 function onTurnChanged() {
   tradeFirst = null; inspectIdx = -1; clearPlayed(); handDirty = true;
-  // 봇 차례에는 판을 보는 시점이 기본 (사용자가 직접 바꿀 수는 있음), 내 차례에는 카드 시점
-  botViewSet = !!botColor && G.current === botColor; setTopView(botViewSet, true);
+  // 시점은 저절로 바꾸지 않음 (사용자가 직접 누르거나, 카드를 사용할 때만 바뀜)
 }
 function syncAll() {
   syncBoard(); syncMarkers(); syncMarkersExtra(); syncPeek(); syncS(); updateHUD(); updateTrait();

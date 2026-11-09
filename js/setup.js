@@ -30,3 +30,4 @@ function loadImg(path) {
   });
 }
 function cardArtPath(id) { return CFG.cards && CFG.cards[id]; }
+var IS_TOUCH = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);   // 터치 화면(폰·태블릿)

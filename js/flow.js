@@ -153,5 +153,4 @@ window.addEventListener('keydown', function (e) {
   else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
 });
 elViewBtn.addEventListener('click', function () { setTopView(topGoal < 0.5); });
-document.getElementById('restart').addEventListener('click', function () { restartGame(); });
 document.getElementById('again').addEventListener('click', function () { $('banner').style.display = 'none'; restartGame(); });

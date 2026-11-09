@@ -249,6 +249,14 @@
     G.gameOver = true; G.winner = winner; G.winLine = line || null;
     ev(G, winner ? { t: 'win', p: winner, line: line, cells: cells } : { t: 'draw' });
   }
+  // 포기: p 가 졌고 상대가 이김 (진행 중이던 선택·대응·알까기도 모두 끝냄)
+  function resign(G, p) {
+    if (G.gameOver) return false;
+    G.pending = null; G.draft = null; G.counter = null; G.alk = null; G.startQueue = null;
+    G.gameOver = true; G.winner = other(p); G.winLine = null;
+    ev(G, { t: 'resign', p: p, winner: other(p) });
+    return true;
+  }
   function endIfBoardWin(G) {
     var f = scanBoardForWin(G);
     if (f) { finish(G, f.player, [f.win.start, f.win.end], f.win.cells); return true; }
@@ -846,7 +854,7 @@
     create: create, drain: drain, place: place, canPlace: canPlace, useCard: useCard, canUseCard: canUseCard,
     target: target, isValidTarget: isValidTarget, cancel: cancel, pickDraft: pickDraft,
     isProtected: isProtected, isZoneCell: isZoneCell, ringOf: ringOf, giantAt: giantAt, MAP_LIST: MAP_LIST, MAP_BY_ID: MAP_BY_ID, ZONE: { START: ZONE_START, EVERY: ZONE_EVERY, MAX: ZONE_MAX }, core: core, H: H, LEGENDS: LEGENDS, LEGEND_BY_ID: LEGEND_BY_ID, ABILITIES: ABILITIES, ABILITY_BY_ID: ABILITY_BY_ID,
-    reroll: reroll, isDark: isDark, handLimit: handLimit, isWindmill: isWindmill, isBlockedForPlayer: isBlockedForPlayer,
+    resign: resign, reroll: reroll, isDark: isDark, handLimit: handLimit, isWindmill: isWindmill, isBlockedForPlayer: isBlockedForPlayer,
     listStones: listStones, alkLaunch: alkLaunch, alkTick: alkTick, alkStep: alkStep, hasEmptyCell: hasEmptyCell,
     weightedSample: weightedSample, grantRandomCard: grantRandomCard
   };

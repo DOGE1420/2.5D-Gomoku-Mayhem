@@ -259,7 +259,6 @@ function botTick(dt) {
     return;
   }
   if (G.startQueue || G.current !== me) return;
-  if (!botViewSet) { botViewSet = true; setTopView(true, true); }     // 봇 차례가 시작되면 판 시점으로 (한 번만)
   if (G.pending) { if (G.pending.forPlayer === me) { botPendingTarget(); botWait = BOT.delay; } return; }
   // 턴 시작: 전설 카드 → (50%) 카드 한 장 → 돌
   if (G.done === 0 && !G.used[me] && botLegendOk()) act = botUseLegend();

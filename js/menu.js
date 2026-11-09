@@ -15,6 +15,7 @@ function showScreen(name) {
   $('side').classList.toggle('show', name === 'side');
   $('level').classList.toggle('show', name === 'level');
   document.body.classList.toggle('in-game', name === 'game');
+  document.body.classList.toggle('in-tut', gameMode === 'tutorial'); if (typeof resetGiveUp === 'function') resetGiveUp();
   $('tutBox').classList.toggle('show', name === 'game' && !!tut);
   syncBgm();
 }
@@ -112,7 +113,21 @@ $('sideOptions').addEventListener('click', function (e) {
   endGameScreens(); gameMode = 'bot'; botStart(b.dataset.side); bgmNewGame(); showScreen('game'); reset();
 });
 $('modeMp').addEventListener('click', function () { setLobbyNote(null); $('roomCodeBox').classList.remove('show'); $('joinCode').value = ''; setMenuNote(null); showScreen('lobby'); });
-$('backBtn').addEventListener('click', showMenu);
+$('menuBtn').addEventListener('click', function () { $('settingsPanel').classList.remove('show'); showMenu(); });
+// 포기: 눌러 보면 한 번 더 확인 → 지금 차례(봇전에서는 내 쪽)가 포기하고 결과 배너에서 '다시 하기'로 새 게임
+var giveUpArm = null;
+function resetGiveUp() { clearTimeout(giveUpArm); giveUpArm = null; $('giveUpBtn').textContent = t('settings.giveup'); }
+$('giveUpBtn').addEventListener('click', function () {
+  if (curScreen !== 'game' || !G) return;
+  if (!giveUpArm) { $('giveUpBtn').textContent = t('settings.giveup.sure'); giveUpArm = setTimeout(resetGiveUp, 3000); return; }
+  resetGiveUp(); $('settingsPanel').classList.remove('show');
+  if (G.gameOver) { $('banner').style.display = 'none'; restartGame(); return; }
+  var p = botColor ? humanColor : G.current;
+  if (G.pending) { Rules.cancel(G); Rules.drain(G); }
+  closeDraftUI(); clearPlayed(); hideLegendHint(); hideDraftCaption();
+  ['counterBox', 'choiceBox', 'slotBox'].forEach(function (id) { $(id).classList.remove('show'); });
+  Rules.resign(G, p); runEvents(Rules.drain(G));
+});
 $('bannerMenu').addEventListener('click', showMenu);
 
 /* ---------------- 멀티플레이 로비 ---------------- */
