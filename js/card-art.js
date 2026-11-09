@@ -372,6 +372,8 @@ function cardTexture(id) {
   var paperImg = CFG.cardPaper && IMG[CFG.cardPaper];
   if (paperImg) g.drawImage(paperImg, 0, 0, W, H);
   else {
+  if (CARD_PAPER_STYLE === 'playing') playingPaper(g, W, H);
+  else {
   // 오래된 종이: 누렇게 바랜 색 + 구름 같은 색 얼룩(크기별 3겹) + 결·섬유 + 잔주름 + 미세한 균열
   var grad = g.createLinearGradient(0, 0, W * 0.5, H);
   grad.addColorStop(0, '#d2b57a'); grad.addColorStop(0.5, '#bd9b5f'); grad.addColorStop(1, '#a0824c');
@@ -392,6 +394,7 @@ function cardTexture(id) {
     g.strokeStyle = 'rgba(70,42,12,' + rnd(0.1, 0.26) + ')'; g.lineWidth = 0.7; g.beginPath(); g.moveTo(cx, cy);
     for (var st = 0; st < rnd(4, 9); st++) { ca += rnd(-0.7, 0.7); cx += Math.cos(ca) * rnd(4, 9); cy += Math.sin(ca) * rnd(4, 9); g.lineTo(cx, cy); }
     g.stroke();
+  }
   }
   var vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);   // 가장자리 어둡게 (이전 카드와 같은 가장자리)
   vg.addColorStop(0, 'rgba(50,28,8,0)'); vg.addColorStop(1, 'rgba(50,28,8,0.62)');
@@ -571,8 +574,35 @@ function cloudLayer(g, W, H, nw, nh, alpha, kind) {
   ng.putImageData(img, 0, 0);
   g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(n, 0, 0, W, H); g.restore();
 }
+// 옛 트럼프 카드 느낌의 종이: 분홍빛 도는 황갈색 카드 종이, 손때로 번진 구름 얼룩, 사선으로 긁힌 잔 흠집, 닳아 날아간 인쇄
+var CARD_PAPER_STYLE = 'aged';       // 'aged' | 'playing'
+function cloudRGB(g, W, H, nw, nh, alpha, rgb) {
+  var n = document.createElement('canvas'); n.width = nw; n.height = nh; var ng = n.getContext('2d'), img = ng.createImageData(nw, nh);
+  for (var i = 0; i < nw * nh; i++) { var v = Math.random(); img.data[i * 4] = rgb[0]; img.data[i * 4 + 1] = rgb[1]; img.data[i * 4 + 2] = rgb[2]; img.data[i * 4 + 3] = Math.round(v * v * 255 * alpha); }
+  ng.putImageData(img, 0, 0); g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(n, 0, 0, W, H); g.restore();
+}
+function playingPaper(g, W, H) {
+  var grad = g.createLinearGradient(0, 0, W * 0.6, H);
+  grad.addColorStop(0, '#e0c4a4'); grad.addColorStop(0.5, '#d2b08c'); grad.addColorStop(1, '#c19e78');
+  g.fillStyle = grad; g.fillRect(0, 0, W, H);
+  cloudRGB(g, W, H, 4, 6, 0.55, [118, 92, 70]); cloudRGB(g, W, H, 9, 13, 0.45, [120, 90, 64]); cloudRGB(g, W, H, 24, 36, 0.3, [112, 84, 58]); cloudRGB(g, W, H, 60, 90, 0.18, [104, 78, 54]);   // 손때로 번진 얼룩
+  cloudRGB(g, W, H, 6, 9, 0.5, [236, 214, 188]); cloudRGB(g, W, H, 18, 27, 0.32, [240, 220, 196]);                                                                                           // 닳아 밝아진 곳
+  for (var i = 0; i < 7000; i++) { g.fillStyle = (i % 3 ? 'rgba(96,70,46,' : 'rgba(246,228,200,') + rnd(0.03, 0.12) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(0.8, 2.2), rnd(0.8, 2.2)); }
+  for (var k = 0; k < 340; k++) {                       // 긁힌 흠집: 주로 사선, 가늘고 길게 (밝은 선과 어두운 선)
+    var x = rnd(-20, W), y = rnd(-20, H), a = -0.5 + rnd(-0.18, 0.18) + (k % 7 === 0 ? 0.9 : 0), l = rnd(30, 190);
+    g.strokeStyle = k % 3 ? 'rgba(250,236,210,' + rnd(0.16, 0.4) + ')' : 'rgba(92,66,42,' + rnd(0.1, 0.22) + ')'; g.lineWidth = rnd(0.5, 1.3);
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+  }
+}
+function playingWear(g, W, H) {
+  cloudRGB(g, W, H, 4, 6, 0.3, [214, 190, 160]);       // 닳아 날아간 인쇄: 큰 구름 모양으로 옅어짐
+  cloudRGB(g, W, H, 14, 21, 0.2, [214, 190, 160]);
+  cloudRGB(g, W, H, 5, 8, 0.2, [110, 84, 60]);           // 번진 손때가 글자 위에도
+  for (var k = 0; k < 900; k++) { g.fillStyle = 'rgba(216,194,162,' + rnd(0.06, 0.25) + ')'; g.fillRect(rnd(30, W - 30), rnd(40, H - 30), rnd(0.8, 2.2), rnd(0.8, 2.2)); }
+}
 // 글자·그림 위: 잉크도 고르게 남지 않고 군데군데 옅어지며, 종이의 누런 기운이 스며듦
 function wearOut(g, W, H) {
+  if (CARD_PAPER_STYLE === 'playing') { playingWear(g, W, H); return; }
   var tint = g.createLinearGradient(0, 0, 0, H); tint.addColorStop(0, 'rgba(150,105,40,0.1)'); tint.addColorStop(1, 'rgba(90,55,15,0.16)');
   g.fillStyle = tint; g.fillRect(0, 0, W, H);
   var n = document.createElement('canvas'); n.width = 26; n.height = 39; var ng = n.getContext('2d'), img = ng.createImageData(26, 39);
