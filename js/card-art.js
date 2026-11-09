@@ -538,3 +538,48 @@ function cardBackTexture() {
   g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.strokeStyle = 'rgba(20,12,2,0.85)'; g.lineWidth = 2.5; g.stroke();
   return (texCache.__back = toTex(cv));
 }
+
+/* ---------- 시안: 주황빛 두꺼운 종이 카드 (인스크립션 생물 카드 느낌) — 아직 게임에는 쓰지 않음, cardCanvasOrange(id) 로 확인 ---------- */
+function cardCanvasOrange(id) {
+  var c = CARDS[id], W = 384, H = 576, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  var g = cv.getContext('2d'), DK = '#1c0f05', i;
+  var edge = roughRectPts(5, 5, W - 10, H - 10, 1.6, 14);
+  var path = function (pts) { g.beginPath(); pts.forEach(function (q, k) { if (k) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); };
+  g.save(); path(edge); g.clip();
+  // 주황빛 종이: 바탕색 + 얼룩 + 알갱이
+  var bg = g.createLinearGradient(0, 0, W * 0.4, H); bg.addColorStop(0, '#e2a35a'); bg.addColorStop(0.55, '#d4914a'); bg.addColorStop(1, '#bf7a38');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  for (i = 0; i < 14; i++) { var sx = rnd(0, W), sy = rnd(0, H), sr = rnd(50, 150), sg = g.createRadialGradient(sx, sy, 2, sx, sy, sr), dk = i % 3 !== 0;
+    sg.addColorStop(0, dk ? 'rgba(120,60,15,' + rnd(0.08, 0.18) + ')' : 'rgba(255,215,150,' + rnd(0.1, 0.2) + ')'); sg.addColorStop(1, 'rgba(120,60,15,0)'); g.fillStyle = sg; g.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
+  for (i = 0; i < 5000; i++) { g.fillStyle = (i % 3 ? 'rgba(90,45,10,' : 'rgba(255,225,170,') + rnd(0.03, 0.13) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(1, 2.4), rnd(1, 2.4)); }
+  // 위쪽 이름 칸 · 그림 칸 · 설명 칸 · 아래 능력치 칸 (굵은 검은 선으로 나눔)
+  var ART_T = 98, ART_B = 332, STAT_T = 468;
+  g.fillStyle = 'rgba(245,205,140,0.38)'; g.fillRect(22, ART_T, W - 44, ART_B - ART_T);                       // 그림 칸 바탕은 조금 밝게
+  // 이름
+  g.fillStyle = DK; g.textAlign = 'left'; g.textBaseline = 'middle'; g.font = '44px ' + TEXT_FONT; g.fillText(c.name, 34, 58);
+  // 오른쪽 위: 분류 표식 (핏방울)
+  g.fillStyle = '#4a1222'; g.beginPath(); g.moveTo(336, 34); g.bezierCurveTo(352, 56, 358, 62, 350, 74); g.bezierCurveTo(342, 86, 326, 84, 322, 72); g.bezierCurveTo(318, 62, 326, 52, 336, 34); g.fill();
+  g.fillStyle = 'rgba(255,200,190,0.5)'; g.beginPath(); g.ellipse(331, 70, 3, 5, 0.4, 0, 7); g.fill();
+  // 그림
+  g.save(); g.beginPath(); g.rect(22, ART_T, W - 44, ART_B - ART_T); g.clip();
+  g.translate(W / 2, (ART_T + ART_B) / 2 + 2); g.scale(1.06, 1.06); g.translate(-W / 2, -262);
+  ART[id](g, W / 2, 262); g.restore();
+  // 설명
+  g.fillStyle = DK; g.textAlign = 'center'; g.textBaseline = 'middle';
+  var size = 25, lines = [], nEx = c.desc.split('\n').length;
+  [25, 23, 21, 19, 17, 15].some(function (sz) { size = sz; g.font = sz + 'px ' + TEXT_FONT; lines = wrapText(g, c.desc, W - 80); return lines.length === nEx && lines.length * sz * 1.3 <= 120; });
+  var lh = size * 1.3, y0 = (ART_B + STAT_T) / 2 - (lines.length - 1) * lh / 2;
+  lines.forEach(function (l, k) { g.fillText(l, W / 2, y0 + k * lh); });
+  // 아래 능력치 칸: 왼쪽 분류, 가운데 화살표, 오른쪽 턴 처리 (큰 글씨)
+  g.fillStyle = DK; g.textBaseline = 'middle';
+  g.textAlign = 'left'; g.font = '46px ' + TEXT_FONT; g.fillText(c.legend ? '전설' : c.cat, 34, 516);
+  g.beginPath(); g.moveTo(186, 500); g.lineTo(186, 524); g.lineTo(166, 524); g.lineWidth = 6; g.strokeStyle = DK; g.lineJoin = 'round'; g.stroke();   // ↳
+  g.beginPath(); g.moveTo(172, 512); g.lineTo(160, 524); g.lineTo(174, 534); g.closePath(); g.fillStyle = DK; g.fill();
+  g.textAlign = 'right'; g.fillText(c.legend ? (c.react ? '대응' : id === 'allin' ? '턴마다' : '1회') : (c.endsTurn ? '종료' : '유지'), W - 34, 516);
+  g.restore();
+  // 굵은 검은 테두리와 칸 나누는 선 (손으로 그은 듯 살짝 떨리게)
+  inkPath(g, roughRectPts(14, 14, W - 28, H - 28, 1.2, 14), 7, { closed: true, jit: 0.8 });
+  inkPath(g, [[16, ART_T], [W - 16, ART_T]], 5, { jit: 0.8 }); inkPath(g, [[16, ART_B], [W - 16, ART_B]], 5, { jit: 0.8 }); inkPath(g, [[16, STAT_T], [W - 16, STAT_T]], 6, { jit: 0.8 });
+  g.beginPath(); path(edge); g.strokeStyle = 'rgba(30,15,4,0.9)'; g.lineWidth = 3; g.stroke();
+  return cv;
+}
