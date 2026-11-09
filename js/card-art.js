@@ -582,24 +582,29 @@ function cloudRGB(g, W, H, nw, nh, alpha, rgb) {
   ng.putImageData(img, 0, 0); g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(n, 0, 0, W, H); g.restore();
 }
 function playingPaper(g, W, H) {
-  var grad = g.createLinearGradient(0, 0, W * 0.6, H);
-  grad.addColorStop(0, '#e0c4a4'); grad.addColorStop(0.5, '#d2b08c'); grad.addColorStop(1, '#c19e78');
+  // 1) 바탕은 원래 카드 종이 그대로 (가장자리 색·어둡기가 이전 디자인과 똑같이 남도록)
+  var grad = g.createLinearGradient(0, 0, W * 0.4, H);
+  grad.addColorStop(0, '#d8c697'); grad.addColorStop(0.55, '#c9b483'); grad.addColorStop(1, '#b89f6a');
   g.fillStyle = grad; g.fillRect(0, 0, W, H);
-  cloudRGB(g, W, H, 4, 6, 0.55, [118, 92, 70]); cloudRGB(g, W, H, 9, 13, 0.45, [120, 90, 64]); cloudRGB(g, W, H, 24, 36, 0.3, [112, 84, 58]); cloudRGB(g, W, H, 60, 90, 0.18, [104, 78, 54]);   // 손때로 번진 얼룩
-  cloudRGB(g, W, H, 6, 9, 0.5, [236, 214, 188]); cloudRGB(g, W, H, 18, 27, 0.32, [240, 220, 196]);                                                                                           // 닳아 밝아진 곳
-  for (var i = 0; i < 7000; i++) { g.fillStyle = (i % 3 ? 'rgba(96,70,46,' : 'rgba(246,228,200,') + rnd(0.03, 0.12) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(0.8, 2.2), rnd(0.8, 2.2)); }
-  for (var k = 0; k < 340; k++) {                       // 긁힌 흠집: 주로 사선, 가늘고 길게 (밝은 선과 어두운 선)
-    var x = rnd(-20, W), y = rnd(-20, H), a = -0.5 + rnd(-0.18, 0.18) + (k % 7 === 0 ? 0.9 : 0), l = rnd(30, 190);
-    g.strokeStyle = k % 3 ? 'rgba(250,236,210,' + rnd(0.16, 0.4) + ')' : 'rgba(92,66,42,' + rnd(0.1, 0.22) + ')'; g.lineWidth = rnd(0.5, 1.3);
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke();
+  for (var i = 0; i < 7; i++) { var sx = rnd(0, W), sy = rnd(0, H), sr = rnd(30, 90), sg = g.createRadialGradient(sx, sy, 2, sx, sy, sr); sg.addColorStop(0, 'rgba(110,75,30,' + rnd(0.06, 0.16) + ')'); sg.addColorStop(1, 'rgba(110,75,30,0)'); g.fillStyle = sg; g.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); }
+  for (var k = 0; k < 1400; k++) { g.fillStyle = 'rgba(70,45,15,' + rnd(0, 0.1) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(1, 3), rnd(1, 3)); }
+  g.strokeStyle = 'rgba(255,245,215,0.18)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H * 0.46); g.lineTo(W, H * 0.5); g.stroke();
+  g.strokeStyle = 'rgba(70,45,15,0.18)'; g.beginPath(); g.moveTo(0, H * 0.46 + 3); g.lineTo(W, H * 0.5 + 3); g.stroke();
+  // 2) 그 위에 옛 트럼프 카드 같은 손때 얼룩과 긁힘을 따로 그려 얹음 — 가장자리 띠에서는 사라지게(마스크) 해서 가장자리는 그대로, 잉크 아래에 깔려 디자인은 가리지 않음
+  var t = document.createElement('canvas'); t.width = W; t.height = H; var tg = t.getContext('2d');
+  cloudRGB(tg, W, H, 4, 6, 0.9, [128, 98, 72]); cloudRGB(tg, W, H, 9, 13, 0.7, [126, 94, 66]); cloudRGB(tg, W, H, 22, 33, 0.42, [116, 88, 62]); cloudRGB(tg, W, H, 54, 81, 0.24, [108, 82, 58]);     // 번진 얼룩
+  cloudRGB(tg, W, H, 6, 9, 0.6, [236, 216, 188]);                                                                                                                                        // 닳아 밝아진 곳
+  for (var n = 0; n < 300; n++) {                                  // 사선으로 긁힌 가는 흠집
+    var x = rnd(-20, W), y = rnd(-20, H), an = -0.5 + rnd(-0.18, 0.18) + (n % 7 === 0 ? 0.9 : 0), l = rnd(30, 190);
+    tg.strokeStyle = n % 3 ? 'rgba(250,236,210,' + rnd(0.14, 0.34) + ')' : 'rgba(92,66,42,' + rnd(0.08, 0.18) + ')'; tg.lineWidth = rnd(0.5, 1.2);
+    tg.beginPath(); tg.moveTo(x, y); tg.lineTo(x + Math.cos(an) * l, y + Math.sin(an) * l); tg.stroke();
   }
+  var m = document.createElement('canvas'); m.width = W; m.height = H; var mg = m.getContext('2d');
+  mg.shadowColor = '#000'; mg.shadowBlur = 26; mg.fillStyle = '#000'; mg.fillRect(40, 40, W - 80, H - 80);                       // 안쪽만 남기는 부드러운 마스크
+  tg.globalCompositeOperation = 'destination-in'; tg.drawImage(m, 0, 0);
+  g.drawImage(t, 0, 0);
 }
-function playingWear(g, W, H) {
-  cloudRGB(g, W, H, 4, 6, 0.3, [214, 190, 160]);       // 닳아 날아간 인쇄: 큰 구름 모양으로 옅어짐
-  cloudRGB(g, W, H, 14, 21, 0.2, [214, 190, 160]);
-  cloudRGB(g, W, H, 5, 8, 0.2, [110, 84, 60]);           // 번진 손때가 글자 위에도
-  for (var k = 0; k < 900; k++) { g.fillStyle = 'rgba(216,194,162,' + rnd(0.06, 0.25) + ')'; g.fillRect(rnd(30, W - 30), rnd(40, H - 30), rnd(0.8, 2.2), rnd(0.8, 2.2)); }
-}
+function playingWear() { /* 인쇄(잉크)는 건드리지 않음 — 얼룩이 카드 디자인을 해치지 않게 */ }
 // 글자·그림 위: 잉크도 고르게 남지 않고 군데군데 옅어지며, 종이의 누런 기운이 스며듦
 function wearOut(g, W, H) {
   if (CARD_PAPER_STYLE === 'playing') { playingWear(g, W, H); return; }
