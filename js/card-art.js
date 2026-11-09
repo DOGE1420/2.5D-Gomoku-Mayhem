@@ -355,7 +355,9 @@ function drawIllustration(g, img) {
   if (CFG.artBlend === 'multiply') g.globalCompositeOperation = 'multiply';
   g.drawImage(img, B.x + (B.w - dw) / 2, B.y + (B.h - dh) / 2, dw, dh);
   g.restore();
-  inkPath(g, roughRectPts(B.x, B.y, B.w, B.h, 1.2, 14), 3, { closed: true, jit: 0.9 });   // 잉크 테두리
+  inkPath(g, roughRectPts(B.x, B.y, B.w, B.h, 1.2, 14), 3, { closed: true, jit: 0.9 });   withSeed(id + ':accent', function () { cardAccent(g, id, c, W, H); });          // 능력마다 다른 세부 흔적 (종이 층, 잉크 아래)
+
+  // 잉크 테두리
 }
 
 function cardTexture(id) {
@@ -405,7 +407,7 @@ function cardTexture(id) {
   }
 
   // 상단 룬 + 이름
-  runeGlyph(g, W / 2, 70, 20);
+  withSeed(id + ':rune', function () { var keep = INK; INK = CAT_TINT[c.legend ? '전설' : c.cat] || keep; runeGlyph(g, W / 2, 70, 20); INK = keep; });   // 룬은 카드마다 고정, 분류별로 잉크 색이 살짝 다름
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK;
   g.font = '40px ' + TEXT_FONT; g.globalAlpha = 0.93; g.fillText(c.name, W / 2, 124); g.globalAlpha = 1;
   inkPath(g, [[W / 2 - 92, 150], [W / 2 + 92, 150]], 2.2, { jit: 1 });
@@ -546,6 +548,65 @@ function usedInk(g, W, H) {
   [[W * 0.5, H * 0.95, 90], [W * 0.2, H * 0.92, 60], [W * 0.8, H * 0.9, 60]].forEach(function (p) {
     var gr = g.createRadialGradient(p[0], p[1], 2, p[0], p[1], p[2]); gr.addColorStop(0, 'rgba(190,166,116,0.16)'); gr.addColorStop(1, 'rgba(190,166,116,0)'); g.fillStyle = gr; g.fillRect(p[0] - p[2], p[1] - p[2], p[2] * 2, p[2] * 2);
   });
+}
+
+/* ---------- 카드마다 다른 세부 디테일 ---------- */
+// 카드 id 로 정해지는 고정 난수 (같은 카드는 늘 같은 모양)
+function withSeed(key, fn) {
+  var h = 2166136261; for (var i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  var keep = Math.random; Math.random = function () { h = (Math.imul(h, 1664525) + 1013904223) >>> 0; return h / 4294967296; };
+  try { fn(); } finally { Math.random = keep; }
+}
+// 분류별 룬 잉크 색 (검정에 가까운 색에 분류 색을 섞음)
+var CAT_TINT = { '공격': '#4a150e', '방해': '#3c1d42', '희귀': '#4e3a08', '무작위': '#1b3144', '규칙': '#2a2a2a', '지형': '#1f3a16', '보급': '#4a2c0c', '수비': '#14284a', '전설': '#4a3406' };
+function accSpots(g, n, rgb, a0, a1, r0, r1, box) {
+  for (var i = 0; i < n; i++) { g.fillStyle = 'rgba(' + rgb + ',' + rnd(a0, a1) + ')'; g.beginPath(); g.arc(rnd(box[0], box[2]), rnd(box[1], box[3]), rnd(r0, r1), 0, 7); g.fill(); }
+}
+function accBlobs(g, n, rgb, a, r0, r1, box) {
+  for (var i = 0; i < n; i++) { var x = rnd(box[0], box[2]), y = rnd(box[1], box[3]), r = rnd(r0, r1), gr = g.createRadialGradient(x, y, 1, x, y, r); gr.addColorStop(0, 'rgba(' + rgb + ',' + a + ')'); gr.addColorStop(1, 'rgba(' + rgb + ',0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+}
+function accLines(g, n, rgb, a0, a1, w, l0, l1, ang, jit, box) {
+  for (var i = 0; i < n; i++) { var x = rnd(box[0], box[2]), y = rnd(box[1], box[3]), an = ang + rnd(-jit, jit), l = rnd(l0, l1); g.strokeStyle = 'rgba(' + rgb + ',' + rnd(a0, a1) + ')'; g.lineWidth = w; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(an) * l, y + Math.sin(an) * l); g.stroke(); }
+}
+function accRing(g, x, y, r, rgb, a, w) { g.strokeStyle = 'rgba(' + rgb + ',' + a + ')'; g.lineWidth = w || 1.4; g.beginPath(); g.arc(x, y, r, 0, 7); g.stroke(); }
+function accCrack(g, x, y, ang, len, rgb, a) {
+  g.strokeStyle = 'rgba(' + rgb + ',' + a + ')'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x, y);
+  for (var d = 0; d < len; d += 9) { ang += rnd(-0.5, 0.5); x += Math.cos(ang) * 9; y += Math.sin(ang) * 9; g.lineTo(x, y); } g.stroke();
+}
+function cardAccent(g, id, c, W, H) {
+  var ALL = [10, 10, W - 10, H - 10], ART = [40, 160, W - 40, 380], TOP = [40, 40, W - 40, 150], BOT = [40, 380, W - 40, H - 40], i;
+  var corners = function (rgb, a, r) { [[14, 14], [W - 14, 14], [14, H - 14], [W - 14, H - 14]].forEach(function (p) { var gr = g.createRadialGradient(p[0], p[1], 1, p[0], p[1], r); gr.addColorStop(0, 'rgba(' + rgb + ',' + a + ')'); gr.addColorStop(1, 'rgba(' + rgb + ',0)'); g.fillStyle = gr; g.fillRect(p[0] - r, p[1] - r, r * 2, r * 2); }); };
+  switch (id) {
+    case 'bomb': corners('20,16,12', 0.32, 90); accSpots(g, 60, '24,18,12', 0.18, 0.5, 0.6, 1.8, ART); accSpots(g, 8, '210,110,30', 0.2, 0.45, 0.8, 1.8, ART); break;               // 그을음 · 불씨
+    case 'chain': accLines(g, 9, '190,150,20', 0.1, 0.22, 1.4, 20, 46, 1.2, 0.8, ART); accBlobs(g, 3, '220,190,60', 0.12, 40, 70, ART); break;                                 // 번개가 지나간 노란 기운
+    case 'windmill': accLines(g, 12, '230,215,170', 0.14, 0.3, 1.6, 40, 90, 0.2, 0.25, ART); accSpots(g, 40, '150,120,50', 0.15, 0.35, 0.5, 1.2, ALL); break;                  // 바람결 · 겨 부스러기
+    case 'alkkagi': for (i = 0; i < 3; i++) accRing(g, rnd(70, W - 70), rnd(200, 360), rnd(18, 30), '40,26,12', 0.12, 2); break;                                                // 바둑돌이 놓였던 자국
+    case 'trade': accLines(g, 6, '60,40,20', 0.08, 0.16, 1.4, 40, 80, 0.4, 0.5, ART); accRing(g, W / 2, 270, 70, '60,40,20', 0.07, 2); break;
+    case 'infection': accBlobs(g, 6, '70,100,50', 0.2, 18, 40, ALL); accSpots(g, 50, '60,96,44', 0.18, 0.42, 0.7, 1.8, ALL); break;                                              // 곰팡이 · 푸르스름한 번짐
+    case 'reversal': accRing(g, W / 2, 262, 96, '40,26,12', 0.07, 5); accRing(g, W / 2, 262, 118, '40,26,12', 0.05, 2); break;
+    case 'teleport': for (i = 1; i <= 5; i++) accRing(g, W / 2, 262, i * 24, '40,70,100', 0.07, 1.4); break;
+    case 'earthquake': for (i = 0; i < 5; i++) accCrack(g, rnd(20, W - 20), i % 2 ? 12 : H - 12, i % 2 ? 1.57 : -1.57, rnd(60, 130), '40,26,12', 0.26); break;                          // 갈라진 금
+    case 'meteor': accSpots(g, 30, '210,110,30', 0.2, 0.5, 0.7, 1.8, ART); accLines(g, 3, '30,20,12', 0.14, 0.24, 5, 60, 120, 0.7, 0.1, ART); break;
+    case 'sixsense': accLines(g, 14, '230,190,80', 0.08, 0.16, 1.2, 40, 80, -1.57, 1.2, [W / 2 - 20, 150, W / 2 + 20, 200]); break;
+    case 'wall': for (i = 0; i < 5; i++) { g.strokeStyle = 'rgba(70,50,30,0.07)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(40, 300 + i * 18); g.lineTo(W - 40, 300 + i * 18); g.stroke(); } accSpots(g, 70, '110,100,90', 0.15, 0.35, 0.5, 1.3, ART); break;   // 벽돌가루
+    case 'trap': accBlobs(g, 5, '125,52,20', 0.24, 14, 34, ALL); accLines(g, 8, '50,24,10', 0.12, 0.24, 1.2, 6, 12, 1.57, 0.4, BOT); break;                                       // 녹물
+    case 'snipe': g.strokeStyle = 'rgba(50,34,18,0.08)'; g.lineWidth = 1; g.beginPath(); g.moveTo(40, 262); g.lineTo(W - 40, 262); g.moveTo(W / 2, 160); g.lineTo(W / 2, 380); g.stroke(); accSpots(g, 4, '20,12,6', 0.35, 0.6, 1.2, 2.2, ART); break;
+    case 'double': g.save(); g.translate(5, 5); inkPath(g, roughRectPts(30, 30, W - 60, H - 60, 1.2, 14), 2, { closed: true, jit: 0.8 }); g.restore(); break;
+    case 'giant': accSpots(g, 90, '96,92,86', 0.15, 0.4, 0.6, 1.6, ALL); accCrack(g, 30, 200, 0.3, 80, '40,36,30', 0.2); accCrack(g, W - 30, 330, 2.9, 80, '40,36,30', 0.2); break;
+    case 'weather': accLines(g, 24, '90,110,130', 0.08, 0.18, 1.2, 14, 40, 1.45, 0.1, ALL); accBlobs(g, 4, '80,100,125', 0.12, 16, 30, ALL); break;                                    // 빗물 자국
+    case 'shield': [0, 1, 2].forEach(function (k) { g.strokeStyle = 'rgba(110,140,170,' + (0.14 - k * 0.04) + ')'; g.lineWidth = 6 - k * 2; g.strokeRect(24 + k * 5, 24 + k * 5, W - 48 - k * 10, H - 48 - k * 10); }); break;      // 쇳빛 테
+    case 'blockade': accRing(g, W - 64, 68, 20, '140,28,22', 0.32, 4); accRing(g, W - 64, 68, 12, '140,28,22', 0.24, 2); g.strokeStyle = 'rgba(140,28,22,0.3)'; g.lineWidth = 3; g.beginPath(); g.moveTo(W - 72, 60); g.lineTo(W - 56, 76); g.moveTo(W - 56, 60); g.lineTo(W - 72, 76); g.stroke(); break;   // 붉은 밀랍 도장
+    case 'obelisk': accSpots(g, 36, '214,170,50', 0.2, 0.5, 0.6, 1.6, ALL); break;
+    case 'nothing': accBlobs(g, 2, '250,244,225', 0.28, 60, 100, ART); break;
+    case 'latebloom': accSpots(g, 24, '96,130,56', 0.2, 0.42, 1, 2.2, BOT); accBlobs(g, 3, '110,140,60', 0.12, 20, 40, BOT); break;
+    case 'blind': accBlobs(g, 3, '20,14,10', 0.2, 30, 60, TOP); accLines(g, 10, '20,14,10', 0.1, 0.22, 3, 20, 50, 0, 0.1, TOP); break;
+    case 'clown': accSpots(g, 30, '190,40,40', 0.2, 0.42, 1, 2.4, ALL); accSpots(g, 24, '50,80,170', 0.18, 0.38, 1, 2.2, ALL); break;
+    case 'sloth': accBlobs(g, 6, '96,120,60', 0.18, 14, 34, BOT); accSpots(g, 40, '80,110,50', 0.18, 0.4, 0.7, 1.6, BOT); break;
+    case 'mirror': accLines(g, 3, '255,250,235', 0.18, 0.3, 14, 140, 260, -0.8, 0.05, ART); break;
+    case 'allin': accSpots(g, 20, '170,36,36', 0.22, 0.48, 1.2, 2.6, ALL); accSpots(g, 20, '214,170,50', 0.22, 0.48, 1.2, 2.4, ALL); break;
+    case 'turtle': accBlobs(g, 5, '70,100,56', 0.16, 20, 40, ALL); for (i = 0; i < 6; i++) { g.strokeStyle = 'rgba(60,90,46,0.1)'; g.lineWidth = 1.6; g.beginPath(); for (var k = 0; k < 6; k++) { var an = k * 1.047; g.lineTo(80 + i * 44 + Math.cos(an) * 16, 400 + (i % 2) * 14 + Math.sin(an) * 16); } g.closePath(); g.stroke(); } break;
+    case 'king': accSpots(g, 40, '214,170,50', 0.22, 0.55, 0.6, 1.8, ALL); accRing(g, W / 2, 262, 116, '190,140,30', 0.1, 3); break;
+  }
 }
 
 // 전설 카드 뒷면 (상대가 쥔 전설 카드: 무엇인지 모름)
