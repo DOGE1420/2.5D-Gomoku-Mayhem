@@ -580,7 +580,7 @@ var BotAI = (function () {
   }
 
   /* ---------------- 카드 뽑기 (5단계~) ---------------- */
-  var LEGEND_PRIORITY = ['king', 'latebloom', 'obelisk', 'clown', 'turtle', 'blind', 'chicken', 'allin', 'nothing', 'mirror', 'sloth'];
+  var LEGEND_PRIORITY = ['king', 'latebloom', 'obelisk', 'clown', 'turtle', 'blind', 'allin', 'nothing', 'mirror', 'sloth'];
   var ABILITY_PRIORITY = ['sturdy', 'pouch', 'clover', 'umbrella', 'retry'];
   function pickDraft(picks, me, kind) {
     if (kind === 'legend') return picks.slice().sort(function (a, b) { return LEGEND_PRIORITY.indexOf(a) - LEGEND_PRIORITY.indexOf(b); })[0];

@@ -38,8 +38,7 @@
       case 'latebloom': r = { ok: lg.plies >= 40, text: '판에 둔 수 ' + Math.min(lg.plies, 40) + '/40' }; break;
       case 'blind': r = { ok: lg.far[p] >= 3 && !R.isDark(G), text: '멀리 둔 수 ' + Math.min(lg.far[p], 3) + '/3' }; break;
       case 'clown': r = { ok: lg.lost[p] >= 3, text: '잃은 돌 ' + Math.min(lg.lost[p], 3) + '/3' }; break;
-      case 'chicken': { var a = longestRun(G, p).len, b = longestRun(G, opp).len; r = { ok: a >= 3 && b >= 3, text: '내 줄 ' + a + ' · 상대 줄 ' + b + ' (둘 다 3 이상)' }; break; }
-      case 'sloth': r = { ok: lg.edge[p] >= 6 && G.hand[p].length > 0, text: '카드 없이 ' + Math.min(lg.edge[p], 6) + '/6턴' }; break;
+      case 'sloth': r = { ok: G.hand[p].length > 0, text: '패 ' + G.hand[p].length + '장' }; break;
       case 'mirror': { var lc = lg.lastCard[opp]; var cd = lc && R.CARD_BY_ID[lc]; r = { ok: !!lc, text: lc ? '베낄 카드: ' + (cd ? cd.name : lc) : '상대가 아직 카드를 쓰지 않음' }; break; }
       case 'allin': { var h = G.hand[p].length, st = countStones(G, p); r = { ok: h > 0 || st >= 3, text: '패 ' + h + '장 · 내 돌 ' + st + '개' }; break; }
       case 'turtle': { var dd = countStones(G, opp) - countStones(G, p); r = { ok: dd >= 5 && !G.winOver[p], text: '돌 차이 ' + clamp(dd, 0, 5) + '/5' }; break; }
@@ -56,7 +55,8 @@
   function canUseLegend(G) {
     var p = G.current, c = R.LEGEND_BY_ID[G.lg.card[p]];
     if (!c || c.react || G.lg.done[p]) return false;
-    if (c.id === 'allin' && G.lgUsedThisTurn) return false;     // 올인: 한 턴에 한 번
+    if (c.id === 'allin' && G.lgUsedThisTurn) return false;
+    if (c.id === 'mirror' && G.used[p]) return false;               // 따라쟁이는 카드 사용으로 침 (턴당 카드 1장)     // 올인: 한 턴에 한 번
     if (G.gameOver || G.draft || G.pending || G.alk || G.counter || G.startQueue) return false;
     return legendProgress(G, p).ok;
   }
@@ -76,20 +76,26 @@
       case 'obelisk': G.pending = { type: 'sacrifice', forPlayer: p, legend: true, picks: [] }; return { ok: true, pending: true };
       case 'king': G.pending = { type: 'kingPick', forPlayer: p, legend: true }; return { ok: true, pending: true };
       case 'latebloom': lgFinish(G, p); G.lg.big = p; G.needed = Math.max(G.needed, 5); break;
-      case 'blind': lgFinish(G, p); G.lg.darkUntil = G.lg.turnNo + 3; ev(G, { t: 'dark', turns: 3 }); break;
+      case 'blind': lgFinish(G, p); G.lg.darkUntil = G.lg.turnNo + 5; ev(G, { t: 'dark', turns: 5 }); break;
       case 'clown': lgFinish(G, p); clown(G, p); break;
-      case 'chicken': lgFinish(G, p); chicken(G, p); break;
-      case 'mirror': {
-        var src = G.lg.lastCard[opp]; if (!src) return { ok: false };
-        lgFinish(G, p); G.hand[p].push(src); C.trimHand(G, p); ev(G, { t: 'gain', p: p, id: src });
-        break;
+      case 'mirror': {                                                    // 상대가 가장 최근에 쓴 카드를 내가 바로 사용
+        var src = G.lg.lastCard[opp]; if (!src || G.used[p]) return { ok: false };
+        G.hand[p].push(src); var mi = G.hand[p].length - 1;
+        ev(G, { t: 'gain', p: p, id: src });
+        var mres = R.useCard(G, mi);
+        if (!mres.ok) { G.hand[p].splice(mi, 1); G.ev.pop(); return { ok: false }; }
+        if (G.pending) G.pending.mirror = true;
+        lgFinish(G, p);
+        return mres;
       }
       case 'sloth': lgFinish(G, p); slothRunAll(G, p); return { ok: true };
       case 'allin': {
-        var canCards = G.hand[p].length > 0, canStones = countStones(G, p) >= 3;
-        if (!choice) { if (canCards && canStones) return { ok: true, choice: true }; choice = canCards ? 'cards' : 'stones'; }
+        var nSt = countStones(G, p), canCards = G.hand[p].length > 0, canStones = nSt >= 3;
+        if (!choice) { if (canCards && canStones) return { ok: true, choice: true, maxStones: nSt }; choice = canCards ? 'cards' : 'stones'; }
+        var need = 3;
+        if (typeof choice === 'string' && choice.indexOf('stones:') === 0) { need = parseInt(choice.slice(7), 10) || 3; choice = 'stones'; }
         if (choice === 'cards' && canCards) { lgFinish(G, p); allinCards(G, p); break; }
-        if (choice === 'stones' && canStones) { G.pending = { type: 'wager', forPlayer: p, legend: true, picks: [] }; return { ok: true, pending: true }; }
+        if (choice === 'stones' && canStones && need >= 3 && need <= nSt) { G.pending = { type: 'wager', forPlayer: p, legend: true, picks: [], need: need }; return { ok: true, pending: true }; }
         return { ok: false };
       }
       case 'turtle': lgFinish(G, p); G.winOver[p] = 4; ev(G, { t: 'rule', turtle: p }); C.passTurn(G); return { ok: true };
@@ -106,7 +112,7 @@
     if (t.type === 'sacrifice' || t.type === 'wager') {
       var i = -1; t.picks.forEach(function (q, k) { if (q.r === r && q.c === c) i = k; });
       if (i !== -1) t.picks.splice(i, 1); else t.picks.push({ r: r, c: c });                // 다시 누르면 선택 취소
-      if (t.picks.length < 3) { ev(G, { t: 'legendPick', picks: t.picks.map(function (q) { return { r: q.r, c: q.c }; }) }); return { ok: true, resolved: false }; }
+      if (t.picks.length < (t.need || 3)) { ev(G, { t: 'legendPick', picks: t.picks.map(function (q) { return { r: q.r, c: q.c }; }) }); return { ok: true, resolved: false }; }
       lgFinish(G, p);
       var picks = t.picks; G.pending = null;
       if (t.type === 'wager') allinStones(G, p, picks); else obeliskResolve(G, p, picks);
@@ -184,13 +190,6 @@
     G.lg.lostPos[p] = [];
     C.pruneTraps(G);
   }
-  // 🍗 동전 던지기: 진 쪽의 가장 긴 줄이 사라짐 (내 줄일 수도)
-  function chicken(G, p) {
-    var win = C.rnd(G) < 0.5, victim = win ? other(p) : p;
-    ev(G, { t: 'coin', win: win });
-    longestRun(G, victim).cells.forEach(function (q) { if (!C.isProtected(G, q.r, q.c)) removeStone(G, victim, q, 'smash'); });
-    C.pruneTraps(G);
-  }
   // 🦥 패의 카드를 모두 즉시 발동 (대상은 모두 무작위, 알까기는 제외, 턴 종료 카드는 다 끝난 뒤 한 번만)
   function resolveRandomPending(G) {
     for (var guard = 0; guard < 4 && G.pending; guard++) {
@@ -231,21 +230,20 @@
     ev(G, { t: 'handLost', p: p, n: n });
     if (spinSlot(G, p)) for (var k = 0; k < n * 2; k++) C.grantRandomCard(G, p);          // 패 한도를 넘으면 오래된 카드부터 버려짐
   }
-  // 올인 (돌 걸기): 고른 돌 3개를 걸고, 잭팟이면 제자리로 돌아오고 주변에 3개 더 (승리 줄이 되는 칸은 건너뜀)
+  // 올인 (돌 걸기): 고른 돌을 걸고, 잭팟이면 건 개수만큼 판의 무작위 빈 칸에 새로 놓임 (승리 줄이 되는 칸은 건너뜀)
   function allinStones(G, p, picks) {
     picks.forEach(function (q) { C.removeStoneAt(G, q.r, q.c); ev(G, { t: 'remove', r: q.r, c: q.c, p: p, why: 'wager' }); });
     if (!spinSlot(G, p)) { C.pruneTraps(G); return; }
-    var put = function (r, c) { G.board[r][c] = p; ev(G, { t: 'spawn', r: r, c: c, p: p }); };
-    picks.forEach(function (q) { if (G.board[q.r][q.c] === EMPTY && !C.lgWouldWin(G, q.r, q.c, p)) put(q.r, q.c); });
-    var near = [];
+    var cells = [];
     for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
-      if (G.board[r][c] !== EMPTY || R.isBlockedForPlayer(G, r, c, p)) continue;
-      var adj = false;
-      for (var dr = -1; dr <= 1 && !adj; dr++) for (var dc = -1; dc <= 1 && !adj; dc++) if ((dr || dc) && R.inb(r + dr, c + dc) && G.board[r + dr][c + dc] === p) adj = true;
-      if (adj) near.push({ r: r, c: c });
+      if (G.board[r][c] !== EMPTY || R.isBlockedForPlayer(G, r, c, p) || C.isZoneCell(G, r, c)) continue;
+      cells.push({ r: r, c: c });
     }
-    var extra = 0;
-    C.shuffle(G, near).forEach(function (q) { if (extra >= picks.length) return; if (G.board[q.r][q.c] === EMPTY && !C.lgWouldWin(G, q.r, q.c, p)) { put(q.r, q.c); extra++; } });
+    var put = 0;
+    C.shuffle(G, cells).forEach(function (q) {
+      if (put >= picks.length || G.board[q.r][q.c] !== EMPTY || C.lgWouldWin(G, q.r, q.c, p)) return;
+      G.board[q.r][q.c] = p; put++; ev(G, { t: 'spawn', r: q.r, c: q.c, p: p });
+    });
     C.pruneTraps(G);
   }
 

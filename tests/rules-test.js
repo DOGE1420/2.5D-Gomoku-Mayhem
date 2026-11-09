@@ -166,7 +166,7 @@ console.log('[시작: 전설 카드 선택 · 시작 능력 · 다시 뽑기]');
   ok(G.lg.card[BLACK] && G.draft && G.draft.player === WHITE, '흑이 고르면 백 차례로 넘어감 (흑의 선택은 비공개)');
   Rules.pickDraft(G, G.draft.picks[1]);
   ok(!G.draft && !G.startQueue && G.current === BLACK && Rules.place(G, 7, 7).ok, '둘 다 고르면 흑부터 시작');
-  ok(Rules.LEGENDS.length === 11 && Rules.ABILITIES.length === 5, '전설 카드 11장 · 시작 능력 5종');
+  ok(Rules.LEGENDS.length === 10 && Rules.ABILITIES.length === 5, '전설 카드 10장 · 시작 능력 5종');
 }
 {
   // 시작 능력
@@ -183,7 +183,7 @@ console.log('[시작: 전설 카드 선택 · 시작 능력 · 다시 뽑기]');
   ok(S.pending && !Rules.target(S, 7, 7).ok, '단단한 시작: 처음 둔 돌은 카드 효과로부터 보호');
 }
 
-console.log('[전설 카드 11장]');
+console.log('[전설 카드 10장]');
 function legendGame(card, seed) {
   const G = Rules.create({ rng: seeded(seed || 30) });
   G.lg.card[BLACK] = card; G.lg.card[WHITE] = 'turtle'; G.current = BLACK;
@@ -226,11 +226,13 @@ function legendGame(card, seed) {
   [[7,7],[8,8],[9,9]].forEach(([r,c], i) => { G.current = BLACK; G.done = 0; G.needed = 1; G.placed = []; Rules.place(G, r, c); });
   if (G.draft) Rules.pickDraft(G, G.draft.picks[0]);        // 3번째 돌에서 카드 뽑기가 열림
   G.current = BLACK; G.done = 0; G.needed = 1; G.placed = [];
-  ok(G.lg.far[BLACK] >= 3 && Rules.canUseLegend(G), '눈 감고 두기: 멀리 3번 두면 사용 가능');
+  ok(G.lg.far[BLACK] >= 3 && Rules.canUseLegend(G), '실명: 멀리 3번 두면 사용 가능');
   Rules.useLegend(G);
-  ok(Rules.isDark(G), '눈 감고 두기: 판이 어두워짐');
-  for (let i = 0; i < 6; i++) { Rules.core.passTurn(G); }
-  ok(!Rules.isDark(G), '눈 감고 두기: 3턴 뒤 끝남');
+  ok(Rules.isDark(G), '실명: 판이 어두워짐');
+  for (let i = 0; i < 4; i++) { Rules.core.passTurn(G); }
+  ok(Rules.isDark(G), '실명: 4턴 뒤에도 어두움');
+  for (let i = 0; i < 2; i++) { Rules.core.passTurn(G); }
+  ok(!Rules.isDark(G), '실명: 5턴 뒤 끝남');
 }
 {
   // 광대
@@ -244,30 +246,25 @@ function legendGame(card, seed) {
   ok(Rules.countStones(G, BLACK) === 3 && G.board[7][7] === BLACK, '광대의 한 수: 잃은 돌이 모두 제자리로 귀환');
 }
 {
-  // 치킨 게임
-  const G = legendGame('chicken');
-  [[2,1],[2,2],[2,3]].forEach(([r,c]) => G.board[r][c] = BLACK); [[9,1],[9,2],[9,3]].forEach(([r,c]) => G.board[r][c] = WHITE);
-  ok(Rules.canUseLegend(G), '치킨 게임: 양쪽 모두 3줄 이상이면 사용 가능');
-  Rules.useLegend(G);
-  const a = Rules.countStones(G, BLACK), b = Rules.countStones(G, WHITE);
-  ok(a + b === 3 && (a === 0 || b === 0), '치킨 게임: 동전에 진 쪽의 줄이 사라짐');
-}
-{
   // 나무늘보
-  const G = legendGame('sloth'); G.lg.edge[BLACK] = 6; G.board[1][1] = BLACK; G.board[1][2] = WHITE;
+  const G = legendGame('sloth'); G.board[1][1] = BLACK; G.board[1][2] = WHITE;
   G.hand[BLACK] = ['sixsense', 'chain', 'teleport'];
-  ok(Rules.canUseLegend(G), '나무늘보: 카드 없이 6턴 + 패가 있으면 사용 가능');
+  ok(Rules.canUseLegend(G), '나무늘보: 조건 없이 패가 있으면 사용 가능');
   Rules.useLegend(G);
   ok(G.hand[BLACK].length === 0 && G.winLength === 6 && G.board[1][1] === EMPTY || G.winLength === 6, '나무늘보: 패의 카드를 모두 즉시 발동');
   const D = Rules.create({ rng: seeded(33) }); D.lg.card[BLACK] = 'sloth';
   [[7,3],[0,0],[7,5],[0,3],[7,7]].forEach(([r,c]) => Rules.place(D, r, c));
-  ok(!D.draft && D.hand[BLACK].length === 1, '나무늘보: 쥐고 있으면 카드 선택이 무작위(고르지 못함)');
+  ok(!!D.draft, '나무늘보: 쥐고 있어도 카드는 직접 고름');
 }
 {
   // 따라쟁이
   const G = legendGame('mirror'); ok(!Rules.canUseLegend(G), '따라쟁이: 상대가 카드를 쓰기 전에는 못 씀');
   G.lg.lastCard[WHITE] = 'bomb'; ok(Rules.canUseLegend(G), '따라쟁이: 상대가 카드를 쓴 뒤 사용 가능');
-  Rules.useLegend(G); ok(G.hand[BLACK].join() === 'bomb', '따라쟁이: 상대의 가장 최근 카드를 내 패로 복사');
+  G.board[7][7] = WHITE;
+  const mr = Rules.useLegend(G); ok(mr.ok && mr.pending && G.pending.type === 'remove' && G.hand[BLACK].join() === 'bomb', '따라쟁이: 상대의 가장 최근 카드(폭파)를 바로 사용 — 대상 고르기');
+  Rules.cancel(G); ok(G.hand[BLACK].length === 0 && !G.lg.done[BLACK], '따라쟁이: 취소하면 복사한 카드도 전설 사용도 없던 일로');
+  Rules.useLegend(G); Rules.target(G, 7, 7);
+  ok(G.board[7][7] === EMPTY && G.hand[BLACK].length === 0 && G.lg.done[BLACK], '따라쟁이: 폭파가 발동하고 전설 카드는 사용됨')
 }
 {
   // 올인
@@ -282,7 +279,11 @@ function legendGame(card, seed) {
   const S = legendGame('allin', 42); [[7,7],[8,8],[9,9]].forEach(([r,c]) => S.board[r][c] = BLACK);
   Rules.useLegend(S, 'stones'); Rules.target(S, 7, 7); Rules.target(S, 8, 8); Rules.target(S, 9, 9);
   const n = Rules.countStones(S, BLACK), s2 = Rules.drain(S).find(e => e.t === 'slot');
-  ok(s2 && (s2.win ? n === 6 : n === 0), '올인(돌): ' + (s2.win ? '잭팟 → 돌 6개' : '꽝 → 돌 잃음'));
+  ok(s2 && (s2.win ? n === 3 : n === 0), '올인(돌): ' + (s2.win ? '잭팟 → 건 개수만큼(3개) 무작위 칸에 배치' : '꽝 → 돌 잃음'));
+  const S4 = legendGame('allin', 43); [[7,7],[8,8],[9,9],[3,3]].forEach(([r,c]) => S4.board[r][c] = BLACK);
+  const w4 = Rules.useLegend(S4, 'stones:4'); ok(w4.ok && w4.pending && S4.pending.need === 4, '올인: 돌은 3개 이상 원하는 만큼 걸 수 있음 (4개)');
+  [[7,7],[8,8],[9,9]].forEach(([r,c]) => Rules.target(S4, r, c)); ok(!!S4.pending, '올인: 건 개수를 다 고를 때까지 대기');
+  Rules.target(S4, 3, 3); const n4 = Rules.countStones(S4, BLACK); ok(n4 === 0 || n4 === 4, '올인(4개): 잭팟이면 4개 배치, 꽝이면 전부 잃음');
 }
 {
   // 토끼와 거북이

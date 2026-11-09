@@ -41,11 +41,14 @@ function showCounterBox(holder, user, cardId, cb) {
 }
 
 // 🎰 올인: 무엇을 걸지
-function askAllin(cb) {
+function askAllin(cb, maxStones) {
   var box = document.getElementById('choiceBox'), acts = document.getElementById('choiceActions');
   document.getElementById('choiceText').innerHTML = H('[[slot]] 올인 — 무엇을 거시겠어요? 슬롯 3개가 같으면 2배!');
   acts.innerHTML = '';
-  [['패 전부 걸기 (' + G.hand[viewer()].length + '장)', 'cards'], ['내 돌 3개 걸기', 'stones'], ['취소', null]].forEach(function (o) {
+  var opts = [['패 전부 걸기 (' + G.hand[viewer()].length + '장)', 'cards']];
+  for (var n = 3; n <= Math.min(maxStones || 3, 6); n++) opts.push(['내 돌 ' + n + '개 걸기', 'stones:' + n]);
+  opts.push(['취소', null]);
+  opts.forEach(function (o) {
     var b = document.createElement('button'); b.className = 'btn'; b.textContent = o[0];
     b.onclick = function () { box.classList.remove('show'); cb(o[1]); };
     acts.appendChild(b);

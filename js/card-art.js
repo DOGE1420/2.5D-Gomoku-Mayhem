@@ -294,16 +294,6 @@ var ART = {
       inkPath(g, circlePts(cx, cy + 26, 13, 12), 3, { closed: true, fill: true });
       inkPath(g, [[cx - 34, cy + 46], [cx - 12, cy + 66], [cx + 12, cy + 66], [cx + 34, cy + 46]], 3.4);
     },
-    chicken: function (g, cx, cy) {          // 치킨 게임: 닭
-      inkPath(g, circlePts(cx - 8, cy + 24, 58, 26, 1.1), 3.8, { closed: true });
-      inkPath(g, circlePts(cx + 52, cy - 34, 30, 18), 3.6, { closed: true });
-      inkPath(g, [[cx + 44, cy - 62], [cx + 52, cy - 80], [cx + 60, cy - 62], [cx + 68, cy - 78], [cx + 70, cy - 58]], 3, { closed: true, fill: true });
-      inkPath(g, [[cx + 78, cy - 36], [cx + 104, cy - 28], [cx + 78, cy - 20]], 3, { closed: true, fill: true });
-      inkPath(g, circlePts(cx + 56, cy - 40, 4, 8), 2.4, { closed: true, fill: true });
-      inkPath(g, [[cx - 66, cy + 4], [cx - 100, cy - 24]], 3.4); inkPath(g, [[cx - 66, cy + 20], [cx - 106, cy + 4]], 3.4); inkPath(g, [[cx - 64, cy + 34], [cx - 98, cy + 30]], 3.4);
-      inkPath(g, [[cx - 24, cy + 82], [cx - 24, cy + 104]], 3.2); inkPath(g, [[cx + 14, cy + 82], [cx + 14, cy + 104]], 3.2);
-      inkPath(g, [[cx - 40, cy + 106], [cx - 24, cy + 104], [cx - 8, cy + 106]], 2.6); inkPath(g, [[cx, cy + 106], [cx + 14, cy + 104], [cx + 30, cy + 106]], 2.6);
-    },
     sloth: function (g, cx, cy) {            // 나무늘보: 나뭇가지에 매달린 모습
       inkPath(g, [[cx - 124, cy - 70], [cx + 124, cy - 74]], 6);
       inkPath(g, [[cx - 60, cy - 70], [cx - 70, cy - 90], [cx - 50, cy - 100]], 2.6); inkPath(g, [[cx + 70, cy - 72], [cx + 86, cy - 94]], 2.6);

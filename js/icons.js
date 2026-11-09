@@ -41,7 +41,6 @@ var ICON_PATHS = {
   // 전설 카드 · 슬롯
   obelisk: '<path d="M12 28l1.5-18L16 4l2.5 6L20 28z"/><path d="M8.5 28h15"/><path d="M14 14h4"/>',
   clown: '<circle cx="16" cy="18" r="9.5"/><circle cx="16" cy="19" r="2.4" fill="currentColor"/><circle cx="12" cy="15" r="1.1" fill="currentColor"/><circle cx="20" cy="15" r="1.1" fill="currentColor"/><path d="M12 23.5c2 1.7 6 1.7 8 0M10 10.5l6-7.5 6 7.5"/>',
-  chicken: '<path d="M7 25l7.5-7.5"/><path d="M5.5 22.5a2.5 2.5 0 103.5 3.5M10 27.5a2.5 2.5 0 003.5-3.5"/><path d="M13 17c-3-5 1-11.5 8-12 5-.3 8 4 6.5 8.5-1.5 5-8 7-11.5 5z"/>',
   sloth: '<path d="M2.5 6h27"/><path d="M10 6l3 8.5M22 6l-3 8.5"/><ellipse cx="16" cy="22" rx="8.5" ry="6.5"/><circle cx="13" cy="21" r="1.1" fill="currentColor"/><circle cx="19" cy="21" r="1.1" fill="currentColor"/><path d="M14 25c1.2.8 2.8.8 4 0"/>',
   slot: '<rect x="4.5" y="5.5" width="20" height="21" rx="2.5"/><rect x="8" y="10" width="13" height="7" rx="1"/><path d="M12.5 10v7M16.8 10v7M24.5 11h3.5v7"/><circle cx="28" cy="9" r="1.8" fill="currentColor"/><path d="M9 22h11"/>',
   cherry: '<circle cx="9.5" cy="22" r="5"/><circle cx="21.5" cy="23" r="5"/><path d="M9.5 17c1-6 6-11 14-12M21.5 18c.5-5 .5-9.5 2-13"/><path d="M23.5 5c3 0 5 1 6 3"/>',

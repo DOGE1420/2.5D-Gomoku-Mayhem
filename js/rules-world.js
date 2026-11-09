@@ -21,7 +21,7 @@
       if (!C.disasterHits(G, p)) return;
       var list = stonesOf(G, p); if (!list.length) return;
       var q = list[Math.floor(C.rnd(G) * list.length)];
-      C.removeStoneAt(G, q.r, q.c); C.lgLose(G, p, q.r, q.c); n++;
+      C.removeStoneAt(G, q.r, q.c); C.lgLose(G, p, q.r, q.c, 0); n++;
       ev(G, { t: 'remove', r: q.r, c: q.c, p: p, why: 'melt' });
     });
     if (n) ev(G, { t: 'disaster', kind: 'melt', n: n });
@@ -62,7 +62,7 @@
       if (!R.isStone(v) || !C.disasterHits(G, v)) continue;
       var dist = d.k === 'up' ? r : d.k === 'down' ? SIZE - 1 - r : d.k === 'left' ? c : SIZE - 1 - c;
       if (dist >= 3) continue;
-      C.removeStoneAt(G, r, c); C.lgLose(G, v, r, c); n++;
+      C.removeStoneAt(G, r, c); C.lgLose(G, v, r, c, 0); n++;
       ev(G, { t: 'remove', r: r, c: c, p: v, why: 'tsunami' });
     }
     C.pruneTraps(G);
@@ -73,7 +73,7 @@
     var z = G.zone, n = 0;
     for (var r = 0; r < SIZE; r++) for (var c = 0; c < SIZE; c++) {
       if (R.ringOf(r, c) !== z) continue;
-      if (R.isStone(G.board[r][c])) { var v = G.board[r][c]; C.removeStoneAt(G, r, c); C.lgLose(G, v, r, c); n++; ev(G, { t: 'remove', r: r, c: c, p: v, why: 'zone' }); }
+      if (R.isStone(G.board[r][c])) { var v = G.board[r][c]; C.removeStoneAt(G, r, c); C.lgLose(G, v, r, c, 0); n++; ev(G, { t: 'remove', r: r, c: c, p: v, why: 'zone' }); }
       G.board[r][c] = WALL;
     }
     G.zone = z + 1; G.zoneWarn = false;

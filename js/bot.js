@@ -153,7 +153,6 @@ function botLegendOk() {                          // 전설 카드를 지금 쓸
     }
     return false;
   }
-  if (id === 'chicken') return bLongestRun(opp).len > bLongestRun(p).len || bWinCells(opp).length > 0;
   if (id === 'mirror') return ['chain', 'windmill', 'bomb', 'shield', 'trap', 'wall', 'blockade', 'infection', 'sixsense'].indexOf(G.lg.lastCard[opp]) >= 0;
   if (id === 'allin') return BotAI.longestEval(G, p) < -800;                       // 크게 밀릴 때만
   return true;

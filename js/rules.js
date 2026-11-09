@@ -39,17 +39,16 @@
   CARDS.forEach(function (c) { CARD_BY_ID[c.id] = c; });
   // 전설 카드 11장: 게임 시작 때 3장 중 1장을 고르는 카드 (상대에게는 쓰기 전까지 비공개). react = 상대 카드에 대응
   var LEGENDS = [
-    { id: 'obelisk',   name: '오목의 거신병',  cat: '전설', desc: '내 돌 3개를 바치면\n상대 돌이 가장 많은\n한 줄을 분쇄', cond: '내 돌 3개 이상' },
-    { id: 'nothing',   name: '무소유',         cat: '대응', react: true, desc: '상대가 카드를 쓸 때\n그 카드를 무효로\n(내 패 전부 버림)', cond: '상대 카드에 대응 · 내 패 1장 이상' },
-    { id: 'latebloom', name: '대기만성',       cat: '전설', desc: '이번 턴에 5번 착수\n거리 제한 없음\n(이번 턴 승리 불가)', cond: '판에 둔 수 40수 이상' },
-    { id: 'blind',     name: '눈 감고 두기',   cat: '전설', desc: '3턴 동안 양쪽 판이\n어두워져 돌이\n보이지 않음', cond: '상대 돌과 3칸 이상 떨어진 착수 3번' },
-    { id: 'clown',     name: '광대의 한 수',   cat: '전설', desc: '잃은 내 돌이\n모두 제자리로 귀환\n(상대 돌은 밀려남)', cond: '카드로 내 돌 3개 이상 잃음' },
-    { id: 'chicken',   name: '치킨 게임',      cat: '전설', desc: '동전 던지기 — 진 쪽의\n가장 긴 줄이\n사라짐', cond: '양쪽 모두 3개 이상 이어진 줄' },
-    { id: 'sloth',     name: '나무늘보',       cat: '전설', desc: '패의 카드를\n모두 즉시 발동\n(대상은 무작위)', cond: '카드 없이 6턴 (쥐고 있는 동안 카드 선택은 무작위)' },
-    { id: 'mirror',    name: '따라쟁이',       cat: '전설', desc: '상대가 가장 최근에\n쓴 카드를\n내 패로 복사', cond: '상대가 카드를 1장 이상 씀' },
-    { id: 'allin',     name: '올인',           cat: '전설', desc: '패 전부 또는 돌 3개를\n걸고 슬롯머신\n같은 그림 3개면 2배', cond: '패 1장 이상 또는 내 돌 3개 이상' },
-    { id: 'turtle',    name: '토끼와 거북이',  cat: '전설', desc: '이후 나만 4목으로도\n승리 (턴 종료)', cond: '내 돌이 상대보다 5개 이상 적음' },
-    { id: 'king',      name: '왕의 귀환',      cat: '전설', desc: '내 돌 하나를 왕으로\n20턴 살아남으면\n패 가득 + 새 전설', cond: '내 돌이 1개 이상' }
+    { id: 'obelisk',   name: '오목의 거신병',  cat: '전설', desc: '자신의 돌 3개를 바쳐\n줄 하나를 통째로\n파괴할 수 있다', cond: '내 돌 3개 이상' },
+    { id: 'nothing',   name: '무소유',         cat: '대응', react: true, desc: '상대의 카드 발동시,\n자신의 패를 전부 버리고\n무효화할 수 있다.', cond: '상대 카드에 대응 · 내 패 1장 이상' },
+    { id: 'latebloom', name: '대기만성',       cat: '전설', desc: '이번 판에 40수 이상을\n뒀을 경우 발동 가능하다.\n5번 연속으로 착수한다', cond: '판에 둔 수 40수 이상' },
+    { id: 'blind',     name: '실명',   cat: '전설', desc: '5턴 동안 판의 상태를\n확인할 수 없게\n만든다.', cond: '상대 돌과 3칸 이상 떨어진 착수 3번' },
+    { id: 'clown',     name: '광대의 한 수',   cat: '전설', desc: '상대에 의해 내 돌이\n3개 이상 잃었을 경우\n발동할 수 있다.\n잃은 내 돌을 전부\n제자리로 되돌린다.', cond: '상대에 의해 내 돌 3개 이상 잃음' },
+    { id: 'sloth',     name: '나무늘보',       cat: '전설', desc: '패의 카드를\n즉시 전부 발동한다.', cond: '패 1장 이상' },
+    { id: 'mirror',    name: '따라쟁이',       cat: '전설', desc: '상대가 사용한 최신의\n카드를 사용할 수 있다.', cond: '상대가 카드를 1장 이상 씀' },
+    { id: 'allin',     name: '올인',           cat: '전설', desc: '패 전부 또는 돌 3개 이상을\n배팅하고 슬롯머신을 돌린다.\n잭팟이 터질 경우 무작위의\n위치에 배팅한 돌의 갯수만큼\n판에 배치한다.', cond: '패 1장 이상 또는 내 돌 3개 이상' },
+    { id: 'turtle',    name: '토끼와 거북이',  cat: '전설', desc: '상대가 자신보다 돌이\n5개 이상일 경우 발동한다.\n자신은 4목이어도\n승리한다.', cond: '내 돌이 상대보다 5개 이상 적음' },
+    { id: 'king',      name: '왕의 귀환',      cat: '전설', desc: '자신의 돌 하나를 지정하여\n왕으로 만든다. 왕이 20턴간\n생존할 경우 무작위로 패를\n가능한 한 받으며, 새로운\n전설 카드 하나를 받는다.', cond: '내 돌이 1개 이상' }
   ];
   var LEGEND_BY_ID = {}; LEGENDS.forEach(function (c) { c.legend = true; LEGEND_BY_ID[c.id] = c; });
   // 시작 능력 5종: 판마다 무작위 1개가 양쪽에 똑같이 적용
@@ -176,8 +175,10 @@
     [1, 2].forEach(function (p) { var k = G.lg.king[p]; if (k && k.r === r && k.c === c) G.lg.king[p] = { r: nr, c: nc, start: k.start }; });
   }
   // 카드 효과로 p의 돌이 사라짐 (광대의 한 수가 기록)
-  function lgLose(G, p, r, c) {
+  function lgLose(G, p, r, c, by) {            // by: 잃게 만든 쪽 (생략하면 지금 차례인 쪽, 0 이면 자연재해). 상대가 아닌 경우는 기록하지 않음 (광대의 한 수)
     if (p !== BLACK && p !== WHITE) return;
+    if (by === undefined) by = G.current;
+    if (!by || by === p) return;
     var lg = G.lg; lg.lost[p]++;
     if (!lg.lostPos[p].some(function (q) { return q.r === r && q.c === c; })) lg.lostPos[p].push({ r: r, c: c });
   }
@@ -321,11 +322,6 @@
   function openDraft(G, p, kind) {
     kind = kind || 'card';
     var picks = draftPicks(G, p, kind);
-    if (kind === 'card' && G.lg.card[p] === 'sloth' && !G.lg.done[p]) {   // 나무늘보를 쥐면 카드를 고를 수 없고 무작위로 받음
-      G.draft = { player: p, picks: picks, kind: kind };
-      pickDraft(G, picks[Math.floor(rnd(G) * picks.length)]);
-      return;
-    }
     G.draft = { player: p, picks: picks, kind: kind };
     ev(G, { t: 'draft', p: p, picks: picks.slice(), kind: kind, refresh: G.refresh[p] });
   }
@@ -381,7 +377,7 @@
       G.board[r][c] = EMPTY;
       G.traps = G.traps.filter(function (t) { return t !== trap; });
       ev(G, { t: 'trapHit', r: r, c: c, p: cur, owner: trap.owner });
-      lgLose(G, cur, r, c);
+      lgLose(G, cur, r, c, trap.owner);
       grantRandomCard(G, trap.owner);
       G.done++;
       endTurnIfStuck(G);
@@ -731,6 +727,8 @@
   }
   function cancel(G) {
     if (!G.pending) return false;
+    var pd = G.pending;
+    if (pd.mirror) { G.hand[pd.forPlayer].splice(pd.handIndex, 1); G.lg.done[pd.forPlayer] = false; ev(G, { t: 'spend', p: pd.forPlayer, id: pd.cardId }); }   // 따라쟁이: 취소하면 복사한 카드도, 전설 사용도 없던 일로
     G.pending = null; ev(G, { t: 'cancel' }); return true;
   }
 

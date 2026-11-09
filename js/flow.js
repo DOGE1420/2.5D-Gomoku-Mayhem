@@ -49,7 +49,7 @@ function onLegendClick() {
       var r2 = Rules.useLegend(G, c), e2 = Rules.drain(G);
       if (!r2.ok) return;
       setTopView(true, true); afterUse(r2, e2, snap);
-    });
+    }, res.maxStones);
     return;
   }
   setTopView(true, true); afterUse(res, evs, snap);

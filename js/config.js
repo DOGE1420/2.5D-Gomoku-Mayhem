@@ -33,7 +33,6 @@ window.GAME_CONFIG = {
     latebloom: null,
     blind: null,
     clown: null,
-    chicken: null,
     sloth: null,
     mirror: null,
     allin: null,

@@ -314,7 +314,7 @@ function handleEvent(e) {
       toast((lc ? lc.name : '전설 카드') + ' 발동!', 2400); return 0.2;
     }
     case 'legendPick': sfx('card'); return 0;
-    case 'dark': toast('[[blind]] 3턴 동안 판이 어두워져 돌이 보이지 않습니다', 3000); sfx('magic'); return 0.3;
+    case 'dark': toast('[[blind]] ' + (e.turns || 5) + '턴 동안 판의 상태를 확인할 수 없습니다', 3000); sfx('magic'); return 0.3;
     case 'coin': toast(e.win ? '[[coin]] 동전: 앞면! 상대의 가장 긴 줄이 사라집니다' : '[[coin]] 동전: 뒷면… 내 가장 긴 줄이 사라집니다', 2800); sfx('card'); return 0.6;
     case 'slot': return playSlot(e.reels, e.win);
     case 'handLost': handDirty = true; return 0;
