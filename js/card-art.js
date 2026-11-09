@@ -372,6 +372,7 @@ function cardTexture(id) {
   var paperImg = CFG.cardPaper && IMG[CFG.cardPaper];
   if (paperImg) g.drawImage(paperImg, 0, 0, W, H);
   else if (CARD_PAPER_STYLE === 'old') oldPaper(g, W, H);
+  else if (CARD_PAPER_STYLE === 'wanted') wantedPaper(g, W, H);
   else {
   var grad = g.createLinearGradient(0, 0, W * 0.4, H);
   grad.addColorStop(0, '#d8c697'); grad.addColorStop(0.55, '#c9b483'); grad.addColorStop(1, '#b89f6a');
@@ -431,6 +432,7 @@ function cardTexture(id) {
   g.font = '21px ' + TEXT_FONT; g.fillStyle = INK;
   g.textAlign = 'left'; g.fillText(c.cat, 60, 521);
   g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.legend ? (c.react ? '상대 카드에 대응' : id === 'allin' ? '턴마다 1번' : '판마다 1번') : (c.endsTurn ? '턴 종료' : '턴 유지'), W - 60, 521); g.globalAlpha = 1;
+  if (CARD_PAPER_STYLE === 'wanted') wantedInk(g, W, H);
   g.restore();
   // 가장자리 잉크 윤곽
   g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath();
@@ -440,7 +442,7 @@ function cardTexture(id) {
 
 /* ---------- 종이 시안: 오래된 종이 (누런 황갈색, 얼룩·알갱이·갈색 점, 주름 없음) ----------
  * CARD_PAPER_STYLE = 'old' 로 바꾸면 모든 카드에 적용. 카드의 가장자리 모양(roughRectPts)과 잉크 테두리·글자·그림은 건드리지 않고 종이 바탕만 바꿈. */
-var CARD_PAPER_STYLE = 'classic';       // 'classic'(원래) | 'old'
+var CARD_PAPER_STYLE = 'classic';       // 'classic'(원래) | 'old' | 'wanted'(현상 수배지)
 function cloudRGB(g, W, H, nw, nh, alpha, rgb) {
   var n = document.createElement('canvas'); n.width = nw; n.height = nh; var ng = n.getContext('2d'), img = ng.createImageData(nw, nh);
   for (var i = 0; i < nw * nh; i++) { var v = Math.random(); img.data[i * 4] = rgb[0]; img.data[i * 4 + 1] = rgb[1]; img.data[i * 4 + 2] = rgb[2]; img.data[i * 4 + 3] = Math.round(v * v * 255 * alpha); }
@@ -468,6 +470,40 @@ function oldPaper(g, W, H) {
   var vg = g.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.74);                  // 가장자리는 조금 더 짙게
   vg.addColorStop(0, 'rgba(60,34,10,0)'); vg.addColorStop(1, 'rgba(60,34,10,0.5)');
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
+}
+
+// 현상 수배지: 싸구려 거친 종이(누런 신문용지 느낌), 네 번 접었다 편 희미한 접힘 선, 압정 구멍, 손때와 먼지, 번져서 고르지 않은 인쇄
+function wantedPaper(g, W, H) {
+  var i, base = g.createLinearGradient(0, 0, W * 0.3, H);
+  base.addColorStop(0, '#d9bf86'); base.addColorStop(0.5, '#cfb178'); base.addColorStop(1, '#c0a06a');
+  g.fillStyle = base; g.fillRect(0, 0, W, H);
+  cloudRGB(g, W, H, 5, 8, 0.28, [150, 108, 52]); cloudRGB(g, W, H, 13, 20, 0.22, [140, 98, 44]); cloudRGB(g, W, H, 34, 51, 0.14, [130, 90, 40]); cloudRGB(g, W, H, 6, 9, 0.22, [236, 214, 160]);
+  for (i = 0; i < 14000; i++) { g.fillStyle = (i % 2 ? 'rgba(104,74,34,' : 'rgba(244,226,176,') + rnd(0.04, 0.17) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(1, 3.2), rnd(1, 3.2)); }   // 거친 펄프 알갱이
+  for (i = 0; i < 700; i++) {                                                                   // 굵은 섬유 부스러기
+    var fx = rnd(0, W), fy = rnd(0, H), fa = rnd(0, 6.28), fl = rnd(4, 14);
+    g.strokeStyle = (i % 3 ? 'rgba(88,60,26,' : 'rgba(250,234,190,') + rnd(0.05, 0.15) + ')'; g.lineWidth = rnd(0.6, 1.3); g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx + Math.cos(fa) * fl, fy + Math.sin(fa) * fl); g.stroke();
+  }
+  [[W * 0.5, 0, W * 0.5, H], [0, H * 0.5, W, H * 0.5], [W * 0.25, 0, W * 0.25, H], [0, H * 0.25, W, H * 0.25]].forEach(function (l, n) {           // 접었다 편 자국: 어두운 선 + 밝은 선
+    var k = n < 2 ? 1 : 0.55;
+    g.strokeStyle = 'rgba(78,52,22,' + 0.2 * k + ')'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(l[2], l[3]); g.stroke();
+    g.strokeStyle = 'rgba(252,238,200,' + 0.22 * k + ')'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(l[0] + (l[0] === l[2] ? 2 : 0), l[1] + (l[1] === l[3] ? 2 : 0)); g.lineTo(l[2] + (l[0] === l[2] ? 2 : 0), l[3] + (l[1] === l[3] ? 2 : 0)); g.stroke();
+  });
+  for (i = 0; i < 9; i++) {                                                                      // 손때·먼지 얼룩
+    var sx = rnd(20, W - 20), sy = rnd(30, H - 30), sr = rnd(20, 60), sg = g.createRadialGradient(sx, sy, 2, sx, sy, sr);
+    sg.addColorStop(0, 'rgba(92,62,26,' + rnd(0.08, 0.18) + ')'); sg.addColorStop(1, 'rgba(92,62,26,0)'); g.fillStyle = sg; g.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
+  }
+  for (i = 0; i < 60; i++) { g.fillStyle = 'rgba(70,44,16,' + rnd(0.25, 0.55) + ')'; g.beginPath(); g.arc(rnd(0, W), rnd(0, H), rnd(0.7, 1.9), 0, 7); g.fill(); }
+  [[28, 26], [W - 28, 26]].forEach(function (p) {                                               // 압정 구멍과 녹물 자국
+    var rg = g.createRadialGradient(p[0], p[1] + 4, 1, p[0], p[1] + 4, 14); rg.addColorStop(0, 'rgba(110,54,18,0.38)'); rg.addColorStop(1, 'rgba(110,54,18,0)'); g.fillStyle = rg; g.fillRect(p[0] - 16, p[1] - 12, 32, 36);
+    g.fillStyle = 'rgba(30,18,6,0.75)'; g.beginPath(); g.arc(p[0], p[1], 3.4, 0, 7); g.fill(); g.strokeStyle = 'rgba(255,240,200,0.3)'; g.lineWidth = 1; g.beginPath(); g.arc(p[0], p[1], 4.4, 0.4, 3.6); g.stroke();
+  });
+  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);               // 가장자리 어둡게 (원래 카드와 같은 정도)
+  vg.addColorStop(0, 'rgba(50,28,8,0)'); vg.addColorStop(1, 'rgba(50,28,8,0.62)');
+  g.fillStyle = vg; g.fillRect(0, 0, W, H);
+}
+// 인쇄가 고르지 않게: 잉크에 종이색 점이 군데군데 박혀 얼룩덜룩함 (글자·그림은 읽히는 정도로만)
+function wantedInk(g, W, H) {
+  for (var i = 0; i < 1100; i++) { g.fillStyle = 'rgba(214,188,132,' + rnd(0.15, 0.5) + ')'; g.fillRect(rnd(30, W - 30), rnd(60, H - 40), rnd(0.8, 2.2), rnd(0.8, 2.2)); }
 }
 
 // 전설 카드 뒷면 (상대가 쥔 전설 카드: 무엇인지 모름)
