@@ -498,9 +498,9 @@ function fiberPaper(g, W, H) {
 // 현상 수배지: 싸구려 거친 종이(누런 신문용지 느낌), 압정 구멍, 손때와 먼지, 번져서 고르지 않은 인쇄
 function wantedPaper(g, W, H) {
   var i, base = g.createLinearGradient(0, 0, W * 0.3, H);
-  base.addColorStop(0, '#ceb279'); base.addColorStop(0.5, '#c3a46b'); base.addColorStop(1, '#b39360');
+  base.addColorStop(0, '#d6bb82'); base.addColorStop(0.5, '#cbad74'); base.addColorStop(1, '#bb9a67');
   g.fillStyle = base; g.fillRect(0, 0, W, H);
-  cloudRGB(g, W, H, 5, 8, 0.28, [150, 108, 52]); cloudRGB(g, W, H, 13, 20, 0.22, [140, 98, 44]); cloudRGB(g, W, H, 34, 51, 0.14, [130, 90, 40]); cloudRGB(g, W, H, 6, 9, 0.2, [226, 202, 148]);
+  cloudRGB(g, W, H, 5, 8, 0.28, [150, 108, 52]); cloudRGB(g, W, H, 13, 20, 0.22, [140, 98, 44]); cloudRGB(g, W, H, 34, 51, 0.14, [130, 90, 40]); cloudRGB(g, W, H, 6, 9, 0.24, [232, 208, 154]);
   for (i = 0; i < 14000; i++) { g.fillStyle = (i % 2 ? 'rgba(104,74,34,' : 'rgba(244,226,176,') + rnd(0.04, 0.17) + ')'; g.fillRect(rnd(0, W), rnd(0, H), rnd(1, 3.2), rnd(1, 3.2)); }   // 거친 펄프 알갱이
   for (i = 0; i < 700; i++) {                                                                   // 굵은 섬유 부스러기
     var fx = rnd(0, W), fy = rnd(0, H), fa = rnd(0, 6.28), fl = rnd(4, 14);
@@ -516,8 +516,8 @@ function wantedPaper(g, W, H) {
     g.fillStyle = 'rgba(30,18,6,0.75)'; g.beginPath(); g.arc(p[0], p[1], 3.4, 0, 7); g.fill(); g.strokeStyle = 'rgba(255,240,200,0.3)'; g.lineWidth = 1; g.beginPath(); g.arc(p[0], p[1], 4.4, 0.4, 3.6); g.stroke();
   });
   if (CARD_USED) usedPaper(g, W, H);
-  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.24, W / 2, H / 2, H * 0.7);                // 가장자리 어둡게 (원래 카드보다 조금 더 짙게)
-  vg.addColorStop(0, 'rgba(46,26,8,0.05)'); vg.addColorStop(1, 'rgba(44,24,7,0.68)');
+  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.7);                 // 가운데는 밝게 두고 가장자리 띠만 더 짙게
+  vg.addColorStop(0, 'rgba(46,26,8,0)'); vg.addColorStop(0.6, 'rgba(44,24,7,0.2)'); vg.addColorStop(1, 'rgba(38,20,5,0.8)');
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
 }
 // 인쇄가 고르지 않게: 잉크에 종이색 점이 군데군데 박혀 얼룩덜룩함 (글자·그림은 읽히는 정도로만)
