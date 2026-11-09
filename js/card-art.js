@@ -388,8 +388,8 @@ function cardTexture(id) {
   }
   g.strokeStyle = 'rgba(255,240,205,0.14)'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, H * 0.46); g.lineTo(W, H * 0.5); g.stroke();   // 희미한 접힌 자국
   g.strokeStyle = 'rgba(70,45,15,0.14)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, H * 0.46 + 3); g.lineTo(W, H * 0.5 + 3); g.stroke();
-  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.26, W / 2, H / 2, H * 0.72);   // 가장자리로 갈수록 갈색이 짙어짐
-  vg.addColorStop(0, 'rgba(70,40,10,0)'); vg.addColorStop(1, 'rgba(60,32,8,0.6)');
+  var vg = g.createRadialGradient(W / 2, H / 2, H * 0.28, W / 2, H / 2, H * 0.72);   // 가장자리 어둡게 (이전 카드와 같은 가장자리)
+  vg.addColorStop(0, 'rgba(50,28,8,0)'); vg.addColorStop(1, 'rgba(50,28,8,0.62)');
   g.fillStyle = vg; g.fillRect(0, 0, W, H);
   }
 
