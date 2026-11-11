@@ -129,6 +129,49 @@ var roomPendulum = null, roomT = 0;
   box(0.7, 2, 0.7, std(0xcfc3a0, 0.8), -SIDE + 2.8, FLOOR + 10.2, LZ + 2.6);               // 독서대 위 촛불
   add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd08a })), -SIDE + 2.8, FLOOR + 11.4, LZ + 2.6);
 })();
+
+/* ---------- 3D 모델 (GLB): assets/models/ — 방에 놓는 소품 ----------
+ * http(s) 로 열 때만 불러옴 (run.bat · run.sh · GitHub Pages). file:// 로 직접 열면 브라우저가 막아서 소품 없이 그대로 진행.
+ * size: 모델의 가장 높은 곳까지 높이(게임 단위), at: 바닥 가운데 위치, rotY: 회전, lights: 촛불 불빛을 붙일지 */
+var ROOM_MODELS = [
+  { file: 'assets/models/desk_candle.glb', size: 19, at: [-10, -18, -24], rotY: 0, lights: true }   // 촛불 두 개가 놓인 작은 탁자 (뒤쪽 왼편)
+];
+var roomModelLights = [];
+function loadRoomModels() {
+  if (!THREE.GLTFLoader || location.protocol === 'file:') return;
+  var loader = new THREE.GLTFLoader();
+  ROOM_MODELS.forEach(function (spec) {
+    loader.load(spec.file, function (gltf) {
+      var obj = gltf.scene, box = new THREE.Box3().setFromObject(obj), size = new THREE.Vector3(), ctr = new THREE.Vector3();
+      box.getSize(size); box.getCenter(ctr);
+      var s = spec.size / size.y, holder = new THREE.Group();
+      obj.position.set(-ctr.x, -box.min.y, -ctr.z);               // 바닥 가운데를 원점으로
+      holder.add(obj); holder.scale.setScalar(s); holder.rotation.y = spec.rotY || 0;
+      holder.position.set(spec.at[0], spec.at[1], spec.at[2]);
+      obj.traverse(function (m) {
+        if (!m.isMesh) return;
+        m.castShadow = m.receiveShadow = true;
+        var mt = m.material; if (mt && mt.map) mt.map.anisotropy = 4;
+        if (mt && mt.transparent) { mt.depthWrite = true; mt.alphaTest = 0.3; }
+      });
+      roomGroup.add(holder);
+      if (spec.lights) {                                          // 초 심지 위에 불꽃 · 불빛 (탁자 위 다른 촛불처럼 일렁임)
+        holder.updateMatrixWorld(true);
+        obj.traverse(function (m) {
+          if (!m.isMesh || !/candle/i.test(m.name + (m.material && m.material.name))) return;
+          var b = new THREE.Box3().setFromObject(m), top = new THREE.Vector3((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2);
+          var flame = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffd08a }));
+          flame.scale.set(1, 1.8, 1); flame.position.set(top.x, top.y + 0.22, top.z); roomGroup.add(flame);
+          var light = new THREE.PointLight(0xffa550, 0.9, 34, 1.5); light.position.set(top.x, top.y + 0.6, top.z); roomGroup.add(light);
+          var body = new THREE.Object3D(); roomGroup.add(body);
+          candles.push({ body: body, flame: flame, light: light, x: top.x, phase: Math.random() * 6, k: 0.7 });
+        });
+      }
+    }, undefined, function () { /* 불러오기 실패: 소품 없이 진행 */ });
+  });
+}
+loadRoomModels();
+
 function setRoom(on) {
   roomGroup.visible = !!on; roomLight.intensity = on ? 0.55 : 0;
   slab.visible = true;

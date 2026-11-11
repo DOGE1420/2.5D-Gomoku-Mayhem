@@ -55,3 +55,9 @@
 | 돌 표면 | 512 × 512 |
 | 카드 일러스트 | 584 × 428 |
 | 카드 바탕 | 768 × 1152 |
+
+## 3D 모델 (GLB)
+- `assets/models/` 에 GLB 파일을 두고 `js/room.js` 의 `ROOM_MODELS` 에 한 줄 추가하면 방(평원 맵)에 놓입니다: `{ file, size(높이), at:[x, 바닥y, z], rotY, lights(촛불 불빛) }`.
+- 지금 들어 있는 것: `desk_candle.glb` — 촛불 두 개가 놓인 작은 탁자 (텍스처를 1024px·JPEG 로 줄여 7.2MB → 1.6MB).
+- 권장: 수 MB 이내, 텍스처 포함(embedded), Draco 압축 없음, Y축이 위.
+- **http(s) 로 열 때만 보입니다** (`run.bat` · `run.sh` · GitHub Pages). `index.html` 을 더블클릭(file://)하면 브라우저가 막아 소품 없이 진행됩니다.
