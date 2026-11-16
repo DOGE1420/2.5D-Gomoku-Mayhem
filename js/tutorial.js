@@ -28,6 +28,7 @@ function tutStage(step) {
 function startTutorial() { endGameScreens(); botStop(); gameMode = 'tutorial'; bgmNewGame(); showScreen('game'); tutStage(1); }
 // 흑이 돌을 둬서 턴이 넘어갈 때 (②단계): 백이 이길 칸이 남았는지 확인
 function tutOnTurn() {
+  if (tut && tut.step === 1 && G.current === Rules.WHITE && !G.gameOver) { tutRetry('tut.1.retry'); return; }   // ①단계: 5목을 못 만들면 다시
   if (!tut || tut.step !== 2 || G.current !== Rules.WHITE) return;
   var win = false;
   for (var r = 0; r < Rules.SIZE && !win; r++) for (var c = 0; c < Rules.SIZE && !win; c++) {
@@ -39,7 +40,7 @@ function tutOnTurn() {
 }
 // ②단계: 장벽은 백의 4 양 끝((6,4) 또는 (6,9)) 중 한 곳에만. 다른 곳에 두면 바로 다시
 var TUT_ENDS = [[6, 4], [6, 9]];
-function tutRetry(key) { if (!tut || tut.retrying) return; tut.retrying = true; tutShow(key || 'tut.2.retry'); setTimeout(function () { if (tut && tut.step === 2) tutStage(2); }, 1300); }
+function tutRetry(key) { if (!tut || tut.retrying) return; tut.retrying = true; tutShow(key || 'tut.2.retry'); var s = tut.step; setTimeout(function () { if (tut && tut.step === s) tutStage(s); }, 1300); }
 function tutOnWall(r, c) {
   if (!tut || tut.step !== 2) return;
   if (!TUT_ENDS.some(function (q) { return q[0] === r && q[1] === c; })) tutRetry('tut.2.wall');
