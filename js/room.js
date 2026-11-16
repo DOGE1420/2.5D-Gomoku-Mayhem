@@ -141,7 +141,7 @@ var roomPendulum = null, roomT = 0;
  *   unit(모델 1m = 게임 몇 단위), floorY(모델 바닥 높이), center(방 가운데로 둘 메시 이름 규칙), rotY, offset(가운데에서 더 옮길 양, 게임 단위) */
 var CABIN_URL = 'https://media.githubusercontent.com/media/DOGE1420/2.5D-Gomoku-Mayhem/main/assets/models/Cabin.glb';   // 통나무 오두막 원본 (LFS, 약 200MB)
 var ROOM_MODELS = [
-  { kind: 'room', file: CABIN_URL, unit: 20, floorY: 443.93, center: /^(House|Foundation)/, rotY: Math.PI / 2, offset: [0, 0] },
+  { kind: 'room', file: CABIN_URL, unit: 20, floorY: 443.93, center: /^(House|Foundation)/, remove: /^(SM_Table_Small|simple_candle)/, rotY: Math.PI / 2, offset: [0, 0] },
   { kind: 'desk', file: 'assets/models/desk_candle.glb', top: [40, 28], topY: -0.6, floorY: -18 }   // 게임 책상: 탁자를 판 아래 책상 크기로 늘리고, 초 2개는 판 옆 촛불 자리에
 ];
 var roomModelLights = [], roomModelProps = [], roomModelActive = false;
@@ -227,6 +227,9 @@ function loadRoomModels() {
       });
       if (spec.kind === 'desk') { useDeskModel(obj, spec); return; }
       if (spec.kind === 'room') {
+        // 오두막 안에 원래 있던 작은 탁자·초는 지움 (그 탁자는 desk_candle.glb 로 판 아래 책상이 됨)
+        var drop = []; obj.traverse(function (m) { if (spec.remove && spec.remove.test(m.name)) drop.push(m); });
+        drop.forEach(function (m) { if (m.parent) m.parent.remove(m); });
         var cb = new THREE.Box3(); obj.updateMatrixWorld(true);
         obj.traverse(function (m) { if (m.isMesh && spec.center.test(m.name)) cb.expandByObject(m); });
         var cx = (cb.min.x + cb.max.x) / 2, cz = (cb.min.z + cb.max.z) / 2;
