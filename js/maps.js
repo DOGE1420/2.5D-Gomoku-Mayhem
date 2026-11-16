@@ -24,6 +24,7 @@ function skinStone(mat, path, defColor) {
   mat.color.setHex(img ? 0xffffff : defColor);
   mat.needsUpdate = true;
 }
+var ALWAYS_ROOM = true;   // true 면 맵과 상관없이 늘 방(오두막)을 보여 줌. false 면 config.js 에서 room: true 인 맵만
 function applyMap(m) {
   m = m || {};
   return Promise.all(mapPaths(m).map(loadImg)).then(function () {
@@ -35,8 +36,9 @@ function applyMap(m) {
     var ti = m.table && IMG[m.table];
     table.material.map = ti ? texFromImg(ti, m.tableRepeat || 6) : defTableTex;
     table.material.needsUpdate = true;
-    table.visible = !m.hideTable && !m.room;   // 방이 있으면 방의 테이블을 씀
-    setRoom(m.room);
+    var room = ALWAYS_ROOM || !!m.room;          // 지금은 모든 맵에서 오두막 방을 씀 (맵마다 조명 색만 다름)
+    table.visible = !m.hideTable && !room;     // 방이 있으면 방의 테이블을 씀
+    setRoom(room);
     var di = m.backdrop && IMG[m.backdrop];
     if (di) {
       if (!backdrop) {
@@ -51,16 +53,16 @@ function applyMap(m) {
     scene.background.set(bg);
     if (m.fog === null) scene.fog = null;
     else { var F = m.fog || {}; fogBase.near = F.near != null ? F.near : 21; fogBase.far = F.far != null ? F.far : 54; scene.fog = new THREE.Fog(F.color || bg, fogBase.near, fogBase.far); }
-    if (m.room && roomModelActive) { fogBase.near = 70; fogBase.far = 360; }   // 오두막(모델) 방은 벽이 멀어서 안개를 멀리
+    if (room && roomModelActive) { fogBase.near = 70; fogBase.far = 360; }   // 오두막(모델) 방은 벽이 멀어서 안개를 멀리
     // 조명 · 촛불
     hemi.color.set(L.hemiSky || '#3a2a1a'); hemi.groundColor.set(L.hemiGround || '#050403'); hemi.intensity = L.hemi != null ? L.hemi : 0.05;
     spot.color.set(L.spotColor || '#ff9a40'); spot.intensity = L.spot != null ? L.spot : 1.5; spot.angle = L.spotAngle || 0.62;
     var candleOn = C.visible !== false;
     candles.forEach(function (c) { c.body.visible = c.flame.visible = c.light.visible = candleOn; c.light.color.set(C.color || '#ffa550'); });
     candleBase = C.intensity != null ? C.intensity : 1.2;
-    stars.visible = m.stars !== false && !di && !m.room;
+    stars.visible = m.stars !== false && !di && !room;
     stars.material.size = m.stars === 'bright' ? 2.6 : 1.8; starBase = m.stars === 'bright' ? 0.95 : 0.55;
-    setPrecip(m.snow ? 'snow' : m.rain ? 'rain' : null);
+    setPrecip(room ? null : m.snow ? 'snow' : m.rain ? 'rain' : null);   // 방 안에서는 눈·비를 내리지 않음
     // 카메라
     var cam = m.camera || {};
     CAM_BASE.fromArray(cam.pos || defCam.pos.toArray()); CAM_LOOK.fromArray(cam.look || defCam.look.toArray());
