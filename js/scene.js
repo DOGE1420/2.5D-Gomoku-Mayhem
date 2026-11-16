@@ -15,7 +15,7 @@ var scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 scene.fog = new THREE.Fog(0x000000, 21, 54);
 
-var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);   // 멀리(오두막 벽·지붕)까지 그리도록 1000
 scene.add(camera);
 var CAM_BASE = new THREE.Vector3(0, 8.6, 21.5);
 var CAM_LOOK = new THREE.Vector3(0, 0.7, -0.4);
