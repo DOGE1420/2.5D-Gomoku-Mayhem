@@ -147,7 +147,7 @@ var ROOM_MODELS = [
 var roomModelLights = [], roomModelProps = [], roomModelActive = false;
 // 방 분위기: 어둡게 가라앉히고, 촛불·난롯불 주변만 따뜻하게. 벽·구석은 어렴풋이 보임
 // hemi: 전체 밝기, warm/fill: 은은한 실내 불빛, fire: 난롯불 세기, fog: 아주 먼 곳만 살짝 어둠에 묻힘
-var ROOM_MOOD = { hemi: 0.05, hemiSky: '#3a2c22', hemiGround: '#050302', warm: 0.1, fill: 0.03, fire: 2.8, fogColor: '#060403', fogNear: 110, fogFar: 560 };
+var ROOM_MOOD = { hemi: 0.05, hemiSky: '#3a2c22', hemiGround: '#050302', warm: 0.1, fill: 0.03, fire: 1.5, fogColor: '#060403', fogNear: 110, fogFar: 560 };
 function addCandleLights(obj) {                                   // 초 심지 위에 불꽃 · 불빛 (탁자 위 다른 촛불처럼 일렁임)
   obj.updateMatrixWorld(true);
   var made = [];
@@ -174,7 +174,7 @@ function useCabinRoom(holder) {                                  // 방을 오�
   var stove = null; holder.traverse(function (m) { if (!stove && m.isMesh && /xg4kedss/i.test(m.name)) stove = m; });
   var fp = new THREE.Vector3(-40, -6, -70);
   if (stove) { new THREE.Box3().setFromObject(stove).getCenter(fp); fp.y += 6; }
-  var fire = new THREE.PointLight(0xff7a2a, 0, 260, 1.6); fire.position.copy(fp); roomGroup.add(fire);
+  var fire = new THREE.PointLight(0xff7a2a, 0, 130, 2); fire.position.copy(fp); roomGroup.add(fire);
   var fb = new THREE.Object3D(), ff = new THREE.Object3D(); roomGroup.add(fb); roomGroup.add(ff);
   candles.push({ body: fb, flame: ff, light: fire, x: fp.x, phase: 1.3, k: ROOM_MOOD.fire / 1.2 });
   applyRoomMood();
@@ -190,6 +190,8 @@ function loadRoomModels() {
       obj.traverse(function (m) {
         if (!m.isMesh) return;
         var mt = m.material; if (mt && mt.map) mt.map.anisotropy = 4;
+        // 그늘(AO) 텍스처는 첫 번째 UV 를 쓰도록: 언리얼에서 온 모델은 두 번째 UV(라이트맵용)가 따로 있어서 그대로 두면 그늘이 엉뚱하게 찍힘
+        if (mt && mt.aoMap && m.geometry.attributes.uv) m.geometry.setAttribute('uv2', m.geometry.attributes.uv);
         if (mt && mt.transparent) { mt.depthWrite = true; mt.alphaTest = 0.3; }
         m.receiveShadow = true; m.castShadow = spec.kind !== 'room';       // 방 전체는 그림자를 만들지 않음 (무거움)
       });
