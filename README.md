@@ -158,6 +158,7 @@ Three.js(r128)를 `js/`에 포함해서 **빌드·설치 없이** `index.html`�
 | `js/bot-worker.js` | 얼티밋 봇이 읽는 동안 화면이 멈추지 않게 하는 작업 스레드 (http/https 로 열 때만. `file://` 직접 열기에서는 브라우저가 막아 생각 시간을 줄여 그 자리에서 계산) |
 | `js/bot.js` | 봇 화면 연결: 차례 진행 · 카드/전설 사용 연출 · 대상 고르기 · 알까기 · 무소유 대응 |
 | `js/main.js` | 시작 · 초기화 · 메인 루프 |
+| `js/GLTFLoader.js` | GLB/glTF 3D 모델 불러오기 (Three.js r128 examples, MIT) |
 | `js/three.min.js` | Three.js r128 (MIT, `js/THREE-LICENSE`) |
 | `assets/` | 일러스트·맵 이미지, 폰트(`fonts/HeoSangGothicB.ttf`) |
 | `tests/rules-test.js` | 규칙 엔진 시험 (`node tests/rules-test.js`) |
