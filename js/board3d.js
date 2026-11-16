@@ -111,6 +111,7 @@ function syncMarkers() {
 function addStoneMesh(r, c, color, animate) {
   var m = makeStone(color), p = cellAt(r, c);
   m.userData.kind = 'stone'; m.userData.color = color;
+  if (Rules.isDark(G)) { m.visible = false; animate = false; }      // 실명 중: 떨어지는 연출도 없이 처음부터 안 보이게 (어둠 위로 돌이 보이면 위치가 드러남)
   if (animate) { m.position.set(p.x, p.y + 2.2, p.z); tween(0.26, function (t) { m.position.y = p.y + 2.2 * (1 - t * t); }, function () { m.position.y = p.y; }); }
   else m.position.copy(p);
   scene.add(m); meshes[r][c] = m; return m;
