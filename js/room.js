@@ -11,7 +11,8 @@ var roomPendulum = null, roomT = 0;
   var FLOOR = -18, TOP = -0.6, BACK = -32, SIDE = 26;
   function canvas(w, h, fn) { var c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; }
   function std(color, rough, map) { return new THREE.MeshStandardMaterial({ color: color, roughness: rough == null ? 0.9 : rough, map: map || null }); }
-  function add(mesh, x, y, z) { mesh.position.set(x, y, z); roomGroup.add(mesh); return mesh; }
+  var PART = 'struct';                                     // 'struct' = 방 구조물(벽·바닥·벽 소품: 오두막 모델이 오면 숨김), 'keep' = 게임 테이블·의자
+  function add(mesh, x, y, z) { mesh.position.set(x, y, z); mesh.userData.roomPart = PART; roomGroup.add(mesh); return mesh; }
   function box(w, h, d, mat, x, y, z) { return add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat), x, y, z); }
   function rnd(a, b) { return a + Math.random() * (b - a); }
   var wood = std(0x3a2616, 0.95), woodDark = std(0x241608, 0.95), woodLight = std(0x5a3d22, 0.9), iron = std(0x1a1a1c, 0.5), brass = std(0x7a6030, 0.45), black = std(0x020202, 0.9);
@@ -50,6 +51,7 @@ var roomPendulum = null, roomT = 0;
   [[-15.5, 4, 0.5], [-15.5, -1, -0.45], [-15.5, 9, -0.3]].forEach(function (p) { var b = box(13, 1.5, 0.5, woodLight, p[0], p[1], BACK + 0.4); b.rotation.z = p[2]; });
 
   /* ---- 테이블 · 의자 ---- */
+  PART = 'keep';
   box(40, 1.4, 28, std(0xffffff, 0.9, repeat(planks(false, '#4a301c'), 1, 1)), 0, TOP - 0.7, 0);
   [[-18, -12], [18, -12], [-18, 12], [18, 12]].forEach(function (p) { box(2, TOP - 1.4 - FLOOR, 2, woodDark, p[0], (TOP - 1.4 + FLOOR) / 2, p[1]); });
   box(34, 0.8, 1, woodDark, 0, FLOOR + 5, 12); box(34, 0.8, 1, woodDark, 0, FLOOR + 5, -12);
@@ -67,6 +69,7 @@ var roomPendulum = null, roomT = 0;
   var cardBack = canvas(64, 96, function (g, W, H) { g.fillStyle = '#9b8458'; g.fillRect(0, 0, W, H); g.strokeStyle = '#4a3a1c'; g.lineWidth = 3; g.strokeRect(5, 5, W - 10, H - 10); g.beginPath(); g.arc(W / 2, H / 2, 14, 0, 7); g.stroke(); });
   for (var i = 0; i < 5; i++) { var c = add(new THREE.Mesh(new THREE.PlaneGeometry(2.4, 3.6), std(0xffffff, 0.9, cardBack)), 12 + rnd(-2, 3), TOP + 0.02 + i * 0.01, 9 + rnd(-1, 1.5)); c.rotation.x = -Math.PI / 2; c.rotation.z = rnd(-0.6, 0.6); }
 
+  PART = 'struct';
   /* ---- 뒤쪽 벽: 세계 지도 · 메모 · 괘종시계 · 쇠사슬 문 ---- */
   var mapTex = canvas(512, 330, function (g, W, H) {
     g.fillStyle = '#b79a68'; g.fillRect(0, 0, W, H);
@@ -87,7 +90,7 @@ var roomPendulum = null, roomT = 0;
   });
   add(new THREE.Mesh(new THREE.CircleGeometry(1.7, 24), std(0xffffff, 0.8, face)), -5, FLOOR + 25, BACK + 1.82);
   box(2.6, 4.4, 0.2, black, -5, FLOOR + 20.2, BACK + 1.82);
-  roomPendulum = new THREE.Group(); roomPendulum.position.set(-5, FLOOR + 21.8, BACK + 1.9); roomGroup.add(roomPendulum);
+  roomPendulum = new THREE.Group(); roomPendulum.userData.roomPart = 'struct'; roomPendulum.position.set(-5, FLOOR + 21.8, BACK + 1.9); roomGroup.add(roomPendulum);
   var rod = new THREE.Mesh(new THREE.BoxGeometry(0.12, 3, 0.1), brass); rod.position.y = -1.5; roomPendulum.add(rod);
   var bob = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.12, 16), brass); bob.rotation.x = Math.PI / 2; bob.position.y = -3.1; roomPendulum.add(bob);
   // 쇠사슬로 잠긴 문
@@ -130,50 +133,84 @@ var roomPendulum = null, roomT = 0;
   add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd08a })), -SIDE + 2.8, FLOOR + 11.4, LZ + 2.6);
 })();
 
-/* ---------- 3D 모델 (GLB): assets/models/ — 방에 놓는 소품 ----------
- * http(s) 로 열 때만 불러옴 (run.bat · run.sh · GitHub Pages). file:// 로 직접 열면 브라우저가 막아서 소품 없이 그대로 진행.
- * size: 모델의 가장 높은 곳까지 높이(게임 단위), at: 바닥 가운데 위치, rotY: 회전, lights: 촛불 불빛을 붙일지 */
+/* ---------- 3D 모델 (GLB): 방에 놓는 소품 · 방 전체 ----------
+ * file 이 http(s) 주소면 어디서 열든 불러옴 (GitHub LFS 원본은 media.githubusercontent.com 주소로 바로 읽힘),
+ * 상대 경로(assets/models/...)는 http(s) 로 열 때만 (file:// 더블클릭은 브라우저가 막음).
+ * kind 'prop': size(높이)·at(바닥 가운데 위치)·rotY·lights(촛불 불빛)
+ * kind 'room': 방 전체를 이 모델로 바꿈 — 코드로 만든 벽·바닥·소품은 숨기고 게임 테이블·의자만 남김.
+ *   unit(모델 1m = 게임 몇 단위), floorY(모델 바닥 높이), center(방 가운데로 둘 메시 이름 규칙), rotY, offset(가운데에서 더 옮길 양, 게임 단위) */
+var CABIN_URL = 'https://media.githubusercontent.com/media/DOGE1420/2.5D-Gomoku-Mayhem/main/assets/models/Cabin.glb';   // 통나무 오두막 원본 (LFS, 약 200MB)
 var ROOM_MODELS = [
-  { file: 'assets/models/desk_candle.glb', size: 19, at: [-10, -18, -24], rotY: 0, lights: true }   // 촛불 두 개가 놓인 작은 탁자 (뒤쪽 왼편)
+  { kind: 'room', file: CABIN_URL, unit: 20, floorY: 443.93, center: /^(House|Foundation)/, rotY: Math.PI / 2, offset: [0, 0] },
+  { kind: 'prop', file: 'assets/models/desk_candle.glb', size: 19, at: [-10, -18, -24], rotY: 0, lights: true, hideWithRoom: true }   // 오두막이 오면 숨김 (오두막 안에 같은 탁자가 있음)
 ];
-var roomModelLights = [];
+var roomModelLights = [], roomModelProps = [], roomModelActive = false;
+function addCandleLights(obj) {                                   // 초 심지 위에 불꽃 · 불빛 (탁자 위 다른 촛불처럼 일렁임)
+  obj.updateMatrixWorld(true);
+  var made = [];
+  obj.traverse(function (m) {
+    if (!m.isMesh || !/candle/i.test(m.name + (m.material && m.material.name))) return;
+    var b = new THREE.Box3().setFromObject(m), top = new THREE.Vector3((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2);
+    var flame = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffd08a }));
+    flame.scale.set(1, 1.8, 1); flame.position.set(top.x, top.y + 0.22, top.z); roomGroup.add(flame);
+    var light = new THREE.PointLight(0xffa550, 0.9, 34, 1.5); light.position.set(top.x, top.y + 0.6, top.z); roomGroup.add(light);
+    var body = new THREE.Object3D(); roomGroup.add(body);
+    var c = { body: body, flame: flame, light: light, x: top.x, phase: Math.random() * 6, k: 0.7 }; candles.push(c); made.push(c);
+  });
+  return made;
+}
+function useCabinRoom(holder) {                                  // 방을 오두막으로: 코드로 만든 구조물 숨김 · 안개를 멀리 · 실내 조명
+  roomModelActive = true;
+  roomGroup.children.forEach(function (o) { if (o.userData.roomPart === 'struct') o.visible = false; });
+  roomModelProps.forEach(function (p) { if (p.spec.hideWithRoom) { p.holder.visible = false; p.candles.forEach(function (c) { c.flame.visible = c.light.visible = false; c.light.intensity = 0; c.k = 0; }); } });
+  var warm = new THREE.PointLight(0xff9a50, 0.9, 260, 1); warm.position.set(0, 60, -60); roomGroup.add(warm);       // 실내를 은은히 밝히는 불빛
+  var fill = new THREE.PointLight(0xffc89a, 0.35, 300, 1); fill.position.set(-60, 50, 50); roomGroup.add(fill);
+  roomModelLights.push(warm, fill);
+  if (roomGroup.visible) { fogBase.near = 70; fogBase.far = 360; }
+}
 function loadRoomModels() {
-  if (!THREE.GLTFLoader || location.protocol === 'file:') return;
+  if (!THREE.GLTFLoader) return;
   var loader = new THREE.GLTFLoader();
   ROOM_MODELS.forEach(function (spec) {
+    var remote = /^https?:/.test(spec.file);
+    if (!remote && location.protocol === 'file:') return;
     loader.load(spec.file, function (gltf) {
-      var obj = gltf.scene, box = new THREE.Box3().setFromObject(obj), size = new THREE.Vector3(), ctr = new THREE.Vector3();
-      box.getSize(size); box.getCenter(ctr);
-      var s = spec.size / size.y, holder = new THREE.Group();
-      obj.position.set(-ctr.x, -box.min.y, -ctr.z);               // 바닥 가운데를 원점으로
-      holder.add(obj); holder.scale.setScalar(s); holder.rotation.y = spec.rotY || 0;
-      holder.position.set(spec.at[0], spec.at[1], spec.at[2]);
+      var obj = gltf.scene, holder = new THREE.Group();
       obj.traverse(function (m) {
         if (!m.isMesh) return;
-        m.castShadow = m.receiveShadow = true;
         var mt = m.material; if (mt && mt.map) mt.map.anisotropy = 4;
         if (mt && mt.transparent) { mt.depthWrite = true; mt.alphaTest = 0.3; }
+        m.receiveShadow = true; m.castShadow = spec.kind !== 'room';       // 방 전체는 그림자를 만들지 않음 (무거움)
       });
-      roomGroup.add(holder);
-      if (spec.lights) {                                          // 초 심지 위에 불꽃 · 불빛 (탁자 위 다른 촛불처럼 일렁임)
-        holder.updateMatrixWorld(true);
-        obj.traverse(function (m) {
-          if (!m.isMesh || !/candle/i.test(m.name + (m.material && m.material.name))) return;
-          var b = new THREE.Box3().setFromObject(m), top = new THREE.Vector3((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2);
-          var flame = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffd08a }));
-          flame.scale.set(1, 1.8, 1); flame.position.set(top.x, top.y + 0.22, top.z); roomGroup.add(flame);
-          var light = new THREE.PointLight(0xffa550, 0.9, 34, 1.5); light.position.set(top.x, top.y + 0.6, top.z); roomGroup.add(light);
-          var body = new THREE.Object3D(); roomGroup.add(body);
-          candles.push({ body: body, flame: flame, light: light, x: top.x, phase: Math.random() * 6, k: 0.7 });
-        });
+      if (spec.kind === 'room') {
+        var cb = new THREE.Box3(); obj.updateMatrixWorld(true);
+        obj.traverse(function (m) { if (m.isMesh && spec.center.test(m.name)) cb.expandByObject(m); });
+        var cx = (cb.min.x + cb.max.x) / 2, cz = (cb.min.z + cb.max.z) / 2;
+        obj.position.set(-cx, -spec.floorY, -cz);
+        holder.add(obj); holder.scale.setScalar(spec.unit); holder.rotation.y = spec.rotY || 0;
+        holder.position.set(spec.offset[0], -18, spec.offset[1]);
+        roomGroup.add(holder);
+        addCandleLights(holder);
+        useCabinRoom(holder);
+        return;
       }
-    }, undefined, function () { /* 불러오기 실패: 소품 없이 진행 */ });
+      var box = new THREE.Box3().setFromObject(obj), size = new THREE.Vector3(), ctr = new THREE.Vector3();
+      box.getSize(size); box.getCenter(ctr);
+      obj.position.set(-ctr.x, -box.min.y, -ctr.z);               // 바닥 가운데를 원점으로
+      holder.add(obj); holder.scale.setScalar(spec.size / size.y); holder.rotation.y = spec.rotY || 0;
+      holder.position.set(spec.at[0], spec.at[1], spec.at[2]);
+      if (roomModelActive && spec.hideWithRoom) holder.visible = false;
+      roomGroup.add(holder);
+      var made = spec.lights && !(roomModelActive && spec.hideWithRoom) ? addCandleLights(holder) : [];
+      roomModelProps.push({ spec: spec, holder: holder, candles: made });
+    }, undefined, function () { /* 불러오기 실패(오프라인 등): 코드로 만든 방 그대로 */ });
   });
 }
 loadRoomModels();
 
 function setRoom(on) {
   roomGroup.visible = !!on; roomLight.intensity = on ? 0.55 : 0;
+  if (on && roomModelActive) { fogBase.near = 70; fogBase.far = 360; }
   slab.visible = true;
 }
 function stepRoom(dt) { if (roomPendulum && roomGroup.visible) { roomT += dt; roomPendulum.rotation.z = Math.sin(roomT * 2.4) * 0.28; } }

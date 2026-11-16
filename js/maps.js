@@ -51,6 +51,7 @@ function applyMap(m) {
     scene.background.set(bg);
     if (m.fog === null) scene.fog = null;
     else { var F = m.fog || {}; fogBase.near = F.near != null ? F.near : 21; fogBase.far = F.far != null ? F.far : 54; scene.fog = new THREE.Fog(F.color || bg, fogBase.near, fogBase.far); }
+    if (m.room && roomModelActive) { fogBase.near = 70; fogBase.far = 360; }   // 오두막(모델) 방은 벽이 멀어서 안개를 멀리
     // 조명 · 촛불
     hemi.color.set(L.hemiSky || '#3a2a1a'); hemi.groundColor.set(L.hemiGround || '#050403'); hemi.intensity = L.hemi != null ? L.hemi : 0.05;
     spot.color.set(L.spotColor || '#ff9a40'); spot.intensity = L.spot != null ? L.spot : 1.5; spot.angle = L.spotAngle || 0.62;
