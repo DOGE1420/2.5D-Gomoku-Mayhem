@@ -8,13 +8,7 @@ function toast(text, ms) {
 }
 
 // 이번 판의 맵 · 라운드 · 자기장, 시작 능력 (왼쪽 위, 마우스를 올리면 설명)
-function updateTrait() {
-  var el = document.getElementById('trait'), ab = G.ab[1] && Rules.ABILITY_BY_ID[G.ab[1]], mp = Rules.MAP_BY_ID[G.map];
-  var lines = [];
-  if (mp) lines.push('<div title="' + mp.desc + ' 자기장: 15라운드부터 5라운드마다 바깥 한 줄씩 닫힘(최대 3줄)">' + '[[' + mp.icon + ']] ' + mp.name + ' · ' + G.round + '라운드' + (G.zone ? ' · [[bolt]]자기장 ' + G.zone + '줄' : '') + '</div>');
-  if (ab) lines.push('<div title="' + ab.desc + '">' + H('[[' + ab.icon + ']] ') + ab.name + '</div>');
-  el.innerHTML = H(lines.join('')); el.style.display = lines.length ? 'block' : 'none';
-}
+function updateTrait() { document.getElementById('trait').style.display = 'none'; }   // 맵·시작 능력은 왼쪽 위 카드로만 보여 줌 (js/hand.js 의 rebuildInfo)
 
 // 전설 카드를 확대해서 볼 때: 사용 조건과 현재 진행 상황
 var elHint = document.getElementById('legendHint');

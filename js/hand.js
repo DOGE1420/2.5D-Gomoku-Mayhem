@@ -233,7 +233,7 @@ function infoSlotTarget(i, o) {
     return { x: (j - (shown.length - 1) / 2) * gap, y: 0.1, z: 0.95, s: s, tint: 1 };
   }
   var hov = hoverInfo === i, sc = (camera.aspect < 0.95 ? 0.26 : 0.32) * (hov ? 1.12 : 1);
-  var px2w = vs.vh / window.innerHeight, top = (camera.aspect < 0.95 ? 112 : 116) * px2w;     // 맵 정보(#trait) 바로 아래
+  var px2w = vs.vh / window.innerHeight, top = (camera.aspect < 0.95 ? 60 : 56) * px2w;      // 왼쪽 위 (차례 표시 높이)
   var x = -vs.vw / 2 + 14 * px2w + 0.1 + 0.95 * sc + i * (1.6 * sc + 0.1);
   var y = vs.vh / 2 - top - 0.08 - 1.125 * sc - (hov ? 0.1 : 0);
   if (topGoal > 0.5 && !hov) y = vs.vh / 2 + 2;                // 직부감: 위로 숨김

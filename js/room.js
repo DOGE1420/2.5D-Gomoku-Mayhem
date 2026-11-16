@@ -52,9 +52,9 @@ var roomPendulum = null, roomT = 0;
 
   /* ---- 테이블 · 의자 ---- */
   PART = 'keep';
-  box(40, 1.4, 28, std(0xffffff, 0.9, repeat(planks(false, '#4a301c'), 1, 1)), 0, TOP - 0.7, 0);
-  [[-18, -12], [18, -12], [-18, 12], [18, 12]].forEach(function (p) { box(2, TOP - 1.4 - FLOOR, 2, woodDark, p[0], (TOP - 1.4 + FLOOR) / 2, p[1]); });
-  box(34, 0.8, 1, woodDark, 0, FLOOR + 5, 12); box(34, 0.8, 1, woodDark, 0, FLOOR + 5, -12);
+  box(40, 1.4, 28, std(0xffffff, 0.9, repeat(planks(false, '#4a301c'), 1, 1)), 0, TOP - 0.7, 0).userData.desk = true;   // desk = GLB 책상이 오면 숨기는 코드 책상
+  [[-18, -12], [18, -12], [-18, 12], [18, 12]].forEach(function (p) { box(2, TOP - 1.4 - FLOOR, 2, woodDark, p[0], (TOP - 1.4 + FLOOR) / 2, p[1]).userData.desk = true; });
+  box(34, 0.8, 1, woodDark, 0, FLOOR + 5, 12).userData.desk = true; box(34, 0.8, 1, woodDark, 0, FLOOR + 5, -12).userData.desk = true;
   // 맞은편 안락의자 (까만 윤곽)
   var cz = -24, cx = 4, seat = FLOOR + 8.5;
   box(7, 1.4, 7, black, cx, seat, cz);
@@ -142,7 +142,7 @@ var roomPendulum = null, roomT = 0;
 var CABIN_URL = 'https://media.githubusercontent.com/media/DOGE1420/2.5D-Gomoku-Mayhem/main/assets/models/Cabin.glb';   // 통나무 오두막 원본 (LFS, 약 200MB)
 var ROOM_MODELS = [
   { kind: 'room', file: CABIN_URL, unit: 20, floorY: 443.93, center: /^(House|Foundation)/, rotY: Math.PI / 2, offset: [0, 0] },
-  { kind: 'prop', file: 'assets/models/desk_candle.glb', size: 19, at: [-10, -18, -24], rotY: 0, lights: true, hideWithRoom: true }   // 오두막이 오면 숨김 (오두막 안에 같은 탁자가 있음)
+  { kind: 'desk', file: 'assets/models/desk_candle.glb', top: [40, 28], topY: -0.6, floorY: -18 }   // 게임 책상: 탁자를 판 아래 책상 크기로 늘리고, 초 2개는 판 옆 촛불 자리에
 ];
 var roomModelLights = [], roomModelProps = [], roomModelActive = false;
 // 방 분위기: 어둡게 가라앉히고, 촛불·난롯불 주변만 따뜻하게. 벽·구석은 어렴풋이 보임
@@ -179,13 +179,43 @@ function useCabinRoom(holder) {                                  // 방을 오�
   candles.push({ body: fb, flame: ff, light: fire, x: fp.x, phase: 1.3, k: ROOM_MOOD.fire / 1.2 });
   applyRoomMood();
 }
+var RAW_BASE = 'https://raw.githubusercontent.com/DOGE1420/2.5D-Gomoku-Mayhem/main/';
+// GLB 책상: 탁자 윗면을 spec.top(가로·세로) 크기로, 높이는 바닥(floorY)~윗면(topY)에 맞게 늘림. 코드로 만든 책상은 숨김
+function useDeskModel(obj, spec) {
+  obj.updateMatrixWorld(true);
+  var tableMesh = null, candleMeshes = [];
+  obj.traverse(function (m) { if (!m.isMesh) return; if (/candle/i.test(m.name + (m.material && m.material.name))) candleMeshes.push(m); else if (!tableMesh) tableMesh = m; });
+  if (tableMesh) {
+    var t = tableMesh.clone(); t.matrixAutoUpdate = true;
+    tableMesh.matrixWorld.decompose(t.position, t.quaternion, t.scale);
+    var g = new THREE.Group(); g.add(t); g.updateMatrixWorld(true);
+    var b = new THREE.Box3().setFromObject(g), sz = new THREE.Vector3(), ct = new THREE.Vector3(); b.getSize(sz); b.getCenter(ct);
+    t.position.sub(new THREE.Vector3(ct.x, b.min.y, ct.z));
+    var holder = new THREE.Group(); holder.add(g);
+    holder.scale.set(spec.top[0] / sz.x, (spec.topY - spec.floorY) / sz.y, spec.top[1] / sz.z);
+    holder.position.set(0, spec.floorY, 0);
+    roomGroup.add(holder);
+    roomGroup.children.forEach(function (o) { if (o.userData.desk) o.visible = false; });
+  }
+  // 초: 판 옆 촛불(js/scene.js 의 makeCandle) 몸통을 GLB 초로 바꿈 — 불꽃·불빛은 그대로
+  var cs = candles.filter(function (c) { return c.body && c.body.isMesh && c.body.geometry.type === 'CylinderGeometry'; });
+  cs.forEach(function (c, i) {
+    var src = candleMeshes[i % Math.max(1, candleMeshes.length)]; if (!src) return;
+    var m = src.clone(); m.matrixAutoUpdate = true; m.position.set(0, 0, 0); m.quaternion.identity(); m.scale.set(1, 1, 1);
+    var bx = new THREE.Box3().setFromBufferAttribute(m.geometry.attributes.position), s = new THREE.Vector3(), cc = new THREE.Vector3(); bx.getSize(s); bx.getCenter(cc);
+    var h = c.body.geometry.parameters.height, w = 0.62;                 // 원래 초와 같은 높이 · 굵기
+    var k = new THREE.Group(); k.add(m); m.position.set(-cc.x, -bx.min.y, -cc.z); k.scale.set(w / s.x, h / s.y, w / s.z); k.position.y = -h / 2;
+    m.castShadow = true; m.receiveShadow = true;
+    c.body.material.visible = false; c.body.add(k);
+  });
+}
 function loadRoomModels() {
   if (!THREE.GLTFLoader) return;
   var loader = new THREE.GLTFLoader();
   ROOM_MODELS.forEach(function (spec) {
-    var remote = /^https?:/.test(spec.file);
-    if (!remote && location.protocol === 'file:') return;
-    loader.load(spec.file, function (gltf) {
+    var remote = /^https?:/.test(spec.file), file = spec.file;
+    if (!remote && location.protocol === 'file:') file = RAW_BASE + spec.file;    // 파일을 더블클릭해 열면 GitHub 의 같은 파일을 읽음
+    loader.load(file, function (gltf) {
       var obj = gltf.scene, holder = new THREE.Group();
       obj.traverse(function (m) {
         if (!m.isMesh) return;
@@ -195,6 +225,7 @@ function loadRoomModels() {
         if (mt && mt.transparent) { mt.depthWrite = true; mt.alphaTest = 0.3; }
         m.receiveShadow = true; m.castShadow = spec.kind !== 'room';       // 방 전체는 그림자를 만들지 않음 (무거움)
       });
+      if (spec.kind === 'desk') { useDeskModel(obj, spec); return; }
       if (spec.kind === 'room') {
         var cb = new THREE.Box3(); obj.updateMatrixWorld(true);
         obj.traverse(function (m) { if (m.isMesh && spec.center.test(m.name)) cb.expandByObject(m); });
