@@ -145,6 +145,9 @@ var ROOM_MODELS = [
   { kind: 'prop', file: 'assets/models/desk_candle.glb', size: 19, at: [-10, -18, -24], rotY: 0, lights: true, hideWithRoom: true }   // 오두막이 오면 숨김 (오두막 안에 같은 탁자가 있음)
 ];
 var roomModelLights = [], roomModelProps = [], roomModelActive = false;
+// 방 분위기: 어둡게 가라앉히고, 촛불·난롯불 주변만 따뜻하게. 벽·구석은 어렴풋이 보임
+// hemi: 전체 밝기, warm/fill: 은은한 실내 불빛, fire: 난롯불 세기, fog: 아주 먼 곳만 살짝 어둠에 묻힘
+var ROOM_MOOD = { hemi: 0.05, hemiSky: '#3a2c22', hemiGround: '#050302', warm: 0.1, fill: 0.03, fire: 2.8, fogColor: '#060403', fogNear: 110, fogFar: 560 };
 function addCandleLights(obj) {                                   // 초 심지 위에 불꽃 · 불빛 (탁자 위 다른 촛불처럼 일렁임)
   obj.updateMatrixWorld(true);
   var made = [];
@@ -163,10 +166,18 @@ function useCabinRoom(holder) {                                  // 방을 오�
   roomModelActive = true;
   roomGroup.children.forEach(function (o) { if (o.userData.roomPart === 'struct') o.visible = false; });
   roomModelProps.forEach(function (p) { if (p.spec.hideWithRoom) { p.holder.visible = false; p.candles.forEach(function (c) { c.flame.visible = c.light.visible = false; c.light.intensity = 0; c.k = 0; }); } });
-  var warm = new THREE.PointLight(0xff9a50, 1.4, 400, 1); warm.position.set(0, 60, -60); roomGroup.add(warm);       // 실내를 은은히 밝히는 불빛
-  var fill = new THREE.PointLight(0xffc89a, 0.8, 400, 1); fill.position.set(-60, 50, 50); roomGroup.add(fill);
+  var warm = new THREE.PointLight(0xff9a50, ROOM_MOOD.warm, 400, 1); warm.position.set(0, 60, -60); roomGroup.add(warm);       // 실내를 은은히 밝히는 불빛
+  var fill = new THREE.PointLight(0xffc89a, ROOM_MOOD.fill, 400, 1); fill.position.set(-60, 50, 50); roomGroup.add(fill);
   roomModelLights.push(warm, fill);
-  if (roomGroup.visible) scene.fog = null;
+  // 난롯불: 난로(정면 왼쪽 안쪽) 근처에서 주황빛이 일렁임 — 촛불과 같은 흔들림 계산을 씀
+  holder.updateMatrixWorld(true);
+  var stove = null; holder.traverse(function (m) { if (!stove && m.isMesh && /xg4kedss/i.test(m.name)) stove = m; });
+  var fp = new THREE.Vector3(-40, -6, -70);
+  if (stove) { new THREE.Box3().setFromObject(stove).getCenter(fp); fp.y += 6; }
+  var fire = new THREE.PointLight(0xff7a2a, 0, 260, 1.6); fire.position.copy(fp); roomGroup.add(fire);
+  var fb = new THREE.Object3D(), ff = new THREE.Object3D(); roomGroup.add(fb); roomGroup.add(ff);
+  candles.push({ body: fb, flame: ff, light: fire, x: fp.x, phase: 1.3, k: ROOM_MOOD.fire / 1.2 });
+  applyRoomMood();
 }
 function loadRoomModels() {
   if (!THREE.GLTFLoader) return;
@@ -208,6 +219,12 @@ function loadRoomModels() {
 }
 loadRoomModels();
 
+function applyRoomMood() {                                      // 지금 맵 조명 위에 방 분위기를 덮어씀 (applyMap 에서도 부름)
+  if (!roomGroup.visible) return;
+  hemi.intensity = ROOM_MOOD.hemi; hemi.color.set(ROOM_MOOD.hemiSky); hemi.groundColor.set(ROOM_MOOD.hemiGround);
+  scene.background.set(ROOM_MOOD.fogColor);
+  fogBase.near = ROOM_MOOD.fogNear; fogBase.far = ROOM_MOOD.fogFar; scene.fog = new THREE.Fog(ROOM_MOOD.fogColor, fogBase.near, fogBase.far);
+}
 function setRoom(on) {
   roomGroup.visible = !!on; roomLight.intensity = on ? 0.55 : 0;
   slab.visible = true;

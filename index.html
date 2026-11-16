@@ -12,7 +12,8 @@
   body { -webkit-user-select: none; user-select: none; }
   #game { position: fixed; inset: 0; touch-action: none; }
   canvas { display: block; outline: none; touch-action: none; -webkit-user-select: none; user-select: none; }
-  #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 75% 70% at 50% 46%, rgba(0,0,0,0) 40%, rgba(0,0,0,.55) 78%, rgba(0,0,0,.9) 100%); }
+  #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 85% 80% at 50% 46%, rgba(0,0,0,0) 55%, rgba(0,0,0,.35) 85%, rgba(0,0,0,.6) 100%); }
+  body:not(.in-game) #vignette { display: none; }
   #hud { position: fixed; top: 12px; left: 0; right: 0; padding: 0 190px; box-sizing: border-box; text-align: center; color: #e8d9b5; pointer-events: none; text-shadow: 0 2px 6px #000; }
   #turn { font-size: 20px; letter-spacing: 1px; }
   @media (max-width: 600px) { #turn { font-size: 15px; } .btn { padding: 6px 10px; } #hud { padding: 0 92px 0 104px; } #mapSel { left: 12px; right: auto; top: 12px; max-width: 84px; font-size: 12px; } #endturn { top: 52px; } }
@@ -176,6 +177,7 @@
 <div id="tutBox"><div id="tutText"></div><button id="tutBtn" class="btn"></button></div>
 <audio id="bgm" loop preload="auto" src="assets/audio/bgm-menu.mp3"></audio>
 
+<div id="vignette"></div>
 <div id="hud"><div id="turn"></div></div>
 <button id="endturn" class="btn">턴 종료</button>
 <select id="mapSel" class="btn"></select>
