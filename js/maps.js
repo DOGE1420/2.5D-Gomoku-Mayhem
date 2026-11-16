@@ -53,9 +53,10 @@ function applyMap(m) {
     scene.background.set(bg);
     if (m.fog === null) scene.fog = null;
     else { var F = m.fog || {}; fogBase.near = F.near != null ? F.near : 21; fogBase.far = F.far != null ? F.far : 54; scene.fog = new THREE.Fog(F.color || bg, fogBase.near, fogBase.far); }
-    if (room && roomModelActive) { fogBase.near = 70; fogBase.far = 360; }   // 오두막(모델) 방은 벽이 멀어서 안개를 멀리
+    if (room) scene.fog = null;                // 방 안에서는 안개 없이 끝까지 다 보이게
     // 조명 · 촛불
     hemi.color.set(L.hemiSky || '#3a2a1a'); hemi.groundColor.set(L.hemiGround || '#050403'); hemi.intensity = L.hemi != null ? L.hemi : 0.05;
+    if (room) { hemi.intensity = Math.max(hemi.intensity, 0.75); hemi.color.set('#d8b48a'); hemi.groundColor.set('#3a2616'); }   // 방 구석까지 보이게 실내를 밝힘
     spot.color.set(L.spotColor || '#ff9a40'); spot.intensity = L.spot != null ? L.spot : 1.5; spot.angle = L.spotAngle || 0.62;
     var candleOn = C.visible !== false;
     candles.forEach(function (c) { c.body.visible = c.flame.visible = c.light.visible = candleOn; c.light.color.set(C.color || '#ffa550'); });

@@ -163,10 +163,10 @@ function useCabinRoom(holder) {                                  // 방을 오�
   roomModelActive = true;
   roomGroup.children.forEach(function (o) { if (o.userData.roomPart === 'struct') o.visible = false; });
   roomModelProps.forEach(function (p) { if (p.spec.hideWithRoom) { p.holder.visible = false; p.candles.forEach(function (c) { c.flame.visible = c.light.visible = false; c.light.intensity = 0; c.k = 0; }); } });
-  var warm = new THREE.PointLight(0xff9a50, 0.9, 260, 1); warm.position.set(0, 60, -60); roomGroup.add(warm);       // 실내를 은은히 밝히는 불빛
-  var fill = new THREE.PointLight(0xffc89a, 0.35, 300, 1); fill.position.set(-60, 50, 50); roomGroup.add(fill);
+  var warm = new THREE.PointLight(0xff9a50, 1.4, 400, 1); warm.position.set(0, 60, -60); roomGroup.add(warm);       // 실내를 은은히 밝히는 불빛
+  var fill = new THREE.PointLight(0xffc89a, 0.8, 400, 1); fill.position.set(-60, 50, 50); roomGroup.add(fill);
   roomModelLights.push(warm, fill);
-  if (roomGroup.visible) { fogBase.near = 70; fogBase.far = 360; }
+  if (roomGroup.visible) scene.fog = null;
 }
 function loadRoomModels() {
   if (!THREE.GLTFLoader) return;
@@ -210,7 +210,6 @@ loadRoomModels();
 
 function setRoom(on) {
   roomGroup.visible = !!on; roomLight.intensity = on ? 0.55 : 0;
-  if (on && roomModelActive) { fogBase.near = 70; fogBase.far = 360; }
   slab.visible = true;
 }
 function stepRoom(dt) { if (roomPendulum && roomGroup.visible) { roomT += dt; roomPendulum.rotation.z = Math.sin(roomT * 2.4) * 0.28; } }

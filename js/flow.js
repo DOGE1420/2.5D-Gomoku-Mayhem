@@ -131,7 +131,7 @@ window.addEventListener('pointerup', function (e) {
 /* ---------------- 둘러보기: 앉은 시점에서 화면을 누른 채 끌면 고개를 돌려 방을 둘러봄 (손가락으로 밀어도 됨) ----------------
  * 살짝 누르기(끌지 않음)는 지금처럼 카드·판 누르기로 동작. 더블클릭하거나 판을 누르면(직부감) 정면으로 돌아옴. */
 var look = { yaw: 0, pitch: 0, ty: 0, tp: 0, down: null, dragged: false };
-function lookReset() { look.ty = 0; look.tp = 0; }
+function lookReset() { var t = Math.PI * 2; look.yaw = ((look.yaw % t) + t + Math.PI) % t - Math.PI; look.ty = 0; look.tp = 0; }   // 몇 바퀴 돌았든 가까운 쪽으로 정면 복귀
 dom.addEventListener('pointerdown', function (e) {
   look.dragged = false;
   if (curScreen !== 'game' || topGoal > 0.5 || (G && G.alk) || draftMeshes.length || inspectIdx >= 0 || inspectLegend) { look.down = null; return; }
@@ -143,8 +143,8 @@ window.addEventListener('pointermove', function (e) {
   if (!look.dragged && Math.hypot(dx, dy) < 8) return;                     // 이만큼은 움직여야 '끌기'로 봄
   look.dragged = true;
   var s = 2.4 / Math.max(window.innerWidth, 360);                           // 화면 폭만큼 끌면 약 140도
-  look.ty = Math.max(-2.5, Math.min(2.5, look.down.ty + dx * s));
-  look.tp = Math.max(-0.5, Math.min(0.65, look.down.tp + dy * s * 0.8));
+  look.ty = look.down.ty + dx * s;                                           // 좌우는 제한 없이 한 바퀴
+  look.tp = Math.max(-1.2, Math.min(1.2, look.down.tp + dy * s * 0.8));
 });
 window.addEventListener('pointerup', function () { look.down = null; });
 window.addEventListener('pointercancel', function () { look.down = null; });
