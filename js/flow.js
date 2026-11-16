@@ -7,9 +7,12 @@ function cancelMode() {
   Rules.cancel(G); Rules.drain(G); tradeFirst = null; clearPlayed(); syncS(); updateHUD(); syncMarkers(); syncMarkersExtra();
 }
 // 카드/전설 카드를 쓴 결과를 화면에 반영
-var pendingCounterSnap = null;
+var pendingCounterSnap = null, HIDDEN_CARDS = ['trap', 'blockade'];
 function afterUse(res, evs, snap) {
   if (res.counter) { pendingCounterSnap = snap; runEvents(evs); return; }          // 'counterAsk' 이벤트가 대응 창을 엶
+  if (HIDDEN_CARDS.indexOf(snap.id) >= 0 && !humanTurn()) {                     // 상대(봇)가 쓴 함정·봉쇄: 아무것도 보여 주지 않음 (발동할 때만 나타남)
+    syncS(); runEvents(evs); return;
+  }
   if (res.pending) { showPlayed(snap); syncS(); runEvents(evs); return; }          // 대상을 고르는 카드는 왼쪽 아래에서 기다림
   busy++; burnSnap(snap, function () { busy--; runEvents(evs); });                 // 바로 발동: 가운데서 다 타고 난 뒤에 효과 적용
 }

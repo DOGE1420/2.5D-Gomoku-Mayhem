@@ -13,7 +13,6 @@ function updateHUD() {
   var b = [];                                   // 작은 상태 표시만
   if (G.next.giant === G.current) b.push('[[rock]]');
   if (G.winOver[G.current]) b.push('[[turtle]]4목');
-  if (G.lock[G.current]) b.push('[[forbid]]');
   if (G.winLength === 6) b.push('6목');
   elTurn.innerHTML = H(tx + (b.length ? '  ' + b.join(' ') : ''));
   elEnd.style.display = 'none';
@@ -142,30 +141,45 @@ function addWallMesh(r, c, animate) {
 
 /* ---------------- 자기장 가스: 닫힌 바깥 줄을 덮는 이어진 보라색 가스 (여러 겹의 일렁이는 막) ---------------- */
 var zoneGas = (function () {
-  var vert = 'varying vec2 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }';
+  // uMode 0: 판 위 가스 막 · 1: 판 밖 책상 위로 흘러 퍼지는 가스 · 2: 판 옆면을 타고 흘러내리는 가스 막
+  var vert = 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }';
   var frag = [
-    'uniform float uT, uIn, uLayer, uA; varying vec2 vP;',
+    'uniform float uT, uIn, uLayer, uA, uMode; varying vec3 vW;',
     'float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
     'float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
     '  return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }',
     'float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int k = 0; k < 4; k++) { v += a * n(p); p = p * 2.03 + 7.1; a *= 0.5; } return v; }',
+    'float gas(vec2 p){ vec2 q = vec2(fbm(p + vec2(uT * 0.13, uT * 0.07)), fbm(p + vec2(-uT * 0.09, uT * 0.11) + 4.3)); return fbm(p + 2.2 * q + uT * 0.05); }',
     'void main(){',
-    '  vec2 p = vP * 0.55 + vec2(uLayer * 3.1, -uLayer * 1.7);',
-    '  vec2 q = vec2(fbm(p + vec2(uT * 0.13, uT * 0.07)), fbm(p + vec2(-uT * 0.09, uT * 0.11) + 4.3));',
-    '  float g = fbm(p + 2.2 * q + uT * 0.05);',
-    '  float d = max(abs(vP.x), abs(vP.y));',                         // 판 가운데에서 바깥으로 (정사각형 거리)
-    '  float edge = smoothstep(uIn - 0.45, uIn + 0.35, d + (g - 0.5) * 0.9);',
-    '  float ov = 1.0 - smoothstep(8.6, 9.4, d);',                  // 판 바깥 조금까지만
-    '  float a = edge * ov * (0.35 + 0.65 * g) * uA;',
+    '  vec2 xz = vW.xz; float d = max(abs(xz.x), abs(xz.y)), g, a;',     // d: 판 가운데에서의 정사각형 거리
+    '  if (uMode < 0.5) {',
+    '    g = gas(xz * 0.55 + vec2(uLayer * 3.1, -uLayer * 1.7));',
+    '    float edge = smoothstep(uIn - 0.45, uIn + 0.35, d + (g - 0.5) * 0.9);',
+    '    a = edge * (1.0 - smoothstep(8.3, 9.1 - uLayer * 0.2, d + (g - 0.5) * 0.6)) * (0.35 + 0.65 * g) * uA;',
+    '  } else if (uMode < 1.5) {',
+    '    vec2 dir = xz / max(d, 0.001);',                                  // 바깥쪽으로 흘러나가게
+    '    g = gas(xz * 0.45 - dir * uT * 0.35);',
+    '    a = smoothstep(8.0, 8.45, d) * (1.0 - smoothstep(8.9, 12.0, d + (g - 0.5) * 3.2)) * (0.3 + 0.7 * g) * uA;',
+    '  } else {',
+    '    float s = abs(xz.x) > abs(xz.y) ? xz.y : xz.x;',                // 옆면을 따라가는 좌표 + 아래로 흐름
+    '    g = gas(vec2(s * 0.6, vW.y * 1.6 + uT * 0.5));',
+    '    a = (1.0 - smoothstep(0.1, 0.75, vW.y + (g - 0.5) * 0.5)) * smoothstep(-0.68, -0.5, vW.y) * (0.35 + 0.65 * g) * uA;',
+    '  }',
     '  vec3 col = mix(vec3(0.16, 0.05, 0.32), vec3(0.62, 0.32, 1.0), g * g * 1.6);',
     '  gl_FragColor = vec4(col, a);',
     '}'].join('\n');
   var layers = [], grp = new THREE.Group(); scene.add(grp);
-  [0.03, 0.28, 0.55, 0.85].forEach(function (y, i) {
+  function mk(geo, mode, layer, alpha, order) {
     var mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { uT: { value: 0 }, uIn: { value: 99 }, uLayer: { value: i }, uA: { value: [0.95, 0.6, 0.42, 0.28][i] } } });
-    var m = new THREE.Mesh(new THREE.PlaneGeometry(19, 19), mat); m.rotation.x = -Math.PI / 2; m.position.y = y; m.renderOrder = 2 + i;
-    grp.add(m); layers.push(mat);
+      uniforms: { uT: { value: 0 }, uIn: { value: 99 }, uLayer: { value: layer }, uA: { value: alpha }, uMode: { value: mode } } });
+    var m = new THREE.Mesh(geo, mat); m.renderOrder = order; grp.add(m); layers.push(mat); return m;
+  }
+  [0.03, 0.28, 0.55, 0.85].forEach(function (y, i) {
+    var m = mk(new THREE.PlaneGeometry(19, 19), 0, i, [0.95, 0.6, 0.42, 0.28][i], 3 + i); m.rotation.x = -Math.PI / 2; m.position.y = y;
+  });
+  var sp = mk(new THREE.PlaneGeometry(26, 26), 1, 0, 0.85, 1); sp.rotation.x = -Math.PI / 2; sp.position.y = -0.57;   // 책상 위 (판 받침 아래 높이)
+  [[0, 8.32, 0], [0, -8.32, Math.PI], [8.32, 0, Math.PI / 2], [-8.32, 0, -Math.PI / 2]].forEach(function (q) {             // 판 받침 네 옆면
+    var c = mk(new THREE.PlaneGeometry(16.9, 1.5), 2, 0, 0.8, 2); c.position.set(q[0], 0.12, q[1]); c.rotation.y = q[2];
   });
   var cur = 99;
   return { step: function (dt) {
@@ -293,7 +307,7 @@ function handleEvent(e) {
   var p, m, i;
   switch (e.t) {
     case 'place': addStoneMesh(e.r, e.c, e.p, true); sfx('place'); return 0.3;
-    case 'trapHit': m = dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0xb070ff, 18); sfx('boom'); return 0.35;
+    case 'trapHit': m = dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0xb070ff, 18); sfx('boom'); totemPop('trap'); return 2.0;    // 숨겨 둔 함정이 발동: 카드가 튀어나옴
     case 'remove':
       m = dropMesh(e.r, e.c);
       burst(cellAt(e.r, e.c), { snipe: 0xff4a3a, melt: 0xff9a3a, tsunami: 0x5aa8ff, zone: 0xb070ff, smash: 0xd0b080 }[e.why] || 0xff8a2a, e.why === 'snipe' ? 14 : 22); sfx(e.why === 'snipe' ? 'place' : 'boom');
@@ -339,8 +353,9 @@ function handleEvent(e) {
       for (i = 0; i < 4; i++) burst(new THREE.Vector3(gc.x + (Math.random() - 0.5) * 2.2, 0.5, gc.z + (Math.random() - 0.5) * 2.2), i % 2 ? 0xb09a80 : 0x8a7a66, 14);
       sfx('boom'); camShake = 1; return 0.6;
     }
-    case 'windmill': case 'shield': case 'trap': case 'crater': sfx('magic'); return 0.15;
-    case 'blocked': sfx('boom'); return 0.3;
+    case 'trap': if (e.owner === viewer()) sfx('magic'); return 0.15;                   // 함정 설치는 상대에게 소리도 안 들리게
+    case 'windmill': case 'shield': case 'crater': sfx('magic'); return 0.15;
+    case 'blocked': totemPop('blockade'); return 2.0;                                   // 숨겨 둔 봉쇄가 발동
     case 'weather': {
       var mp = Rules.MAP_BY_ID[e.map]; applyThemeFor(e.map); revealInfo('map_');
       toast('[[weather]] 기상 이변! 맵이 ' + '[[' + mp.icon + ']] ' + mp.name + '(으)로 바뀌었습니다 — ' + mp.short, 3400); sfx('magic'); return 0.8;
