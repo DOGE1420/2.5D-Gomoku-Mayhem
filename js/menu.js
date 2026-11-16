@@ -37,6 +37,7 @@ $('langBtn').addEventListener('click', function () {
   lang = lang === 'ko' ? 'en' : 'ko';
   try { localStorage.setItem('omok_lang', lang); } catch (e) {}
   applyStaticI18n();
+  texCache = {}; if (G) { rebuildHand(); if (typeof rebuildInfo === 'function') rebuildInfo(); }   // 카드 앞면도 새 언어로 다시 그림
 });
 
 /* ---------------- 설정: 움직임 줄이기 · 배경 음악 ---------------- */

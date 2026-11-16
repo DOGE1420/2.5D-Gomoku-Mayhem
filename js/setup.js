@@ -11,6 +11,14 @@ var Rules = window.Rules;
 var CARDS = {};
 Rules.CARDS.forEach(function (c) { CARDS[c.id] = { name: c.name, cat: c.cat, desc: c.desc, endsTurn: !!c.ends }; });
 Rules.LEGENDS.forEach(function (c) { CARDS[c.id] = { name: c.name, cat: c.cat, desc: c.desc, endsTurn: false, legend: true, react: !!c.react }; });
+// 날씨(맵) · 시작 능력도 카드 모양으로 보여 줌 (map_<맵 id>, ab_<능력 id>)
+var INFO_DESC = {
+  map_classic: '자연재해가 없는\n평온한 들판', map_summer: '5라운드마다\n흑·백 돌이 하나씩\n녹아 사라짐', map_winter: '5라운드마다\n돌 하나가 2라운드 동안\n얼어붙음',
+  map_space: '판의 양 끝이\n반대편과 이어짐\n(웜홀)', map_desert: '8라운드부터\n4라운드마다\n모래폭풍', map_rain: '알까기가 미끄럽고\n지진 때 쓰나미가\n가장자리를 쓸어 감',
+  ab_umbrella: '맵 자연재해가\n일어나지 않음', ab_pouch: '패를 5장까지\n쥘 수 있음', ab_clover: '카드를 4장 중에서\n고름', ab_sturdy: '처음 둔 돌 3개는\n카드 효과로부터\n영구 보호', ab_retry: '다시 뽑기를\n3번 쓸 수 있음'
+};
+Rules.MAP_LIST.forEach(function (m) { CARDS['map_' + m.id] = { name: m.name, cat: '날씨', desc: INFO_DESC['map_' + m.id] || m.short, foot: '이번 판의 날씨' }; });
+Rules.ABILITIES.forEach(function (a) { CARDS['ab_' + a.id] = { name: a.name, cat: '시작 능력', desc: INFO_DESC['ab_' + a.id] || a.desc, foot: '양쪽 모두' }; });
 var CARD_IDS = Rules.CARDS.map(function (c) { return c.id; }).concat(Rules.LEGENDS.map(function (c) { return c.id; }));   // 일러스트를 지정할 수 있는 모든 카드
 
 /* ---------------- 설정(js/config.js) · 이미지 로더 ---------------- */

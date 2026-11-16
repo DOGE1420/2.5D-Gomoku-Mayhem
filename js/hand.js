@@ -147,8 +147,8 @@ function rebuildHand() {
 }
 function stepCards(dt) {
   var k = 1 - Math.pow(0.0006, dt), n = cardMeshes.length;
-  stepDraft(k); stepLegend(k);
-  var op = dimMesh.material.opacity + (((inspectIdx >= 0 || inspectLegend || draftMeshes.length) ? 0.68 : 0) - dimMesh.material.opacity) * k;
+  stepDraft(k); stepLegend(k); stepInfo(dt, k);
+  var op = dimMesh.material.opacity + (((inspectIdx >= 0 || inspectLegend || inspectInfo >= 0 || infoRevealing() || draftMeshes.length) ? 0.68 : 0) - dimMesh.material.opacity) * k;
   dimMesh.material.opacity = op; dimMesh.visible = op > 0.01;
   if (playedMesh) {                       // 사용한 카드: 직부감일 때만 왼쪽 아래에 표시
     var vs = viewSize(), sc = 0.62, ch = 2.25 * sc, cwp = 1.5 * sc, show = topGoal > 0.5;
@@ -202,6 +202,50 @@ function stepLegend(k) {
     var t = legendSlotTarget(o), m = o.m;
     m.position.x += (t.x - m.position.x) * k; m.position.y += (t.y - m.position.y) * k; m.position.z += (t.z - m.position.z) * k;
     m.rotation.z += (t.rz - m.rotation.z) * k;
+    var sc = m.scale.x + (t.s - m.scale.x) * k; m.scale.set(sc, sc, 1);
+    var c = m.material.color.r + (t.tint - m.material.color.r) * k; m.material.color.setRGB(c, c, c);
+  });
+}
+
+/* ---------------- 날씨 · 시작 능력 카드: 왼쪽 위(맵 정보 아래)에 작게, 판 시작·기상 이변 때 가운데에 크게 ---------------- */
+var infoMeshes = [], hoverInfo = -1, inspectInfo = -1, infoReveal = { t: 0, end: 0, only: null };
+function rebuildInfo() {
+  infoMeshes.forEach(function (o) { handGroup.remove(o.m); o.m.material.dispose(); });
+  infoMeshes = []; hoverInfo = inspectInfo = -1;
+  if (!G || tut) return;                                    // 튜토리얼에서는 숨김
+  var ids = [];
+  if (G.map && CARDS['map_' + G.map]) ids.push('map_' + G.map);
+  var ab = G.ab && G.ab[viewer()]; if (ab && CARDS['ab_' + ab]) ids.push('ab_' + ab);
+  ids.forEach(function (id, i) {
+    var m = new THREE.Mesh(cardGeo, new THREE.MeshBasicMaterial({ map: cardTexture(id), transparent: true, alphaTest: 0.02 }));
+    var vs = viewSize(); m.position.set(-vs.vw / 2 + 0.6, vs.vh / 2 + 2, 0.2); m.scale.set(0.3, 0.3, 1);
+    m.userData.info = i; handGroup.add(m); infoMeshes.push({ m: m, id: id });
+  });
+}
+function revealInfo(only) { rebuildInfo(); infoReveal.t = 1; infoReveal.end = performance.now() + 2800; infoReveal.only = only || null; }
+function infoRevealing() { return infoReveal.t > 0 && infoMeshes.length > 0; }
+function infoSlotTarget(i, o) {
+  var vs = viewSize(), n = infoMeshes.length;
+  if (inspectInfo === i) return { x: 0, y: 0, z: 0.95, s: 1.75, tint: 1 };
+  if (infoRevealing() && (!infoReveal.only || o.id.indexOf(infoReveal.only) === 0)) {
+    var shown = infoMeshes.filter(function (q) { return !infoReveal.only || q.id.indexOf(infoReveal.only) === 0; }), j = shown.indexOf(o);
+    var s = camera.aspect < 0.95 ? 0.95 : 1.3, gap = 1.55 * s;
+    return { x: (j - (shown.length - 1) / 2) * gap, y: 0.1, z: 0.95, s: s, tint: 1 };
+  }
+  var hov = hoverInfo === i, sc = (camera.aspect < 0.95 ? 0.26 : 0.32) * (hov ? 1.12 : 1);
+  var px2w = vs.vh / window.innerHeight, top = (camera.aspect < 0.95 ? 112 : 116) * px2w;     // 맵 정보(#trait) 바로 아래
+  var x = -vs.vw / 2 + 14 * px2w + 0.1 + 0.95 * sc + i * (1.6 * sc + 0.1);
+  var y = vs.vh / 2 - top - 0.08 - 1.125 * sc - (hov ? 0.1 : 0);
+  if (topGoal > 0.5 && !hov) y = vs.vh / 2 + 2;                // 직부감: 위로 숨김
+  return { x: x, y: y, z: hov ? 0.5 : 0.3, s: sc, tint: hov ? 1 : 0.92 };
+}
+function stepInfo(dt, k) {
+  if (infoReveal.t > 0 && performance.now() > infoReveal.end) infoReveal.t = 0;
+  infoMeshes.forEach(function (o, i) {
+    var t = infoSlotTarget(i, o), m = o.m;
+    m.visible = curScreen === 'game';
+    m.position.x += (t.x - m.position.x) * k; m.position.y += (t.y - m.position.y) * k; m.position.z += (t.z - m.position.z) * k;
+    m.rotation.z += (0 - m.rotation.z) * k;
     var sc = m.scale.x + (t.s - m.scale.x) * k; m.scale.set(sc, sc, 1);
     var c = m.material.color.r + (t.tint - m.material.color.r) * k; m.material.color.setRGB(c, c, c);
   });

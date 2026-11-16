@@ -6,10 +6,10 @@
 var tut = null;   // { step, k, b }
 function tutShow(key, btnKey) {
   if (tut) { tut.k = key; tut.b = btnKey; }
-  $('tutBox').classList.add('show'); $('tutText').textContent = t(key);
+  $('tutBox').classList.add('show'); $('tutBox').classList.toggle('full', !!(tut && tut.step === 3)); $('tutText').innerHTML = H(t(key));
   var b = $('tutBtn'); b.style.display = btnKey ? 'inline-block' : 'none'; if (btnKey) b.textContent = t(btnKey);
 }
-function endTutorial() { tut = null; $('tutBox').classList.remove('show'); $('tutBtn').style.display = 'none'; }
+function endTutorial() { tut = null; $('tutBox').classList.remove('show', 'full'); $('tutBtn').style.display = 'none'; }
 function tutStage(step) {
   reset({});                                              // 시작 카드·능력 없이 빈 평원 판
   tut = { step: step };
@@ -35,7 +35,14 @@ function tutOnTurn() {
     G.board[r][c] = Rules.WHITE; if (Rules.core.checkWin(G, r, c, Rules.WHITE)) win = true; G.board[r][c] = Rules.EMPTY;
   }
   if (!win) setTimeout(function () { if (tut) tutStage(3); }, 700);
-  else { tutShow('tut.2.retry'); setTimeout(function () { if (tut) tutStage(2); }, 1500); }
+  else tutRetry();
+}
+// ②단계: 장벽은 백의 4 양 끝((6,4) 또는 (6,9)) 중 한 곳에만. 다른 곳에 두면 바로 다시
+var TUT_ENDS = [[6, 4], [6, 9]];
+function tutRetry(key) { if (!tut || tut.retrying) return; tut.retrying = true; tutShow(key || 'tut.2.retry'); setTimeout(function () { if (tut && tut.step === 2) tutStage(2); }, 1300); }
+function tutOnWall(r, c) {
+  if (!tut || tut.step !== 2) return;
+  if (!TUT_ENDS.some(function (q) { return q[0] === r && q[1] === c; })) tutRetry('tut.2.wall');
 }
 // 승리 이벤트 (①단계): 배너 없이 다음 단계로. true 면 일반 처리를 건너뜀
 function tutOnWin() {

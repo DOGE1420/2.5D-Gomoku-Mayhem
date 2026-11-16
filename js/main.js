@@ -16,7 +16,7 @@ function reset(opts) {
   applyThemeFor(G.map);
   hideLegendHint(); hideDraftCaption(); pendingCounterSnap = null; inspectLegend = false;
   ['counterBox', 'choiceBox', 'slotBox'].forEach(function (id) { document.getElementById(id).classList.remove('show'); });
-  handDirty = false; inspectIdx = -1; syncAll(); rebuildHand();
+  handDirty = false; inspectIdx = -1; syncAll(); rebuildHand(); infoReveal.t = 0; rebuildInfo();
   runEvents(Rules.drain(G));                                // 시작: 전설 카드 고르기 · 시작 능력 표시
 }
 

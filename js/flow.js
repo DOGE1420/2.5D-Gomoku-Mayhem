@@ -99,15 +99,18 @@ function updateHover() {
   var lh = (topGoal > 0.5 || draftMeshes.length || !own.length) ? [] : raycaster.intersectObjects(own, false);
   hoverLegend = lh.length > 0;
   if (hoverLegend) hoverCard = -1;
+  var ih = (topGoal > 0.5 || draftMeshes.length || infoRevealing() || inspectInfo >= 0) ? [] : raycaster.intersectObjects(infoMeshes.map(function (o) { return o.m; }), false);
+  hoverInfo = ih.length ? ih[0].object.userData.info : -1;
+  if (hoverInfo >= 0) { hoverCard = -1; hoverLegend = false; }
   handUp = topGoal < 0.5 && !draftMeshes.length && (hoverCard >= 0 || (Math.abs(pointer.x) < 0.5 && pointer.y < -0.3));
   hoverCell = null; hoverTable = false;
-  var hasGround = hoverCard < 0 && !hoverLegend && hoverDraft < 0 && !draftMeshes.length && raycaster.ray.intersectPlane(groundPlane, hitPoint);
+  var hasGround = hoverCard < 0 && !hoverLegend && hoverInfo < 0 && hoverDraft < 0 && !draftMeshes.length && raycaster.ray.intersectPlane(groundPlane, hitPoint);
   if (hasGround) {
     var x = Math.round(hitPoint.x + HALF), y = Math.round(hitPoint.z + HALF);
     if (inb(x, y) && Math.abs(hitPoint.x + HALF - x) < 0.5 && Math.abs(hitPoint.z + HALF - y) < 0.5) hoverCell = [x, y];
     else hoverTable = true;                 // 격자 밖(판 테두리·테이블) = 시점 전환 영역
   }
-  dom.style.cursor = (hoverCard >= 0 || hoverLegend || hoverDraft >= 0 || hoverCell || hoverTable) ? 'pointer' : 'default';
+  dom.style.cursor = (hoverCard >= 0 || hoverLegend || hoverInfo >= 0 || hoverDraft >= 0 || hoverCell || hoverTable) ? 'pointer' : 'default';
   if (alkUI && alkUI.dragging && raycaster.ray.intersectPlane(groundPlane, hitPoint)) aimUpdate(hitPoint);
 }
 dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch' && !(alkUI && alkUI.dragging)) return; setPointer(e); updateHover(); });
@@ -134,7 +137,7 @@ var look = { yaw: 0, pitch: 0, ty: 0, tp: 0, down: null, dragged: false };
 function lookReset() { var t = Math.PI * 2; look.yaw = ((look.yaw % t) + t + Math.PI) % t - Math.PI; look.ty = 0; look.tp = 0; }   // 몇 바퀴 돌았든 가까운 쪽으로 정면 복귀
 dom.addEventListener('pointerdown', function (e) {
   look.dragged = false;
-  if (curScreen !== 'game' || topGoal > 0.5 || (G && G.alk) || draftMeshes.length || inspectIdx >= 0 || inspectLegend) { look.down = null; return; }
+  if (curScreen !== 'game' || topGoal > 0.5 || (G && G.alk) || draftMeshes.length || inspectIdx >= 0 || inspectLegend || inspectInfo >= 0 || infoRevealing() || hoverInfo >= 0) { look.down = null; return; }
   look.down = { x: e.clientX, y: e.clientY, id: e.pointerId, ty: look.ty, tp: look.tp };
 });
 window.addEventListener('pointermove', function (e) {
@@ -155,6 +158,9 @@ dom.addEventListener('click', function (e) {
   ac(); if (actx && actx.state === 'suspended') actx.resume();
   if (G.alk) return;                                                       // 알까기 중에는 클릭 대신 당기기
   setPointer(e); updateHover();
+  if (infoRevealing()) { infoReveal.t = 0; return; }                      // 날씨·능력 소개 중 누르면 바로 제자리로
+  if (inspectInfo >= 0) { inspectInfo = -1; return; }
+  if (hoverInfo >= 0) { inspectInfo = hoverInfo; inspectIdx = -1; inspectLegend = false; hideLegendHint(); sfx('card'); return; }
   if (draftMeshes.length) { if (hoverDraft >= 0) onDraftClick(hoverDraft); return; }
   if (hoverLegend) onLegendClick();
   else if (hoverCard >= 0) onCardClick(hoverCard);
@@ -166,11 +172,11 @@ dom.addEventListener('click', function (e) {
     else setTopView(false);                                               // 직부감에서 테이블을 누르면 카드 화면으로
   }
   // 터치는 '호버'가 없으므로 탭이 끝나면 호버 효과를 지움
-  if (e.pointerType === 'touch') { hoverCard = -1; hoverCell = null; hoverTable = false; handUp = false; }
+  if (e.pointerType === 'touch') { hoverCard = -1; hoverInfo = -1; hoverCell = null; hoverTable = false; handUp = false; }
 });
 window.addEventListener('keydown', function (e) {
   if (curScreen !== 'game') return;
-  if (e.key === 'Escape') { if (inspectLegend) { inspectLegend = false; hideLegendHint(); } else if (inspectIdx >= 0) inspectIdx = -1; else if (G.pending) cancelMode(); }
+  if (e.key === 'Escape') { if (infoRevealing() || inspectInfo >= 0) { infoReveal.t = 0; inspectInfo = -1; } else if (inspectLegend) { inspectLegend = false; hideLegendHint(); } else if (inspectIdx >= 0) inspectIdx = -1; else if (G.pending) cancelMode(); }
   else if (e.key === 'v' || e.key === 'V') setTopView(topGoal < 0.5);
 });
 document.getElementById('again').addEventListener('click', function () { $('banner').style.display = 'none'; restartGame(); });

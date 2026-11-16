@@ -285,8 +285,8 @@ function handleEvent(e) {
         : '[[wave]] 쓰나미! ' + e.dir + ' 가장자리 3줄의 돌 ' + e.n + '개가 휩쓸려 갔습니다';
       toast(msg, 3000); return 0.2;
     }
-    case 'map': applyThemeFor(e.id); return 0;
-    case 'wall': addWallMesh(e.r, e.c, true); sfx('boom'); burst(cellAt(e.r, e.c), 0x8a7a66, 10); return 0.5;
+    case 'map': applyThemeFor(e.id); rebuildInfo(); return 0;
+    case 'wall': tutOnWall(e.r, e.c); addWallMesh(e.r, e.c, true); sfx('boom'); burst(cellAt(e.r, e.c), 0x8a7a66, 10); return 0.5;
     case 'giant':                                                          // 바위 하나가 떨어져 3×3 칸의 돌을 깨뜨림
       for (var dr = -1; dr <= 1; dr++) for (var dc = -1; dc <= 1; dc++) {
         var rr = e.r + dr, cc = e.c + dc; if (!Rules.inb(rr, cc)) continue;
@@ -302,7 +302,7 @@ function handleEvent(e) {
     case 'windmill': case 'shield': case 'trap': case 'crater': sfx('magic'); return 0.15;
     case 'blocked': sfx('boom'); return 0.3;
     case 'weather': {
-      var mp = Rules.MAP_BY_ID[e.map]; applyThemeFor(e.map);
+      var mp = Rules.MAP_BY_ID[e.map]; applyThemeFor(e.map); revealInfo('map_');
       toast('[[weather]] 기상 이변! 맵이 ' + '[[' + mp.icon + ']] ' + mp.name + '(으)로 바뀌었습니다 — ' + mp.short, 3400); sfx('magic'); return 0.8;
     }
     case 'gain': case 'overflow': case 'spend': handDirty = true; if (e.t === 'gain') sfx('card'); return 0;
@@ -325,7 +325,8 @@ function handleEvent(e) {
     case 'kingReturn': handDirty = true; sfx('win'); toast('[[crown]] 왕의 귀환! 패가 가득 차고 새 전설 카드를 받았습니다', 3200); return 0.5;
     case 'rule': if (e.turtle) toast('[[turtle]] 이제 한쪽은 4목으로도 승리합니다', 2600); else toast('[[eye]] 이제 6목이 되어야 승리합니다', 2600); return 0.2;
     case 'slothDone': return 0;
-    case 'legendPicked': case 'start': case 'ability': handDirty = true; return 0;
+    case 'start': handDirty = true; revealInfo(); return 0;
+    case 'legendPicked': case 'ability': handDirty = true; return 0;
     case 'turn': onTurnChanged(); tutOnTurn(); return 0.15;
     case 'draft': if (botColor && e.p === botColor) return 0.3; openDraftUI(e.picks, e.kind, e.refresh, e.p); return 0.3;
     case 'alkTurn': startAlkUI(); return 0;

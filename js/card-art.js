@@ -16,10 +16,10 @@ dimMesh.position.z = 0.5; dimMesh.visible = false; handGroup.add(dimMesh);
 function wrapText(g, text, maxW) {
   var out = [];
   text.split('\n').forEach(function (line) {
-    var cur = '';
-    for (var i = 0; i < line.length; i++) {
-      var t = cur + line[i];
-      if (g.measureText(t).width > maxW && cur) { out.push(cur); cur = line[i]; } else cur = t;
+    var cur = '', parts = /[가-힣]/.test(line) ? line.split('') : line.split(/(?= )/);   // 한글은 글자 단위, 영어는 단어 단위
+    for (var i = 0; i < parts.length; i++) {
+      var t = cur + parts[i];
+      if (g.measureText(t).width > maxW && cur) { out.push(cur); cur = parts[i].replace(/^ /, ''); } else cur = t;
     }
     out.push(cur);
   });
@@ -362,7 +362,7 @@ function drawIllustration(g, img) {
 
 function cardTexture(id) {
   if (texCache[id]) return texCache[id];
-  var c = CARDS[id], W = 384, H = 576;
+  var c = CARDS[id], T = cardText(id), W = 384, H = 576;
   var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   var g = cv.getContext('2d');
   g.clearRect(0, 0, W, H);
@@ -409,7 +409,8 @@ function cardTexture(id) {
   // 상단 룬 + 이름
   withSeed(id + ':rune', function () { var keep = INK; INK = CAT_TINT[c.legend ? '전설' : c.cat] || keep; runeGlyph(g, W / 2, 70, 20); INK = keep; });   // 룬은 카드마다 고정, 분류별로 잉크 색이 살짝 다름
   g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = INK;
-  g.font = '40px ' + TEXT_FONT; g.globalAlpha = 0.93; g.fillText(c.name, W / 2, 124); g.globalAlpha = 1;
+  var nsz = 40; g.font = nsz + 'px ' + TEXT_FONT; while (nsz > 22 && g.measureText(T.name).width > W - 84) { nsz -= 2; g.font = nsz + 'px ' + TEXT_FONT; }
+  g.globalAlpha = 0.93; g.fillText(T.name, W / 2, 124); g.globalAlpha = 1;
   inkPath(g, [[W / 2 - 92, 150], [W / 2 + 92, 150]], 2.2, { jit: 1 });
 
   // 그림 영역
@@ -420,9 +421,9 @@ function cardTexture(id) {
 
   // 설명: 칸(가로 284 · 세로 100)에 맞게 글자 크기를 줄이고, 한 글자만 남는 줄은 만들지 않음
   g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle';
-  var size = 25, lines = [], nExplicit = c.desc.split('\n').length;
+  var size = 25, lines = [], nExplicit = T.desc.split('\n').length;
   [25, 23, 21, 19, 17, 15].some(function (sz) {           // 줄바꿈 없이 의도한 줄 그대로 들어가는 가장 큰 글자 크기
-    size = sz; g.font = sz + 'px ' + TEXT_FONT; lines = wrapText(g, c.desc, W - 100);
+    size = sz; g.font = sz + 'px ' + TEXT_FONT; lines = wrapText(g, T.desc, W - 100);
     return lines.length === nExplicit && lines.length * sz * 1.3 <= 100;
   });
   var lh = size * 1.3, y0 = 438 - (lines.length - 1) * lh / 2;
@@ -433,8 +434,9 @@ function cardTexture(id) {
   // 하단: 분류 + 턴 종료 표시 (테두리 선보다 위에 둠)
   inkPath(g, [[56, 500], [W - 56, 500]], 2, { jit: 1 });
   g.font = '21px ' + TEXT_FONT; g.fillStyle = INK;
-  g.textAlign = 'left'; g.fillText(c.cat, 60, 521);
-  g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(c.legend ? (c.react ? '상대 카드에 대응' : id === 'allin' ? '턴마다 1번' : '판마다 1번') : (c.endsTurn ? '턴 종료' : '턴 유지'), W - 60, 521); g.globalAlpha = 1;
+  var fsz = 21; while (fsz > 14 && g.measureText(T.cat).width + g.measureText(T.foot).width + 24 > W - 120) { fsz--; g.font = fsz + 'px ' + TEXT_FONT; }   // 분류와 아래 문구가 겹치지 않게
+  g.textAlign = 'left'; g.fillText(T.cat, 60, 521);
+  g.textAlign = 'right'; g.globalAlpha = 0.85; g.fillText(T.foot, W - 60, 521); g.globalAlpha = 1;
   if (CARD_PAPER_STYLE === 'wanted') wantedInk(g, W, H);
   g.restore();
   // 가장자리 잉크 윤곽
@@ -558,7 +560,7 @@ function withSeed(key, fn) {
   try { fn(); } finally { Math.random = keep; }
 }
 // 분류별 룬 잉크 색 (검정에 가까운 색에 분류 색을 섞음)
-var CAT_TINT = { '공격': '#4a150e', '방해': '#3c1d42', '희귀': '#4e3a08', '무작위': '#1b3144', '규칙': '#2a2a2a', '지형': '#1f3a16', '보급': '#4a2c0c', '수비': '#14284a', '전설': '#4a3406' };
+var CAT_TINT = { '날씨': '#1b3144', '시작 능력': '#1f3a16', '공격': '#4a150e', '방해': '#3c1d42', '희귀': '#4e3a08', '무작위': '#1b3144', '규칙': '#2a2a2a', '지형': '#1f3a16', '보급': '#4a2c0c', '수비': '#14284a', '전설': '#4a3406' };
 function accSpots(g, n, rgb, a0, a1, r0, r1, box) {
   for (var i = 0; i < n; i++) { g.fillStyle = 'rgba(' + rgb + ',' + rnd(a0, a1) + ')'; g.beginPath(); g.arc(rnd(box[0], box[2]), rnd(box[1], box[3]), rnd(r0, r1), 0, 7); g.fill(); }
 }
@@ -622,3 +624,93 @@ function cardBackTexture() {
   g.beginPath(); edge.forEach(function (q, i) { if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.strokeStyle = 'rgba(20,12,2,0.85)'; g.lineWidth = 2.5; g.stroke();
   return (texCache.__back = toTex(cv));
 }
+
+/* ---------- 날씨(맵) · 시작 능력 카드 그림 (카드와 같은 잉크 손그림) ---------- */
+(function () {
+  function arc(cx, cy, r, a0, a1, n, sq) { var p = []; for (var i = 0; i <= n; i++) { var a = a0 + (a1 - a0) * i / n; p.push([cx + Math.cos(a) * r * (sq || 1), cy + Math.sin(a) * r]); } return p; }
+  function sun(g, cx, cy, r, rays) {
+    inkPath(g, circlePts(cx, cy, r, 24), 3.2, { closed: true });
+    for (var i = 0; i < rays; i++) { var a = i / rays * Math.PI * 2; inkPath(g, [[cx + Math.cos(a) * (r + 10), cy + Math.sin(a) * (r + 10)], [cx + Math.cos(a) * (r + 28), cy + Math.sin(a) * (r + 28)]], 2.8); }
+  }
+  function cloud(g, cx, cy, k) {
+    var p = [].concat(arc(cx - 52 * k, cy, 26 * k, Math.PI * 0.5, Math.PI * 1.5, 8), arc(cx - 18 * k, cy - 26 * k, 34 * k, Math.PI * 1.05, Math.PI * 1.95, 10),
+      arc(cx + 30 * k, cy - 14 * k, 30 * k, Math.PI * 1.25, Math.PI * 2.1, 8), arc(cx + 56 * k, cy + 6 * k, 20 * k, Math.PI * 1.5, Math.PI * 2.5, 8));
+    p.push([cx - 52 * k, cy + 26 * k]); inkPath(g, p, 3.2, { closed: true });
+  }
+  function flake(g, cx, cy, r, w) {
+    for (var i = 0; i < 3; i++) {
+      var a = i * Math.PI / 3, dx = Math.cos(a) * r, dy = Math.sin(a) * r;
+      inkPath(g, [[cx - dx, cy - dy], [cx + dx, cy + dy]], w);
+      [-1, 1].forEach(function (s) { var bx = cx + dx * 0.6 * s, by = cy + dy * 0.6 * s, b = r * 0.28;
+        inkPath(g, [[bx + Math.cos(a + 2.4) * b * s, by + Math.sin(a + 2.4) * b * s], [bx, by], [bx + Math.cos(a - 2.4) * b * s, by + Math.sin(a - 2.4) * b * s]], w * 0.8); });
+    }
+  }
+  var A = {
+    map_classic: function (g, cx, cy) {           // 평원: 완만한 언덕과 풀, 작은 해
+      inkPath(g, [[cx - 130, cy + 50], [cx - 70, cy + 6], [cx - 10, cy + 40], [cx + 50, cy - 4], [cx + 130, cy + 44]], 3.4);
+      inkPath(g, [[cx - 130, cy + 82], [cx - 40, cy + 58], [cx + 40, cy + 74], [cx + 130, cy + 60]], 2.6);
+      [[-88, 70], [-30, 80], [26, 66], [84, 78]].forEach(function (d) { inkPath(g, [[cx + d[0] - 8, cy + d[1]], [cx + d[0] - 4, cy + d[1] - 14]], 2); inkPath(g, [[cx + d[0], cy + d[1]], [cx + d[0] + 2, cy + d[1] - 18]], 2); inkPath(g, [[cx + d[0] + 8, cy + d[1]], [cx + d[0] + 10, cy + d[1] - 12]], 2); });
+      sun(g, cx + 70, cy - 58, 20, 10);
+    },
+    map_summer: function (g, cx, cy) {            // 여름: 이글거리는 해 + 아지랑이
+      sun(g, cx, cy - 18, 42, 14); inkPath(g, circlePts(cx, cy - 18, 24, 16), 2, { closed: true });
+      for (var k = 0; k < 3; k++) { var y = cy + 62 + k * 16, p = []; for (var x = -110; x <= 110; x += 14) p.push([cx + x, y + Math.sin(x / 14) * 6]); inkPath(g, p, 2.2); }
+    },
+    map_winter: function (g, cx, cy) {            // 겨울: 큰 눈송이 + 작은 눈송이
+      flake(g, cx, cy, 70, 3.4); flake(g, cx - 96, cy - 56, 20, 2); flake(g, cx + 98, cy + 52, 24, 2); flake(g, cx + 92, cy - 66, 14, 1.8);
+      inkPath(g, circlePts(cx, cy, 10, 10), 2.4, { closed: true, fill: true });
+    },
+    map_space: function (g, cx, cy) {             // 우주: 초승달 + 고리 행성 + 별
+      inkPath(g, [].concat(arc(cx - 40, cy, 66, -1.9, 1.9, 18), arc(cx - 16, cy, 52, 1.75, -1.75, 18)), 3.4, { closed: true });
+      inkPath(g, circlePts(cx + 74, cy + 44, 24, 18), 3, { closed: true });
+      inkPath(g, arc(cx + 74, cy + 44, 44, 0.15, Math.PI * 2 + 0.15, 26, 1).map(function (q) { return [q[0], cy + 44 + (q[1] - cy - 44) * 0.3]; }), 2.4);
+      sparkle(g, cx + 60, cy - 60, 14); sparkle(g, cx + 108, cy - 20, 8); sparkle(g, cx - 104, cy + 74, 9);
+    },
+    map_desert: function (g, cx, cy) {            // 사막: 모래 언덕 + 선인장 + 바람
+      inkPath(g, [[cx - 130, cy + 70], [cx - 60, cy + 36], [cx + 10, cy + 66], [cx + 80, cy + 30], [cx + 130, cy + 50]], 3.2);
+      inkPath(g, [[cx - 20, cy + 52], [cx - 20, cy - 60]], 4.4); inkPath(g, [[cx - 20, cy - 4], [cx - 48, cy - 4], [cx - 48, cy - 34]], 3.6); inkPath(g, [[cx - 20, cy + 14], [cx + 8, cy + 14], [cx + 8, cy - 22]], 3.6);
+      [[-110, -50], [40, -70]].forEach(function (d) { var p = []; for (var x = 0; x <= 70; x += 10) p.push([cx + d[0] + x, cy + d[1] + Math.sin(x / 11) * 5]); inkPath(g, p, 2.2); });
+      sun(g, cx + 90, cy - 40, 16, 8);
+    },
+    map_rain: function (g, cx, cy) {              // 장마: 먹구름 + 빗줄기 + 물웅덩이
+      cloud(g, cx, cy - 30, 1.15);
+      for (var i = 0; i < 9; i++) { var x = cx - 80 + i * 20, y = cy + 6 + (i % 3) * 10; inkPath(g, [[x, y], [x - 7, y + 22]], 2.4); }
+      inkPath(g, circlePts(cx, cy + 76, 14, 20).map(function (q) { return [cx + (q[0] - cx) * 5, q[1]]; }), 2.2, { closed: true });
+    },
+    ab_umbrella: function (g, cx, cy) {           // 자연재해 면역: 우산 아래는 비가 닿지 않음
+      inkPath(g, [].concat(arc(cx, cy - 10, 96, Math.PI, Math.PI * 2, 20)), 3.4);
+      for (var i = 0; i <= 4; i++) { var x0 = cx - 96 + i * 48; inkPath(g, arc(x0 + 24, cy - 10, 24, Math.PI, 0, 8).reverse(), 2.4); }
+      inkPath(g, [[cx, cy - 10], [cx, cy + 76], [cx + 18, cy + 92], [cx + 34, cy + 76]], 3.6);
+      for (var k = 0; k < 6; k++) { var x = cx - 110 + k * 44, y = cy - 92 + (k % 2) * 14; inkPath(g, [[x, y], [x - 6, y + 18]], 2.2); }
+    },
+    ab_pouch: function (g, cx, cy) {              // 넉넉한 주머니: 불룩한 가죽 주머니 + 삐져나온 카드
+      inkPath(g, [[cx - 30, cy - 62], [cx - 42, cy - 46], [cx - 86, cy - 6], [cx - 92, cy + 46], [cx - 58, cy + 80], [cx + 58, cy + 80], [cx + 92, cy + 46], [cx + 86, cy - 6], [cx + 42, cy - 46], [cx + 30, cy - 62]], 3.4, { closed: false });
+      inkPath(g, [[cx - 46, cy - 52], [cx + 46, cy - 52]], 3); inkPath(g, [[cx + 40, cy - 52], [cx + 62, cy - 30], [cx + 54, cy - 14]], 2.4);
+      [[-30, -1], [0, 0], [30, 1]].forEach(function (d) { g.save(); g.translate(cx + d[0], cy - 66); g.rotate(d[1] * 0.25); inkPath(g, [[-16, -26], [16, -26], [16, 22], [-16, 22]], 2.4, { closed: true }); g.restore(); });
+    },
+    ab_clover: function (g, cx, cy) {             // 행운: 하트 모양 잎 네 장 + 줄기
+      var oy = cy - 14;
+      [0, 1, 2, 3].forEach(function (k) {
+        var a = k * Math.PI / 2 - Math.PI / 2, p = [];
+        for (var i = 0; i <= 32; i++) { var t = i / 32 * Math.PI * 2, hx = 16 * Math.pow(Math.sin(t), 3), hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+          var u = -hy * 2.3 + 34, v = hx * 2.3;                     // 하트의 뾰족한 끝이 가운데를 향하게
+          p.push([cx + Math.cos(a) * u - Math.sin(a) * v, oy + Math.sin(a) * u + Math.cos(a) * v]); }
+        inkPath(g, p, 3, { closed: true });
+        inkPath(g, [[cx + Math.cos(a) * 6, oy + Math.sin(a) * 6], [cx + Math.cos(a) * 60, oy + Math.sin(a) * 60]], 1.6);
+      });
+      inkPath(g, [[cx, oy], [cx + 10, oy + 50], [cx + 30, oy + 96]], 3.4);
+    },
+    ab_sturdy: function (g, cx, cy) {             // 단단한 시작: 성벽에 둘러싸인 돌 세 개
+      inkPath(g, [[cx - 100, cy + 84], [cx - 100, cy - 20], [cx - 76, cy - 20], [cx - 76, cy - 40], [cx - 56, cy - 40], [cx - 56, cy - 20], [cx - 30, cy - 20], [cx - 30, cy - 40], [cx - 10, cy - 40], [cx - 10, cy - 20], [cx + 10, cy - 20], [cx + 10, cy - 40], [cx + 30, cy - 40], [cx + 30, cy - 20], [cx + 56, cy - 20], [cx + 56, cy - 40], [cx + 76, cy - 40], [cx + 76, cy - 20], [cx + 100, cy - 20], [cx + 100, cy + 84]], 3.2);
+      inkPath(g, [[cx - 110, cy + 84], [cx + 110, cy + 84]], 3.6);
+      [[-46, 40], [0, 26], [46, 40]].forEach(function (d) { inkPath(g, circlePts(cx + d[0], cy + d[1], 17, 14), 3, { closed: true, fill: true }); });
+      inkPath(g, [[cx, cy - 40], [cx, cy - 92], [cx + 34, cy - 82], [cx, cy - 72]], 2.6);
+    },
+    ab_retry: function (g, cx, cy) {              // 재도전: 카드 주위를 도는 두 화살표
+      inkPath(g, [[cx - 26, cy - 40], [cx + 26, cy - 40], [cx + 26, cy + 34], [cx - 26, cy + 34]], 3, { closed: true });
+      inkPath(g, arc(cx, cy - 3, 82, -2.6, -0.3, 14), 3.4); inkPath(g, [[cx + 64, cy - 40], [cx + 78, cy - 26], [cx + 86, cy - 50]], 3.2);
+      inkPath(g, arc(cx, cy - 3, 82, 0.55, 2.85, 14), 3.4); inkPath(g, [[cx - 64, cy + 34], [cx - 78, cy + 20], [cx - 86, cy + 44]], 3.2);
+    }
+  };
+  Object.keys(A).forEach(function (k) { ART[k] = A[k]; });
+})();
