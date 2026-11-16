@@ -136,8 +136,47 @@ function addWallMesh(r, c, animate) {
   var q = cellAt(r, c), top = h / 2;
   if (animate) { w.position.set(q.x, -h / 2, q.z); tween(0.5, function (t) { w.position.y = -h / 2 + h * t; }, function () { w.position.y = top; }); }
   else w.position.set(q.x, top, q.z);
+  if (style === 'zone') w.visible = false;                            // 자기장 칸: 블록 대신 아래의 이어진 가스(zoneGas)로 보여 줌
   scene.add(w); meshes[r][c] = w; return w;
 }
+
+/* ---------------- 자기장 가스: 닫힌 바깥 줄을 덮는 이어진 보라색 가스 (여러 겹의 일렁이는 막) ---------------- */
+var zoneGas = (function () {
+  var vert = 'varying vec2 vP; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vP = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }';
+  var frag = [
+    'uniform float uT, uIn, uLayer, uA; varying vec2 vP;',
+    'float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
+    'float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
+    '  return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }',
+    'float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int k = 0; k < 4; k++) { v += a * n(p); p = p * 2.03 + 7.1; a *= 0.5; } return v; }',
+    'void main(){',
+    '  vec2 p = vP * 0.55 + vec2(uLayer * 3.1, -uLayer * 1.7);',
+    '  vec2 q = vec2(fbm(p + vec2(uT * 0.13, uT * 0.07)), fbm(p + vec2(-uT * 0.09, uT * 0.11) + 4.3));',
+    '  float g = fbm(p + 2.2 * q + uT * 0.05);',
+    '  float d = max(abs(vP.x), abs(vP.y));',                         // 판 가운데에서 바깥으로 (정사각형 거리)
+    '  float edge = smoothstep(uIn - 0.45, uIn + 0.35, d + (g - 0.5) * 0.9);',
+    '  float ov = 1.0 - smoothstep(8.6, 9.4, d);',                  // 판 바깥 조금까지만
+    '  float a = edge * ov * (0.35 + 0.65 * g) * uA;',
+    '  vec3 col = mix(vec3(0.16, 0.05, 0.32), vec3(0.62, 0.32, 1.0), g * g * 1.6);',
+    '  gl_FragColor = vec4(col, a);',
+    '}'].join('\n');
+  var layers = [], grp = new THREE.Group(); scene.add(grp);
+  [0.03, 0.28, 0.55, 0.85].forEach(function (y, i) {
+    var mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      uniforms: { uT: { value: 0 }, uIn: { value: 99 }, uLayer: { value: i }, uA: { value: [0.95, 0.6, 0.42, 0.28][i] } } });
+    var m = new THREE.Mesh(new THREE.PlaneGeometry(19, 19), mat); m.rotation.x = -Math.PI / 2; m.position.y = y; m.renderOrder = 2 + i;
+    grp.add(m); layers.push(mat);
+  });
+  var cur = 99;
+  return { step: function (dt) {
+    var goal = (G && G.zone > 0) ? HALF + 0.5 - G.zone : 99;            // 열린 칸의 바깥 경계 (가운데에서의 거리)
+    cur = cur > 50 ? (goal > 50 ? 99 : HALF + 1.6) : cur;               // 처음 생길 때는 판 바깥에서 밀려 들어옴
+    cur += (goal - cur) * (1 - Math.pow(0.15, dt));
+    if (goal > 50 && cur > HALF + 1.5) cur = 99;
+    grp.visible = cur < 50;
+    layers.forEach(function (m) { m.uniforms.uT.value = time; m.uniforms.uIn.value = cur; });
+  } };
+})();
 // 거대한 돌은 3×3 칸이 하나의 모델을 함께 가리키므로, 한 칸만 비울 때는 장면에서 지우지 않음
 function dropMesh(r, c) {
   var m = meshes[r][c];
