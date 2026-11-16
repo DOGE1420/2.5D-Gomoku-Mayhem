@@ -77,6 +77,7 @@ var hoverCell = null, hoverTable = false, hitPoint = new THREE.Vector3(), camSha
 var topT = 0, topGoal = 0, topH = 30, topDz = 2, parX = 0, parY = 0;
 function setTopView(on, quiet) {
   topGoal = on ? 1 : 0;
+  if (on && typeof look !== 'undefined') lookReset();           // 판을 내려다볼 때는 둘러보던 고개를 정면으로
 }
 var mouseN = { x: 0, y: 0 };
 
@@ -127,7 +128,29 @@ window.addEventListener('pointerup', function (e) {
   }
   aimBand.visible = aimDir.visible = false;
 });
+/* ---------------- 둘러보기: 앉은 시점에서 화면을 누른 채 끌면 고개를 돌려 방을 둘러봄 (손가락으로 밀어도 됨) ----------------
+ * 살짝 누르기(끌지 않음)는 지금처럼 카드·판 누르기로 동작. 더블클릭하거나 판을 누르면(직부감) 정면으로 돌아옴. */
+var look = { yaw: 0, pitch: 0, ty: 0, tp: 0, down: null, dragged: false };
+function lookReset() { look.ty = 0; look.tp = 0; }
+dom.addEventListener('pointerdown', function (e) {
+  look.dragged = false;
+  if (curScreen !== 'game' || topGoal > 0.5 || (G && G.alk) || draftMeshes.length || inspectIdx >= 0 || inspectLegend) { look.down = null; return; }
+  look.down = { x: e.clientX, y: e.clientY, id: e.pointerId, ty: look.ty, tp: look.tp };
+});
+window.addEventListener('pointermove', function (e) {
+  if (!look.down || e.pointerId !== look.down.id) return;
+  var dx = e.clientX - look.down.x, dy = e.clientY - look.down.y;
+  if (!look.dragged && Math.hypot(dx, dy) < 8) return;                     // 이만큼은 움직여야 '끌기'로 봄
+  look.dragged = true;
+  var s = 2.4 / Math.max(window.innerWidth, 360);                           // 화면 폭만큼 끌면 약 140도
+  look.ty = Math.max(-2.5, Math.min(2.5, look.down.ty + dx * s));
+  look.tp = Math.max(-0.5, Math.min(0.65, look.down.tp + dy * s * 0.8));
+});
+window.addEventListener('pointerup', function () { look.down = null; });
+window.addEventListener('pointercancel', function () { look.down = null; });
+dom.addEventListener('dblclick', function () { if (curScreen === 'game') lookReset(); });
 dom.addEventListener('click', function (e) {
+  if (look.dragged) { look.dragged = false; return; }                     // 둘러보려고 끈 것은 누르기로 치지 않음
   if (curScreen !== 'game') return;
   ac(); if (actx && actx.state === 'suspended') actx.resume();
   if (G.alk) return;                                                       // 알까기 중에는 클릭 대신 당기기

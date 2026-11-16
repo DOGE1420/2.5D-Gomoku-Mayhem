@@ -36,6 +36,7 @@ function resize() {
 window.addEventListener('resize', resize);
 
 var clock = new THREE.Clock(), time = 0;
+var Y_UP = new THREE.Vector3(0, 1, 0), lookDir = new THREE.Vector3(), lookRight = new THREE.Vector3();
 function frame() {
   var dt = Math.min(0.05, clock.getDelta()); time += dt;
   stepAnims(dt); stepRoom(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepBurns(dt);
@@ -59,7 +60,17 @@ function frame() {
     (CAM_BASE.z * camDist) * k + topDz * topT);
   camera.up.set(0, k, -topT).normalize();
   if (camShake > 0) { camera.position.x += (Math.random() - 0.5) * camShake * 0.35; camera.position.y += (Math.random() - 0.5) * camShake * 0.25; camShake = Math.max(0, camShake - dt * 2.2); }
-  camera.lookAt(CAM_LOOK.x * k, CAM_LOOK.y * k, CAM_LOOK.z * k + topDz * topT);
+  var lx = CAM_LOOK.x * k, ly = CAM_LOOK.y * k, lz = CAM_LOOK.z * k + topDz * topT;
+  // 둘러보기: 끌어서 돌린 만큼 바라보는 방향을 좌우(yaw)·위아래(pitch)로 돌림 (직부감으로 갈수록 효과가 사라짐)
+  var ease = 1 - Math.pow(0.0008, dt);
+  look.yaw += (look.ty - look.yaw) * ease; look.pitch += (look.tp - look.pitch) * ease;
+  if (k > 0.001 && (Math.abs(look.yaw) > 1e-4 || Math.abs(look.pitch) > 1e-4)) {
+    lookDir.set(lx - camera.position.x, ly - camera.position.y, lz - camera.position.z).applyAxisAngle(Y_UP, look.yaw * k);
+    lookRight.crossVectors(lookDir, Y_UP).normalize();
+    lookDir.applyAxisAngle(lookRight, look.pitch * k);
+    lx = camera.position.x + lookDir.x; ly = camera.position.y + lookDir.y; lz = camera.position.z + lookDir.z;
+  }
+  camera.lookAt(lx, ly, lz);
   if (scene.fog) { scene.fog.near = fogBase.near + 30 * topT; scene.fog.far = fogBase.far + 70 * topT; }
 
   // 고스트 / 링 표시
