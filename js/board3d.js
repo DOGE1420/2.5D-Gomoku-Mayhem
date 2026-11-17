@@ -47,11 +47,11 @@ function crownSprite() {
   sp.scale.set(0.8, 0.8, 1); return sp;
 }
 function syncMarkersExtra() {
-  if (G.zoneWarn && G.zone < Rules.ZONE.MAX) {                           // 자기장 예고: 다음에 닫힐 바깥 줄을 붉게
+  if (G.zoneWarn && G.zone < Rules.ZONE.MAX) {                           // 자기장 예고: 다음 안전 구역을 흰 선으로
     var z = G.zone, lo = z - HALF - 0.5, hi = (N - 1 - z) - HALF + 0.5, lo2 = lo + 1, hi2 = hi - 1;
-    [[lo, hi], [lo2, hi2]].forEach(function (q) {
-      var pts = [new THREE.Vector3(q[0], 0.07, q[0]), new THREE.Vector3(q[1], 0.07, q[0]), new THREE.Vector3(q[1], 0.07, q[1]), new THREE.Vector3(q[0], 0.07, q[1])];
-      markerGroup.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xff4a3a })));
+    [[lo2, hi2, 0.07], [lo2 - 0.03, hi2 + 0.03, 0.071], [lo2 + 0.03, hi2 - 0.03, 0.071]].forEach(function (q) {      // 다음 안전 구역: 흰 선 (배그의 흰 원처럼)
+      var pts = [new THREE.Vector3(q[0], q[2], q[0]), new THREE.Vector3(q[1], q[2], q[0]), new THREE.Vector3(q[1], q[2], q[1]), new THREE.Vector3(q[0], q[2], q[1])];
+      markerGroup.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 })));
     });
   }
   if (G.map === 'space') {                                               // 우주: 이어진 판의 가장자리를 빛으로 표시 (위↔아래 보라, 좌↔우 청록)
@@ -139,56 +139,67 @@ function addWallMesh(r, c, animate) {
   scene.add(w); meshes[r][c] = w; return w;
 }
 
-/* ---------------- 자기장 가스: 닫힌 바깥 줄을 덮는 이어진 보라색 가스 (여러 겹의 일렁이는 막) ---------------- */
+/* ---------------- 자기장 (배그 자기장처럼): 안전 구역 경계에 선 파란 에너지 벽 + 바깥은 파랗게 물듦 ---------------- */
 var zoneGas = (function () {
-  // uMode 0: 판 위 가스 막 · 1: 판 밖 책상 위로 흘러 퍼지는 가스 · 2: 판 옆면을 타고 흘러내리는 가스 막
-  var vert = 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }';
-  var frag = [
-    'uniform float uT, uIn, uLayer, uA, uMode; varying vec3 vW;',
+  var noiseFn = [
     'float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }',
     'float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);',
-    '  return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }',
-    'float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int k = 0; k < 4; k++) { v += a * n(p); p = p * 2.03 + 7.1; a *= 0.5; } return v; }',
-    'float gas(vec2 p){ vec2 q = vec2(fbm(p + vec2(uT * 0.13, uT * 0.07)), fbm(p + vec2(-uT * 0.09, uT * 0.11) + 4.3)); return fbm(p + 2.2 * q + uT * 0.05); }',
+    '  return mix(mix(h(i), h(i + vec2(1.0, 0.0)), f.x), mix(h(i + vec2(0.0, 1.0)), h(i + vec2(1.0, 1.0)), f.x), f.y); }'].join('\n');
+  // 벽: 아래가 진하고 위로 갈수록 옅어짐 · 세로 줄무늬가 흐르고 아지랑이처럼 일렁임 · 바닥에 밝은 선
+  var wallVert = 'varying vec2 vUv; varying vec3 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }';
+  var wallFrag = [
+    'uniform float uT, uA; varying vec2 vUv; varying vec3 vW;', noiseFn,
     'void main(){',
-    '  vec2 xz = vW.xz; float d = max(abs(xz.x), abs(xz.y)), g, a;',     // d: 판 가운데에서의 정사각형 거리
-    '  if (uMode < 0.5) {',
-    '    g = gas(xz * 0.55 + vec2(uLayer * 3.1, -uLayer * 1.7));',
-    '    float edge = smoothstep(uIn - 0.45, uIn + 0.35, d + (g - 0.5) * 0.9);',
-    '    a = edge * (1.0 - smoothstep(8.3, 9.1 - uLayer * 0.2, d + (g - 0.5) * 0.6)) * (0.35 + 0.65 * g) * uA;',
-    '  } else if (uMode < 1.5) {',
-    '    vec2 dir = xz / max(d, 0.001);',                                  // 바깥쪽으로 흘러나가게
-    '    g = gas(xz * 0.45 - dir * uT * 0.35);',
-    '    a = smoothstep(8.0, 8.45, d) * (1.0 - smoothstep(8.9, 12.0, d + (g - 0.5) * 3.2)) * (0.3 + 0.7 * g) * uA;',
-    '  } else {',
-    '    float s = abs(xz.x) > abs(xz.y) ? xz.y : xz.x;',                // 옆면을 따라가는 좌표 + 아래로 흐름
-    '    g = gas(vec2(s * 0.6, vW.y * 1.6 + uT * 0.5));',
-    '    a = (1.0 - smoothstep(0.1, 0.75, vW.y + (g - 0.5) * 0.5)) * smoothstep(-0.68, -0.5, vW.y) * (0.35 + 0.65 * g) * uA;',
-    '  }',
-    '  vec3 col = mix(vec3(0.16, 0.05, 0.32), vec3(0.62, 0.32, 1.0), g * g * 1.6);',
-    '  gl_FragColor = vec4(col, a);',
+    '  float s = vW.x + vW.z, y = vUv.y;',
+    '  float flow = n(vec2(s * 1.4, y * 3.0 - uT * 0.8)) * 0.6 + n(vec2(s * 3.1 + 5.0, y * 6.0 - uT * 1.6)) * 0.4;',
+    '  float stripe = 0.5 + 0.5 * sin(s * 9.0 + uT * 1.2 + flow * 3.0);',
+    '  float fade = pow(1.0 - y, 1.6);',
+    '  float a = (0.18 + 0.55 * fade) * (0.6 + 0.4 * flow) * (0.75 + 0.25 * stripe) + smoothstep(0.06, 0.0, y) * 0.6;',
+    '  vec3 col = mix(vec3(0.10, 0.32, 0.95), vec3(0.55, 0.80, 1.0), flow * 0.6 + smoothstep(0.08, 0.0, y));',
+    '  gl_FragColor = vec4(col, a * uA);',
     '}'].join('\n');
-  var layers = [], grp = new THREE.Group(); scene.add(grp);
-  function mk(geo, mode, layer, alpha, order) {
-    var mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { uT: { value: 0 }, uIn: { value: 99 }, uLayer: { value: layer }, uA: { value: alpha }, uMode: { value: mode } } });
-    var m = new THREE.Mesh(geo, mat); m.renderOrder = order; grp.add(m); layers.push(mat); return m;
+  // 바닥: 벽 바깥을 파랗게 (판 위 닫힌 줄 + 판 밖 책상까지, 멀수록 옅게) · 잔물결처럼 흐름
+  var floorVert = 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }';
+  var floorFrag = [
+    'uniform float uT, uIn, uA; varying vec3 vW;', noiseFn,
+    'void main(){',
+    '  vec2 xz = vW.xz; float d = max(abs(xz.x), abs(xz.y));',
+    '  float g = n(xz * 0.9 + vec2(uT * 0.25, -uT * 0.18)) * 0.6 + n(xz * 2.3 - vec2(uT * 0.4, uT * 0.3)) * 0.4;',
+    '  float inside = smoothstep(uIn - 0.02, uIn + 0.12, d);',
+    '  float far = 1.0 - smoothstep(9.0, 14.0, d);',
+    '  float a = inside * far * (0.38 + 0.27 * g) * uA;',
+    '  gl_FragColor = vec4(mix(vec3(0.08, 0.25, 0.85), vec3(0.35, 0.65, 1.0), g), a);',
+    '}'].join('\n');
+  var grp = new THREE.Group(); grp.visible = false; scene.add(grp);
+  var mats = [], WALL_H = 3.2;
+  function mat(v, f, extra) {
+    var u = { uT: { value: 0 }, uA: { value: 1 }, uIn: { value: 99 } };
+    var m = new THREE.ShaderMaterial(Object.assign({ vertexShader: v, fragmentShader: f, uniforms: u, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }, extra || {}));
+    mats.push(m); return m;
   }
-  [0.03, 0.28, 0.55, 0.85].forEach(function (y, i) {
-    var m = mk(new THREE.PlaneGeometry(19, 19), 0, i, [0.95, 0.6, 0.42, 0.28][i], 3 + i); m.rotation.x = -Math.PI / 2; m.position.y = y;
+  var floors = [[0.012, 1.0], [-0.585, 0.8]].map(function (q, i) {            // 판 위 · 책상 위 (판 받침 아래 높이)
+    var f = new THREE.Mesh(new THREE.PlaneGeometry(i ? 30 : 16.6, i ? 30 : 16.6), mat(floorVert, floorFrag)); f.rotation.x = -Math.PI / 2; f.position.y = q[0];
+    f.material.uniforms.uA.value = q[1]; f.renderOrder = 2; grp.add(f); return f;
   });
-  var sp = mk(new THREE.PlaneGeometry(26, 26), 1, 0, 0.85, 1); sp.rotation.x = -Math.PI / 2; sp.position.y = -0.57;   // 책상 위 (판 받침 아래 높이)
-  [[0, 8.32, 0], [0, -8.32, Math.PI], [8.32, 0, Math.PI / 2], [-8.32, 0, -Math.PI / 2]].forEach(function (q) {             // 판 받침 네 옆면
-    var c = mk(new THREE.PlaneGeometry(16.9, 1.5), 2, 0, 0.8, 2); c.position.set(q[0], 0.12, q[1]); c.rotation.y = q[2];
+  var wallMat = mat(wallVert, wallFrag), walls = [0, 1, 2, 3].map(function () {
+    var w = new THREE.Mesh(new THREE.PlaneGeometry(1, WALL_H), wallMat); w.renderOrder = 3; grp.add(w); return w;
   });
+  function placeWalls(r, bottom) {                                            // 한 변이 2r 인 정사각형 벽 (bottom: 벽 아래 끝 높이)
+    var hy = bottom + WALL_H / 2;
+    walls[0].position.set(0, hy, -r); walls[1].position.set(0, hy, r); walls[1].rotation.y = Math.PI;
+    walls[2].position.set(-r, hy, 0); walls[2].rotation.y = Math.PI / 2; walls[3].position.set(r, hy, 0); walls[3].rotation.y = -Math.PI / 2;
+    walls.forEach(function (w) { w.scale.x = 2 * r; });
+  }
   var cur = 99;
   return { step: function (dt) {
-    var goal = (G && G.zone > 0) ? HALF + 0.5 - G.zone : 99;            // 열린 칸의 바깥 경계 (가운데에서의 거리)
-    cur = cur > 50 ? (goal > 50 ? 99 : HALF + 1.6) : cur;               // 처음 생길 때는 판 바깥에서 밀려 들어옴
-    cur += (goal - cur) * (1 - Math.pow(0.15, dt));
-    if (goal > 50 && cur > HALF + 1.5) cur = 99;
+    var goal = (G && G.zone > 0) ? HALF + 0.5 - G.zone : 99;            // 안전 구역 경계 (가운데에서의 거리)
+    if (cur > 50) cur = goal > 50 ? 99 : 9.6;                             // 처음 생길 때는 판 바깥에서 밀려 들어옴
+    else cur += (goal - cur) * (1 - Math.pow(0.2, dt));
+    if (goal > 50) cur = 99;
     grp.visible = cur < 50;
-    layers.forEach(function (m) { m.uniforms.uT.value = time; m.uniforms.uIn.value = cur; });
+    if (!grp.visible) return;
+    placeWalls(cur, cur > 8.3 ? -0.6 : 0);
+    mats.forEach(function (m) { m.uniforms.uT.value = time; m.uniforms.uIn.value = cur; });
   } };
 })();
 // 거대한 돌은 3×3 칸이 하나의 모델을 함께 가리키므로, 한 칸만 비울 때는 장면에서 지우지 않음
