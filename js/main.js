@@ -36,7 +36,7 @@ function resize() {
 window.addEventListener('resize', resize);
 
 var clock = new THREE.Clock(), time = 0;
-var Y_UP = new THREE.Vector3(0, 1, 0), lookDir = new THREE.Vector3(), lookRight = new THREE.Vector3();
+var alkT = 0, alkCam = { x: 0, z: 0 }, Y_UP = new THREE.Vector3(0, 1, 0), lookDir = new THREE.Vector3(), lookRight = new THREE.Vector3();
 function frame() {
   var dt = Math.min(0.05, clock.getDelta()); time += dt;
   stepAnims(dt); stepRoom(dt); zoneGas.step(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepTotems(dt); stepBurns(dt);
@@ -69,6 +69,15 @@ function frame() {
     lookRight.crossVectors(lookDir, Y_UP).normalize();
     lookDir.applyAxisAngle(lookRight, look.pitch * k);
     lx = camera.position.x + lookDir.x; ly = camera.position.y + lookDir.y; lz = camera.position.z + lookDir.z;
+  }
+  // 알까기: 쏠 돌 뒤쪽 낮은 곳으로 카메라가 물러나 돌 너머를 바라봄 (끌어 당기면 앞으로 날아감)
+  alkT += (((G && G.alk && alkUI) ? 1 : 0) - alkT) * (1 - Math.pow(0.004, dt));
+  if (G && G.alk && G.alk.phase === 'aim') { var as = G.alk.stones[G.alk.newIndex]; if (as) { alkCam.x = as.x; alkCam.z = as.z; } }
+  if (alkT > 0.001) {
+    var ae = alkT * alkT * (3 - 2 * alkT), cx = alkCam.x * 0.85, cz = alkCam.z + 7;
+    camera.position.x += (cx - camera.position.x) * ae; camera.position.y += (14 - camera.position.y) * ae; camera.position.z += (cz - camera.position.z) * ae;
+    lx += (alkCam.x - lx) * ae; ly += (0 - ly) * ae; lz += (alkCam.z - 4 - lz) * ae;
+    camera.up.lerp(Y_UP, ae).normalize();
   }
   camera.lookAt(lx, ly, lz);
   if (scene.fog) { scene.fog.near = fogBase.near + 30 * topT; scene.fog.far = fogBase.far + 70 * topT; }

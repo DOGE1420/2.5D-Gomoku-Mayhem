@@ -119,7 +119,7 @@ function updateHover() {
 dom.addEventListener('pointermove', function (e) { if (e.pointerType === 'touch' && !(alkUI && alkUI.dragging)) return; setPointer(e); updateHover(); });
 // 알까기: 새 돌을 눌러 당겼다 놓으면 발사
 dom.addEventListener('pointerdown', function (e) {
-  if (curScreen !== 'game' || !G || !G.alk || (botColor && G.alk.order[G.alk.idx] === botColor) || G.alk.phase !== 'aim' || topT < 0.85 || busy > 0) return;
+  if (curScreen !== 'game' || !G || !G.alk || (botColor && G.alk.order[G.alk.idx] === botColor) || G.alk.phase !== 'aim' || (topT < 0.85 && alkT < 0.85) || busy > 0) return;
   setPointer(e); updateHover();
   if (!raycaster.ray.intersectPlane(groundPlane, hitPoint)) return;
   var s = G.alk.stones[G.alk.newIndex];
