@@ -215,7 +215,8 @@ function loadRoomModels() {
   ROOM_MODELS.forEach(function (spec) {
     var remote = /^https?:/.test(spec.file), file = spec.file;
     if (!remote && location.protocol === 'file:') file = RAW_BASE + spec.file;    // 파일을 더블클릭해 열면 GitHub 의 같은 파일을 읽음
-    loader.load(file, function (gltf) {
+    roomLoad.items[spec.file] = { l: 0, t: 0, done: false };
+    loader.load(file, function (gltf) { try { (function () {
       var obj = gltf.scene, holder = new THREE.Group();
       obj.traverse(function (m) {
         if (!m.isMesh) return;
@@ -250,8 +251,24 @@ function loadRoomModels() {
       roomGroup.add(holder);
       var made = spec.lights && !(roomModelActive && spec.hideWithRoom) ? addCandleLights(holder) : [];
       roomModelProps.push({ spec: spec, holder: holder, candles: made });
-    }, undefined, function () { /* 불러오기 실패(오프라인 등): 코드로 만든 방 그대로 */ });
+    })(); } finally { roomLoadDone(spec); } }, function (x) { roomLoadProgress(spec, x); },
+    function () { roomLoadDone(spec); });                          // 불러오기 실패(오프라인 등): 코드로 만든 방 그대로
   });
+  roomLoadRender();
+}
+/* 로딩 화면: 방 모델(오두막 · 책상)을 다 불러올 때까지 화면을 덮고 진행률을 보여 줌 — 다 되면 걷힘 */
+var roomLoad = { items: {}, done: false };
+function roomLoadProgress(spec, x) { var it = roomLoad.items[spec.file]; if (it) { it.l = x.loaded || 0; it.t = x.total || 0; roomLoadRender(); } }
+function roomLoadDone(spec) { var it = roomLoad.items[spec.file]; if (it) { it.done = true; if (it.t) it.l = it.t; } roomLoadRender(); }
+function roomLoadRender() {
+  var keys = Object.keys(roomLoad.items), l = 0, tt = 0, all = true;
+  keys.forEach(function (k) { var it = roomLoad.items[k]; l += it.l; tt += it.t; if (!it.done) all = false; });
+  roomLoad.done = all;
+  var el = document.getElementById('loading'); if (!el) return;
+  var pct = tt ? Math.min(100, Math.floor(l / tt * 100)) : 0, mb = function (b) { return (b / 1048576).toFixed(0); };
+  document.getElementById('loadBar').style.width = (all ? 100 : pct) + '%';
+  document.getElementById('loadText').textContent = all ? '' : (tt ? pct + '%  ·  ' + mb(l) + ' / ' + mb(tt) + ' MB' : mb(l) + ' MB');
+  if (all && !el.classList.contains('hide')) { el.classList.add('hide'); setTimeout(function () { el.style.display = 'none'; }, 700); }
 }
 loadRoomModels();
 

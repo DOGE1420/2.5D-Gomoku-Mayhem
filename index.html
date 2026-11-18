@@ -14,6 +14,11 @@
   canvas { display: block; outline: none; touch-action: none; -webkit-user-select: none; user-select: none; }
   #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 85% 80% at 50% 46%, rgba(0,0,0,0) 55%, rgba(0,0,0,.35) 85%, rgba(0,0,0,.6) 100%); }
   body:not(.in-game) #vignette { display: none; }
+  #loading { position: fixed; inset: 0; z-index: 200; background: #070403; color: #e8d9b5; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; transition: opacity .6s; }
+  #loading.hide { opacity: 0; pointer-events: none; }
+  #loading .lt { font-size: 34px; letter-spacing: 2px; } #loading .ls { font-size: 15px; opacity: .8; } #loadText { font-size: 13px; opacity: .6; min-height: 1em; }
+  #loading .lbar { width: min(360px, 70vw); height: 6px; background: #2a1d12; border: 1px solid #6b4f2e; border-radius: 3px; overflow: hidden; }
+  #loadBar { width: 0; height: 100%; background: linear-gradient(90deg, #b8742c, #f1c070); transition: width .3s; }
   #totemFlash { position: fixed; inset: 0; pointer-events: none; opacity: 0; z-index: 9; background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(255,120,40,.22), rgba(40,4,0,.15) 50%, rgba(10,0,0,.7) 100%); }
   #totemFlash.go { animation: totemFlash 1.4s ease-out; } @keyframes totemFlash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
   #hud { position: fixed; top: 12px; left: 0; right: 0; padding: 0 190px; box-sizing: border-box; text-align: center; color: #e8d9b5; pointer-events: none; text-shadow: 0 2px 6px #000; }
@@ -128,6 +133,7 @@
 <body>
 <div id="game"></div>
 <div id="totemFlash"></div>
+<div id="loading"><div class="lt" data-i18n="title">증강 오목</div><div class="lbar"><div id="loadBar"></div></div><div class="ls" data-i18n="loading">방을 불러오는 중…</div><div id="loadText"></div></div>
 <div id="topControls">
   <button id="settingsBtn" class="btn" aria-label="설정" data-ico="settings"></button>
   <div id="settingsPanel">

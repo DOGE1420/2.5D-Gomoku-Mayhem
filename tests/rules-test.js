@@ -345,16 +345,16 @@ function fill(G) { [[3,3],[3,5],[5,3],[10,10]].forEach(([r,c]) => G.board[r][c] 
   ok(evs.some(e => e.t === 'disaster' && e.kind === 'tsunami'), '장마: 지진 뒤 쓰나미가 일어남');
   // 자기장
   const Z = Rules.create({ map: 'classic', rng: seeded(54) }); Z.board[0][5] = BLACK; Z.board[7][7] = WHITE;
-  passes(Z, 28); ok(Z.zoneWarn && Z.zone === 0, '자기장: 14라운드에 예고');
+  passes(Z, 18); ok(Z.zoneWarn && Z.zone === 0, '자기장: 9라운드에 예고');
   passes(Z, 2);
-  ok(Z.zone === 1 && Z.board[0][5] === WALL && Rules.countStones(Z, BLACK) === 0 && Z.board[7][7] === WHITE, '자기장: 15라운드에 바깥 한 줄이 닫히고 그 줄의 돌이 사라짐');
+  ok(Z.zone === 1 && Z.board[0][5] === WALL && Rules.countStones(Z, BLACK) === 0 && Z.board[7][7] === WHITE, '자기장: 10라운드에 바깥 한 줄이 닫히고 그 줄의 돌이 사라짐');
   ok(!Rules.canPlace(Z, 0, 3) && !Rules.canPlace(Z, 14, 14) && Rules.canPlace(Z, 1, 1), '자기장: 닫힌 줄에는 둘 수 없음');
   passes(Z, 10 + 10); ok(Z.zone === 3, '자기장: 5라운드마다 한 줄씩, 최대 3줄 (9×9까지)');
   passes(Z, 20); ok(Z.zone === 3, '자기장: 3줄을 넘어 닫히지 않음');
   // 자연재해 면역
   const U = Rules.create({ map: 'summer', ability: 'umbrella', rng: seeded(55) }); fill(U); passes(U, 10);
   ok(Rules.countStones(U, BLACK) === 4 && Rules.countStones(U, WHITE) === 4, '자연재해 면역: 여름에도 돌이 녹지 않음');
-  const U2 = Rules.create({ map: 'classic', ability: 'umbrella', rng: seeded(56) }); U2.board[0][5] = BLACK; passes(U2, 30);
+  const U2 = Rules.create({ map: 'classic', ability: 'umbrella', rng: seeded(56) }); U2.board[0][5] = BLACK; passes(U2, 20);
   ok(U2.zone === 1 && Rules.countStones(U2, BLACK) === 0, '자연재해 면역: 자기장은 막지 못함');
   // 기상 이변
   const X = Rules.create({ map: 'winter', rng: seeded(57) }); fill(X); passes(X, 10);

@@ -7,7 +7,7 @@ try { lang = localStorage.getItem('omok_lang') === 'en' ? 'en' : 'ko'; } catch (
 
 var I18N = {
   ko: {
-    'title': '증강 오목', 'sub': '3수마다 카드 1장 · 턴마다 카드 1장 사용',
+    'title': '증강 오목', 'loading': '방을 불러오는 중…', 'sub': '3수마다 카드 1장 · 턴마다 카드 1장 사용',
     'lang.toggle': 'English', 'lang.aria': '언어 바꾸기', 'settings': '설정',
     'settings.bgm': '[[music]] 배경 음악', 'settings.bgmMute': '배경 음악 끄기/켜기',
     'mode.tut': '튜토리얼', 'mode.tut.desc': '1분 만에 규칙 익히기',
@@ -27,7 +27,7 @@ var I18N = {
     'banner.win': '{who} 승리!', 'banner.draw': '무승부', 'reroll': '[[reroll]] 다시 뽑기 ({n}회 남음)'
   },
   en: {
-    'title': 'Gomoku-Mayhem', 'sub': 'A card every 3 stones · one card per turn',
+    'title': 'Gomoku-Mayhem', 'loading': 'Loading the room…', 'sub': 'A card every 3 stones · one card per turn',
     'lang.toggle': '한국어', 'lang.aria': 'Change language', 'settings': 'Settings',
     'settings.bgm': '[[music]] Music', 'settings.bgmMute': 'Mute / unmute music',
     'mode.tut': 'Tutorial', 'mode.tut.desc': 'Learn the rules in a minute',

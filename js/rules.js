@@ -71,7 +71,7 @@
     { id: 'rain',    icon: 'rain', name: '장마', short: '알까기 미끄러움 · 지진 때 쓰나미', desc: '알까기가 더 미끄럽고, 지진 카드가 2배로 자주 나오며, 지진 때 쓰나미가 한쪽 가장자리 3줄의 돌을 쓸어 갑니다.' }
   ];
   var MAP_BY_ID = {}; MAP_LIST.forEach(function (m) { MAP_BY_ID[m.id] = m; });
-  var ZONE_START = 15, ZONE_EVERY = 5, ZONE_MAX = 3;   // 자기장(모든 맵): 15라운드부터 5라운드마다 바깥 한 줄씩, 최대 3줄(9×9까지), 1라운드 전에 예고
+  var ZONE_START = 10, ZONE_EVERY = 5, ZONE_MAX = 3;   // 자기장(모든 맵): 10라운드(각자 10수)부터 5라운드마다 바깥 한 줄씩, 최대 3줄(9×9까지), 1라운드 전에 예고
 
   /* ---------------- 유틸 ---------------- */
   function other(p) { return p === BLACK ? WHITE : BLACK; }
