@@ -1,4 +1,4 @@
-/* 튜토리얼 — 3단계로 규칙 익히기 (메인 화면의 📖)
+/* 튜토리얼 — 3단계로 규칙 익히기 (캠페인 1단계 견습생과 처음 붙기 전에 한 번)
  * ① 돌 5개를 한 줄로 → ② 백의 열린 4를 장벽 카드와 돌로 막기 → ③ 끝, 로컬 모드로
  */
 'use strict';
@@ -25,6 +25,8 @@ function tutStage(step) {
   }
   handDirty = true; syncAll();
 }
+function tutDone() { try { return localStorage.getItem('omok_tut_done') === '1'; } catch (e) { return false; } }
+function tutMarkDone() { try { localStorage.setItem('omok_tut_done', '1'); } catch (e) {} }
 function startTutorial() { endGameScreens(); botStop(); gameMode = 'tutorial'; bgmNewGame(); showScreen('game'); tutStage(1); }
 // 흑이 돌을 둬서 턴이 넘어갈 때 (②단계): 백이 이길 칸이 남았는지 확인
 function tutOnTurn() {
@@ -51,4 +53,4 @@ function tutOnWin() {
   if (tut.step === 1) { setTimeout(function () { if (tut) tutStage(2); }, 1100); return true; }
   return true;
 }
-$('tutBtn').addEventListener('click', function () { startLocal(); });   // ③ 끝: 로컬 모드 시작
+$('tutBtn').addEventListener('click', function () { tutMarkDone(); if (camp) campStart(); else startLocal(); });   // ③ 끝: 캠페인 1단계(견습생)와 대결

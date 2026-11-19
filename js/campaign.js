@@ -58,7 +58,10 @@ function campIntro(i, phase) {
   $('campIntroLearn').textContent = t('camp.learn') + ' ' + campText(s, 'learn');
   $('campIntro').classList.add('show');
 }
-$('campGo').addEventListener('click', function () { $('campIntro').classList.remove('show'); campStart(); });
+$('campGo').addEventListener('click', function () {
+  $('campIntro').classList.remove('show');
+  if (camp.i === 0 && camp.phase === 1 && !tutDone()) startTutorial(); else campStart();   // 견습생: 처음이면 튜토리얼부터
+});
 function campOpts(s, phase) {
   var o = JSON.parse(JSON.stringify(phase === 2 ? s.phase2.opts : s.opts));
   if (o.map === 'weathery') { var ms = Rules.MAP_LIST.filter(function (m) { return m.id !== 'classic'; }); o.map = ms[Math.floor(Math.random() * ms.length)].id; }   // 기상술사: 평원이 아닌 맵

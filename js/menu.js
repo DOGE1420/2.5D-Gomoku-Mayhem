@@ -99,7 +99,6 @@ function showMenu() {
 }
 function restartGame() { if (gameMode === 'campaign' && typeof camp !== 'undefined' && camp) { $('again').textContent = t('btn.again'); if (camp.result) campAfterBanner(); else campIntro(camp.i, camp.phase); return; } if (gameMode === 'bot') { endGameScreens(); showScreen('side'); } else if (gameMode === 'tutorial' && tut) tutStage(tut.step); else { bgmNewGame(); syncBgm(); reset(); } }
 $('modeLocal').addEventListener('click', startLocal);
-$('modeTut').addEventListener('click', function () { setMenuNote(null); startTutorial(); });
 function botLevelName(n) { return n === 20 ? t('bot.ultimate') : t('bot.lv', { n: n }); }
 function renderLevelButtons() {
   $('levelOptions').innerHTML = BOT_LEVEL_LIST.map(function (n) { return '<button class="mode-btn" data-level="' + n + '"><div class="mode-name">' + botLevelName(n) + '</div></button>'; }).join('');

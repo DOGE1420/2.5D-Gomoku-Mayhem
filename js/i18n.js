@@ -22,7 +22,7 @@ var I18N = {
     'tut.1': '① 같은 색 돌 5개를 한 줄로 놓으면 승리! 판의 빈 칸을 눌러 위에서 내려다보는 화면으로 가서 흑 5개를 완성하세요.',
     'tut.2': '② 백이 양쪽이 열린 4! 돌 하나로는 못 막아요. 아래 패의 [[brick]] 장벽 카드를 눌러 확대하고, 한 번 더 눌러 발동해 한쪽을 막은 뒤 돌로 다른 쪽을 막으세요.',
     'tut.1.retry': '5개가 한 줄로 이어지지 않았어요. 다시 해 봐요!', 'tut.2.retry': '아직 백이 이길 수 있어요. 다시 해 봐요!', 'tut.2.wall': '장벽은 백의 4 양 끝 중 한 곳에 둬야 해요. 다시 해 봐요!',
-    'tut.3': '③ 끝! 3수마다 카드 1장을 고르고, 턴마다 1장 쓸 수 있어요. 카드는 패에서 눌러 확대한 뒤 한 번 더 누르면 발동합니다.', 'tut.play': '로컬 모드 시작',
+    'tut.3': '③ 끝! 3수마다 카드 1장을 고르고, 턴마다 1장 쓸 수 있어요. 카드는 패에서 눌러 확대한 뒤 한 번 더 누르면 발동합니다.', 'tut.play': '견습생과 대결',
     'settings.lang': '언어', 'settings.giveup': '새 게임', 'settings.giveup.sure': '정말 포기할까요?', 'settings.menu': '메뉴로 나가기', 'banner.resign': '{who} 포기 — {winner} 승리', 'btn.restart': '새 게임', 'btn.viewBoard': '[[search]] 판 보기', 'btn.viewCards': '[[cards]] 카드 보기', 'btn.again': '다시 하기', 'btn.menu': '메뉴로',
     'turn.black': '[[black]] 흑 차례', 'turn.white': '[[white]] 백 차례', 'turn.alk': '[[flick]] {who} 알까기', 'who.black': '[[black]] 흑', 'who.white': '[[white]] 백',
     'banner.win': '{who} 승리!', 'banner.draw': '무승부', 'reroll': '[[reroll]] 다시 뽑기 ({n}회 남음)'
@@ -43,7 +43,7 @@ var I18N = {
     'tut.1': '① Put 5 stones of one color in a row to win! Click the board to look down on it, then complete 5 black stones.',
     'tut.2': '② White has an open four! One stone cannot stop it. Click the [[brick]] Wall card to enlarge it, click again to use it and block one end, then block the other end with a stone.',
     'tut.1.retry': 'That is not 5 in a row. Try again!', 'tut.2.retry': 'White can still win. Try again!', 'tut.2.wall': 'Put the wall on one end of White\'s four. Try again!',
-    'tut.3': '③ Done! Pick a card every 3 stones and use one per turn. Click a card to enlarge it, click again to play it.', 'tut.play': 'Start Local game',
+    'tut.3': '③ Done! Pick a card every 3 stones and use one per turn. Click a card to enlarge it, click again to play it.', 'tut.play': 'Face the Apprentice',
     'settings.lang': 'Language', 'settings.giveup': 'New game', 'settings.giveup.sure': 'Really give up?', 'settings.menu': 'Back to menu', 'banner.resign': '{who} gave up — {winner} wins', 'btn.restart': 'New game', 'btn.viewBoard': '[[search]] Board', 'btn.viewCards': '[[cards]] Cards', 'btn.again': 'Play again', 'btn.menu': 'Menu',
     'turn.black': '[[black]] Black to play', 'turn.white': '[[white]] White to play', 'turn.alk': '[[flick]] {who} flick', 'who.black': '[[black]] Black', 'who.white': '[[white]] White',
     'banner.win': '{who} wins!', 'banner.draw': 'Draw', 'reroll': '[[reroll]] Reroll ({n} left)'
