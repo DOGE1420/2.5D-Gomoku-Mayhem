@@ -397,9 +397,9 @@ function handleEvent(e) {
     case 'draft': if (botColor && e.p === botColor) return 0.3; openDraftUI(e.picks, e.kind, e.refresh, e.p); return 0.3;
     case 'alkTurn': startAlkUI(); return 0;
     case 'alkSnap': finishAlkUI(e.stones); return 0.4;
-    case 'win': highlightLine(e.line, e.cells); sfx('win'); if (tutOnWin()) return 0; tween(0.9, function () {}, function () { document.getElementById('bannerText').innerHTML = H(t('banner.win', { who: t(e.p === BLACK ? 'who.black' : 'who.white') })); elBanner.style.display = 'flex'; }); return 0;
-    case 'resign': sfx('boom'); tween(0.5, function () {}, function () { document.getElementById('bannerText').innerHTML = H(t('banner.resign', { who: t(e.p === BLACK ? 'who.black' : 'who.white'), winner: t(e.winner === BLACK ? 'who.black' : 'who.white') })); elBanner.style.display = 'flex'; }); return 0;
-    case 'draw': tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = t('banner.draw'); elBanner.style.display = 'flex'; }); return 0;
+    case 'win': highlightLine(e.line, e.cells); sfx('win'); if (tutOnWin()) return 0; campOnEnd(e.p); tween(0.9, function () {}, function () { document.getElementById('bannerText').innerHTML = H(t('banner.win', { who: t(e.p === BLACK ? 'who.black' : 'who.white') })); elBanner.style.display = 'flex'; }); return 0;
+    case 'resign': sfx('boom'); campOnEnd(e.winner); tween(0.5, function () {}, function () { document.getElementById('bannerText').innerHTML = H(t('banner.resign', { who: t(e.p === BLACK ? 'who.black' : 'who.white'), winner: t(e.winner === BLACK ? 'who.black' : 'who.white') })); elBanner.style.display = 'flex'; }); return 0;
+    case 'draw': campOnEnd(0); tween(0.9, function () {}, function () { document.getElementById('bannerText').textContent = t('banner.draw'); elBanner.style.display = 'flex'; }); return 0;
   }
   return 0;
 }

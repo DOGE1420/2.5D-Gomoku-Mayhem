@@ -93,9 +93,10 @@
     if (G.map === 'summer' && Rn % 5 === 0) melt(G);                  // 맵 자연재해
     if (G.map === 'winter' && Rn % 5 === 0) freeze(G);
     if (G.map === 'desert' && Rn >= 8 && (Rn - 8) % 4 === 0) sandstorm(G);
-    if (G.zone < ZONE.MAX) {                                          // 자기장: 1라운드 전에 예고
-      if (Rn >= ZONE.START - 1 && (Rn - (ZONE.START - 1)) % ZONE.EVERY === 0) { G.zoneWarn = true; ev(G, { t: 'zoneWarn', ring: G.zone }); }
-      if (Rn >= ZONE.START && (Rn - ZONE.START) % ZONE.EVERY === 0) zoneShrink(G);
+    var ZS = G.zoneStart || ZONE.START;                               // 캠페인에서 자기장 시작 라운드를 바꿀 수 있음
+    if (!G.noZone && G.zone < ZONE.MAX) {                             // 자기장: 1라운드 전에 예고
+      if (Rn >= ZS - 1 && (Rn - (ZS - 1)) % ZONE.EVERY === 0) { G.zoneWarn = true; ev(G, { t: 'zoneWarn', ring: G.zone }); }
+      if (Rn >= ZS && (Rn - ZS) % ZONE.EVERY === 0) zoneShrink(G);
     }
   };
   R.H.tsunami = tsunami;

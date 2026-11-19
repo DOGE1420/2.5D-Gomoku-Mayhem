@@ -125,6 +125,12 @@
       if (ab === 'retry') G.refresh = { 1: 3, 2: 3 };
       ev(G, { t: 'ability', id: ab });
     }
+    // 캠페인용: cards false = 카드 없음 · zone false = 자기장 없음 · zoneStart = 자기장 시작 라운드 · forceLegend {색: 전설 id} · hand {색: [카드]}
+    if (opts.cards === false) G.noCards = true;
+    if (opts.zone === false) G.noZone = true;
+    if (opts.zoneStart) G.zoneStart = opts.zoneStart;
+    if (opts.forceLegend) G.forceLegend = opts.forceLegend;
+    if (opts.hand) { if (opts.hand[1]) G.hand[1] = opts.hand[1].slice(); if (opts.hand[2]) G.hand[2] = opts.hand[2].slice(); }
     if (opts.legends) {                                    // 시작: 흑 → 백 순서로 전설 카드 3장 중 1장
       G.startQueue = [BLACK, WHITE];
       openDraft(G, BLACK, 'legend');
@@ -324,6 +330,7 @@
     return id;
   }
   function draftPicks(G, p, kind) {
+    if (kind === 'legend' && G.forceLegend && G.forceLegend[p]) return [G.forceLegend[p]];   // 캠페인: 정해진 전설 카드
     if (kind === 'legend') return shuffle(G, LEGENDS.map(function (c) { return c.id; })).slice(0, 3);
     return weightedSample(G, draftSize(G, p));
   }
@@ -402,7 +409,7 @@
 
     if (countsForDraft) G.placedCount[cur]++;
     G.done++;
-    var milestone = countsForDraft && G.placedCount[cur] % INTERVAL === 0;
+    var milestone = countsForDraft && !G.noCards && G.placedCount[cur] % INTERVAL === 0;   // noCards: 카드 없는 순수 오목
     endTurnIfStuck(G);
     if (milestone && G.done < G.needed) G.draftAfterTurn = cur;   // 연속 착수 중이면 카드 선택은 마지막 수 뒤로
     if (G.done >= G.needed && (milestone || G.draftAfterTurn === cur)) { G.draftAfterTurn = null; openDraft(G, cur); }

@@ -60,7 +60,13 @@
   .mode-btn.soon { opacity: .72; }
 
   /* 메인 화면: 어두운 배경에 흩어진 돌과 카드, 가운데 큰 제목과 글자만 있는 메뉴 */
-  #menu, #lobby, #side, #level { background: #050302; overflow: hidden; }
+  #menu, #lobby, #side, #level, #campaign { background: #050302; overflow: hidden; }
+  #campaign .mode-btn.locked { opacity: .4; cursor: default; } #campaign .mode-btn.locked:hover { transform: none; }
+  #campaign .camp-done { grid-row: 1 / span 2; grid-column: 3; color: #e0b04a; font-size: 22px; }
+  #campBack { position: absolute; top: 18px; left: 18px; }
+  #campIntro { position: fixed; inset: 0; z-index: 60; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: rgba(6,3,2,.99); color: #f1e2b8; text-align: center; padding: 24px; }
+  #campIntro.show { display: flex; } #campIntroIco { font-size: 54px; color: #e0b04a; } #campIntroName { font-size: 32px; letter-spacing: 1px; }
+  #campIntroLine { font-size: 19px; font-style: italic; opacity: .9; max-width: 640px; word-break: keep-all; } #campIntroLearn { font-size: 14px; opacity: .65; } #campGo { position: static; margin-top: 18px; font-size: 18px; padding: 10px 34px; }
   #menuBg, #menuBg2, #menuBg3, #menuBg4 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
   #menu::after, #lobby::after, #side::after, #level::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 38% 46% at 50% 50%, rgba(3,2,1,.93) 0%, rgba(3,2,1,.78) 55%, rgba(3,2,1,0) 100%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.7) 100%); }
   #menu > *:not(canvas), #lobby > *:not(canvas), #side > *:not(canvas), #level > *:not(canvas) { position: relative; z-index: 2; }
@@ -150,11 +156,17 @@
   <div class="modes">
     <button class="mode-btn" id="modeTut"><div class="mode-icon" data-ico="book"></div><div class="mode-name" data-i18n="mode.tut"></div><div class="mode-desc" data-i18n="mode.tut.desc"></div></button>
     <button class="mode-btn" id="modeLocal"><div class="mode-icon" data-ico="people"></div><div class="mode-name" data-i18n="mode.local"></div><div class="mode-desc" data-i18n="mode.local.desc"></div></button>
+    <button class="mode-btn" id="modeCamp"><div class="mode-icon" data-ico="crown"></div><div class="mode-name" data-i18n="mode.camp"></div><div class="mode-desc" data-i18n="mode.camp.desc"></div></button>
     <button class="mode-btn" id="modeBot"><div class="mode-icon" data-ico="bot"></div><div class="mode-name" data-i18n="mode.bot"></div><div class="mode-desc" data-i18n="mode.bot.desc"></div></button>
     <button class="mode-btn" id="modeMp"><div class="mode-icon" data-ico="globe"></div><div class="mode-name" data-i18n="mode.mp"></div><div class="mode-desc" data-i18n="mode.mp.desc"></div></button>
   </div>
   <p id="menuNote"></p>
 </div>
+<div id="campaign" class="screen">
+  <button class="btn" id="campBack" data-i18n="back"></button>
+  <div class="modes" id="campOptions"></div>
+</div>
+<div id="campIntro"><div id="campIntroIco"></div><div id="campIntroName"></div><div id="campIntroLine"></div><div id="campIntroLearn"></div><button class="btn" id="campGo" data-i18n="camp.go"></button></div>
 <div id="level" class="screen">
   <canvas id="menuBg4"></canvas>
   <button class="btn" id="levelBack" data-i18n="back"></button>
@@ -226,6 +238,7 @@
 <script src="js/maps.js"></script>
 <script src="js/menu.js"></script>
 <script src="js/tutorial.js"></script>
+<script src="js/campaign.js"></script>
 <script src="js/bot-ai.js"></script>
 <script src="js/bot.js"></script>
 <script src="js/main.js"></script>

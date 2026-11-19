@@ -4,7 +4,7 @@
  */
 'use strict';
 
-var curScreen = 'menu', gameMode = 'local';   // gameMode: 'local' | 'tutorial'
+var curScreen = 'menu', gameMode = 'local';   // gameMode: 'local' | 'tutorial' | 'bot' | 'campaign'
 function $(id) { return document.getElementById(id); }
 
 /* ---------------- 화면 전환 ---------------- */
@@ -14,6 +14,7 @@ function showScreen(name) {
   $('lobby').classList.toggle('show', name === 'lobby');
   $('side').classList.toggle('show', name === 'side');
   $('level').classList.toggle('show', name === 'level');
+  $('campaign').classList.toggle('show', name === 'campaign');
   document.body.classList.toggle('in-game', name === 'game');
   document.body.classList.toggle('in-tut', gameMode === 'tutorial'); if (typeof resetGiveUp === 'function') resetGiveUp();
   $('tutBox').classList.toggle('show', name === 'game' && !!tut);
@@ -32,6 +33,7 @@ function applyStaticI18n() {
   if (lobbyNoteKey) $('lobbyStatus').textContent = t(lobbyNoteKey);
   if (typeof updateHUD === 'function' && G) updateHUD();
   if (tut) tutShow(tut.k, tut.b);
+  if (curScreen === 'campaign' && typeof renderCampaign === 'function') renderCampaign();
 }
 $('langBtn').addEventListener('click', function () {
   lang = lang === 'ko' ? 'en' : 'ko';
@@ -89,13 +91,13 @@ function setLobbyNote(key) { lobbyNoteKey = key; $('lobbyStatus').textContent = 
 function endGameScreens() {                      // 진행 중이던 게임 화면 요소를 모두 정리
   endTutorial(); hideLegendHint(); hideDraftCaption(); toast('', 1);
   ['counterBox', 'choiceBox', 'slotBox'].forEach(function (id) { $(id).classList.remove('show'); });
-  $('banner').style.display = 'none';
+  $('banner').style.display = 'none'; $('again').textContent = t('btn.again');
 }
 function startLocal() { endGameScreens(); botStop(); gameMode = 'local'; setMenuNote(null); bgmNewGame(); showScreen('game'); reset(); }
 function showMenu() {
   endGameScreens(); botStop(); gameMode = 'local'; reset({}); showScreen('menu');   // 빈 판을 배경으로 보여 줌
 }
-function restartGame() { if (gameMode === 'bot') { endGameScreens(); showScreen('side'); } else if (gameMode === 'tutorial' && tut) tutStage(tut.step); else { bgmNewGame(); syncBgm(); reset(); } }
+function restartGame() { if (gameMode === 'campaign' && typeof camp !== 'undefined' && camp) { $('again').textContent = t('btn.again'); if (camp.result) campAfterBanner(); else campIntro(camp.i, camp.phase); return; } if (gameMode === 'bot') { endGameScreens(); showScreen('side'); } else if (gameMode === 'tutorial' && tut) tutStage(tut.step); else { bgmNewGame(); syncBgm(); reset(); } }
 $('modeLocal').addEventListener('click', startLocal);
 $('modeTut').addEventListener('click', function () { setMenuNote(null); startTutorial(); });
 function botLevelName(n) { return n === 20 ? t('bot.ultimate') : t('bot.lv', { n: n }); }
