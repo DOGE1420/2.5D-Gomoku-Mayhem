@@ -1,1 +1,2 @@
 assets/models/*.glb filter=lfs diff=lfs merge=lfs -text
+assets/models/robot.glb -filter -diff -merge binary

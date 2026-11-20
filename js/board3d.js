@@ -315,6 +315,7 @@ function moveMany(moves, jitter) {
 function mapIndexOf(name) { var ms = getMaps(); for (var i = 0; i < ms.length; i++) if (ms[i].id === name) return i; return -1; }
 // 이벤트 하나를 연출하고, 다음 이벤트까지 기다릴 시간(초)을 돌려줌
 function handleEvent(e) {
+  if (typeof enemyReact === 'function') enemyReact(e);
   var p, m, i;
   switch (e.t) {
     case 'place': addStoneMesh(e.r, e.c, e.p, true); sfx('place'); return 0.3;

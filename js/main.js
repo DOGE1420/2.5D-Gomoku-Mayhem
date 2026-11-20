@@ -39,7 +39,7 @@ var clock = new THREE.Clock(), time = 0;
 var alkT = 0, alkCam = { x: 0, z: 0 }, Y_UP = new THREE.Vector3(0, 1, 0), lookDir = new THREE.Vector3(), lookRight = new THREE.Vector3();
 function frame() {
   var dt = Math.min(0.05, clock.getDelta()); time += dt;
-  stepAnims(dt); stepRoom(dt); zoneGas.step(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepTotems(dt); stepBurns(dt);
+  stepAnims(dt); stepRoom(dt); zoneGas.step(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepTotems(dt); stepEnemy(dt); stepBurns(dt);
 
   // 촛불 일렁임
   candles.forEach(function (c) {

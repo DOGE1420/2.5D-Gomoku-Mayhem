@@ -73,6 +73,7 @@ function campStart() {
   botLevel = s.lv;                                          // 봇전에서 고른 단계는 건드리지 않음 (저장 안 함)
   botStart(camp.phase === 2 ? 'second' : 'first');
   bgmNewGame(); showScreen('game'); reset(campOpts(s, camp.phase));
+  enemyShow(camp.i);                                       // 맞은편 로봇 (눈 색이 상대마다 다름)
 }
 
 /* ---------------- 판이 끝났을 때: 이기면 다음 상대 · 지면 다시 도전 ---------------- */
