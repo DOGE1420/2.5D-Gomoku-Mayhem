@@ -10,6 +10,7 @@ function $(id) { return document.getElementById(id); }
 /* ---------------- 화면 전환 ---------------- */
 function showScreen(name) {
   curScreen = name;
+  if (name === 'menu' && typeof syncBotLock === 'function') syncBotLock();
   $('menu').classList.toggle('show', name === 'menu');
   $('lobby').classList.toggle('show', name === 'lobby');
   $('side').classList.toggle('show', name === 'side');
@@ -102,7 +103,12 @@ function botLevelName(n) { return n === 20 ? t('bot.ultimate') : t('bot.lv', { n
 function renderLevelButtons() {
   $('levelOptions').innerHTML = BOT_LEVEL_LIST.map(function (n) { return '<button class="mode-btn" data-level="' + n + '"><div class="mode-name">' + botLevelName(n) + '</div></button>'; }).join('');
 }
-$('modeBot').addEventListener('click', function () { setMenuNote(null); showScreen('level'); });
+function botUnlocked() { return typeof campCleared === 'function' && campCleared() >= CAMPAIGN.length; }   // 캠페인을 끝까지 깨야 열림
+function syncBotLock() { $('modeBot').classList.toggle('locked', !botUnlocked()); }
+$('modeBot').addEventListener('click', function () {
+  if (!botUnlocked()) { setMenuNote('note.botLocked'); return; }
+  setMenuNote(null); showScreen('level');
+});
 $('levelBack').addEventListener('click', function () { showScreen('menu'); });
 $('levelOptions').addEventListener('click', function (e) {
   var b = e.target.closest('button[data-level]'); if (!b) return;

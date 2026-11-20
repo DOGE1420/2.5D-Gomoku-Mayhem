@@ -121,7 +121,9 @@ function campOnEnd(winner) {
     if (!won) return dialog([campSay(s, CAMP_LOSE[lang === 'en' ? 1 : 0])], function () { campStart(); });
     if (s.boss && camp.phase === 1) { camp.phase = 2; return campEnter(); }
     campSave(camp.i + 1);
-    dialog([campSay(s, campText(s, 'win'))], function () {
+    var endLines = [campSay(s, campText(s, 'win'))];
+    if (camp.i + 1 >= CAMPAIGN.length) endLines.push(campSay(s, t('camp.unlock'), 'ThumbsUp'));   // 딜러를 꺾으면 울트라 짱짱 봇전이 열림
+    dialog(endLines, function () {
       if (camp.i + 1 < CAMPAIGN.length) { camp.i++; camp.phase = 1; campEnter(); }
       else { camp = null; showMenu(); }                       // 딜러까지 꺾음 → 메뉴로
     });
