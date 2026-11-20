@@ -36,10 +36,10 @@ function resize() {
 window.addEventListener('resize', resize);
 
 var clock = new THREE.Clock(), time = 0;
-var alkT = 0, alkCam = { x: 0, z: 0 }, Y_UP = new THREE.Vector3(0, 1, 0), lookDir = new THREE.Vector3(), lookRight = new THREE.Vector3();
+var focusT = 0, alkT = 0, alkCam = { x: 0, z: 0 }, Y_UP = new THREE.Vector3(0, 1, 0), lookDir = new THREE.Vector3(), lookRight = new THREE.Vector3();
 function frame() {
   var dt = Math.min(0.05, clock.getDelta()); time += dt;
-  stepAnims(dt); stepRoom(dt); zoneGas.step(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepTotems(dt); stepEnemy(dt); stepBurns(dt);
+  stepAnims(dt); stepRoom(dt); zoneGas.step(dt); botTick(dt); stepParticles(dt); stepCards(dt); stepTotems(dt); stepEnemy(dt); stepDialog(dt); stepBurns(dt);
 
   // 촛불 일렁임
   candles.forEach(function (c) {
@@ -78,6 +78,15 @@ function frame() {
     camera.position.x += (cx - camera.position.x) * ae; camera.position.y += (14 - camera.position.y) * ae; camera.position.z += (cz - camera.position.z) * ae;
     lx += (alkCam.x - lx) * ae; ly += (0 - ly) * ae; lz += (alkCam.z - 4 - lz) * ae;
     camera.up.lerp(Y_UP, ae).normalize();
+  }
+  // 캠페인: 대사 · 카드 고르기 · 로봇의 카드 사용 때 화면이 뒤로 물러나 맞은편 로봇이 보이게
+  var fGoal = (gameMode === 'campaign' && enemy.root && enemy.root.visible && (dlgOpen() || draftMeshes.length || enemy.focusUntil > performance.now())) ? 1 : 0;
+  focusT += (fGoal - focusT) * (1 - Math.pow(0.01, dt));
+  if (focusT > 0.001) {
+    var fe = focusT * focusT * (3 - 2 * focusT);
+    camera.position.x += (0 - camera.position.x) * fe; camera.position.y += (10.5 - camera.position.y) * fe; camera.position.z += (27 - camera.position.z) * fe;
+    lx += (0 - lx) * fe; ly += (3.2 - ly) * fe; lz += (-12 - lz) * fe;
+    camera.up.lerp(Y_UP, fe).normalize();
   }
   camera.lookAt(lx, ly, lz);
   if (scene.fog) { scene.fog.near = fogBase.near + 30 * topT; scene.fog.far = fogBase.far + 70 * topT; }

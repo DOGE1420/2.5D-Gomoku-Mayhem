@@ -159,6 +159,7 @@ dom.addEventListener('click', function (e) {
   if (look.dragged) { look.dragged = false; return; }                     // 둘러보려고 끈 것은 누르기로 치지 않음
   if (curScreen !== 'game') return;
   ac(); if (actx && actx.state === 'suspended') actx.resume();
+  if (typeof dlgOpen === 'function' && dlgOpen()) { dlgNext(); return; }   // 캠페인 대화 중: 화면을 눌러도 다음 줄
   if (G.alk) return;                                                       // 알까기 중에는 클릭 대신 당기기
   setPointer(e); updateHover();
   if (infoRevealing()) { infoReveal.t = 0; return; }                      // 날씨·능력 소개 중 누르면 바로 제자리로

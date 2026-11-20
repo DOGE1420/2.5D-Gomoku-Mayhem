@@ -53,4 +53,4 @@ function tutOnWin() {
   if (tut.step === 1) { setTimeout(function () { if (tut) tutStage(2); }, 1100); return true; }
   return true;
 }
-$('tutBtn').addEventListener('click', function () { tutMarkDone(); if (camp) campStart(); else startLocal(); });   // ③ 끝: 캠페인 1단계(견습생)와 대결
+$('tutBtn').addEventListener('click', function () { tutMarkDone(); if (camp) campEnter(); else startLocal(); });   // ③ 끝: 캠페인 1단계(견습생)와 대결

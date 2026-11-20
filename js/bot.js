@@ -241,6 +241,7 @@ function botCounterYes(cardId) {
 function botTick(dt) {
   if (botThinking) return;
   if (!botColor || curScreen !== 'game' || !G || G.gameOver || busy > 0) return;
+  if (typeof dlgOpen === 'function' && dlgOpen()) return;                    // 캠페인 대화 중에는 기다림
   if ((botWait -= dt) > 0) return;
   var me = botColor, act = false;
   if (G.draft) {

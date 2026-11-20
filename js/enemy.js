@@ -4,7 +4,7 @@
 'use strict';
 
 var ENEMY_EYES = [0xffb347, 0xb070ff, 0x5ad0ff, 0xff5a2a, 0xffd24a, 0xff2a3a];   // 캠페인 상대 순서대로 눈 색
-var enemy = { root: null, mixer: null, actions: {}, cur: null, eyeMat: null, eyeLight: null, want: false, stage: 0, down: false, queue: null };
+var enemy = { focusUntil: 0, root: null, mixer: null, actions: {}, cur: null, eyeMat: null, eyeLight: null, want: false, stage: 0, down: false, queue: null };
 (function loadEnemy() {
   if (!THREE.GLTFLoader) return;
   var file = 'assets/models/robot.glb';
@@ -40,12 +40,12 @@ function enemyPlay(name, once) {
   a.reset(); a.setLoop(once ? THREE.LoopOnce : THREE.LoopRepeat, Infinity); a.clampWhenFinished = !!once;
   a.fadeIn(0.25).play(); enemy.cur = a;
 }
-function enemyShow(stage) {
+function enemyShow(stage, quiet) {
   enemy.want = true; enemy.stage = stage || 0; enemy.down = false;
   if (!enemy.root) return;
   var c = ENEMY_EYES[enemy.stage % ENEMY_EYES.length];
   enemy.eyeMat.emissive.setHex(c); enemy.eyeLight.color.setHex(c);
-  enemy.root.visible = true; enemyPlay('Wave', true);
+  enemy.root.visible = true; if (!quiet) enemyPlay('Wave', true); else if (!enemy.cur || enemy.cur === enemy.actions.Death || enemy.cur === enemy.actions.Dance) enemyPlay('Idle');
 }
 function enemyHide() { enemy.want = false; if (enemy.root) enemy.root.visible = false; }
 // 게임 이벤트에 따른 동작 (board3d.js 의 handleEvent 에서 부름)
@@ -53,7 +53,9 @@ function enemyReact(e) {
   if (!enemy.root || !enemy.root.visible || enemy.down) return;
   switch (e.t) {
     case 'place': if (e.p === botColor && Math.random() < 0.3) enemyPlay('Yes', true); break;              // 가끔 끄덕임
-    case 'spend': enemyPlay(e.p === botColor ? 'Punch' : 'No', true); break;                                  // 카드: 내가 쓰면 주먹, 상대가 쓰면 고개 젓기
+    case 'spend': enemyPlay(e.p === botColor ? 'Punch' : 'No', true);
+      if (e.p === botColor && HIDDEN_CARDS.indexOf(e.id) < 0) enemy.focusUntil = performance.now() + 2600;   // 로봇이 카드를 쓰면 화면이 물러나 로봇이 보이게
+      break;                                  // 카드: 내가 쓰면 주먹, 상대가 쓰면 고개 젓기
     case 'trapHit': case 'blocked': if (e.owner === botColor || (e.t === 'blocked' && e.p !== botColor)) enemyPlay('ThumbsUp', true); break;
     case 'win': case 'resign': {
       var w = e.t === 'win' ? e.p : e.winner;
