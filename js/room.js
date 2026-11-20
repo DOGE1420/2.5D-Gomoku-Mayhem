@@ -268,7 +268,7 @@ function roomLoadRender() {
   var pct = tt ? Math.min(100, Math.floor(l / tt * 100)) : 0, mb = function (b) { return (b / 1048576).toFixed(0); };
   document.getElementById('loadBar').style.width = (all ? 100 : pct) + '%';
   document.getElementById('loadText').textContent = all ? '' : (tt ? pct + '%  ·  ' + mb(l) + ' / ' + mb(tt) + ' MB' : mb(l) + ' MB');
-  if (all && !el.classList.contains('hide')) { el.classList.add('hide'); setTimeout(function () { el.style.display = 'none'; }, 700); }
+  if (all && !el.classList.contains('hide')) { if (typeof syncBgm === 'function') syncBgm(); el.classList.add('hide'); setTimeout(function () { el.style.display = 'none'; }, 700); }
 }
 loadRoomModels();
 

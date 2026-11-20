@@ -48,11 +48,11 @@ function campSave(n) { try { if (n > campCleared()) localStorage.setItem('omok_c
 function campText(s, key) { return lang === 'en' && s[key + 'En'] ? s[key + 'En'] : s[key]; }
 function campName(s) { return lang === 'en' ? s.en : s.name; }
 
-/* ---------------- 캠페인 버튼: 단계를 고르지 않고 이어서 바로 시작 (처음이면 1단계, 다 깼으면 다시 1단계) ---------------- */
+/* ---------------- 캠페인 버튼: 단계를 고르지 않고 늘 1단계부터 바로 시작 ---------------- */
 function renderCampaign() {}
 $('modeCamp').addEventListener('click', function () {
   setMenuNote(null);
-  var i = campCleared(); if (i >= CAMPAIGN.length) i = 0;
+  var i = 0;                                                     // 캠페인은 늘 1단계(견습생)부터
   camp = { i: i, phase: 1, result: null };
   if (i === 0 && !tutDone()) startTutorial(); else campEnter();     // 견습생과 처음이면 튜토리얼부터
 });

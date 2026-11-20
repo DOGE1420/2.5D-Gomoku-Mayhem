@@ -72,7 +72,7 @@ function bgmNewGame() { setBgmTrack(BGM_GAME[Math.floor(Math.random() * BGM_GAME
 function syncBgm() {
   var game = curScreen === 'game';
   if (!game && BGM_GAME.indexOf(bgmTrack) >= 0) setBgmTrack(BGM_MENU, true);    // 메인으로 돌아오면 처음부터
-  var want = !bgmMuted && bgmVol > 0;
+  var want = !bgmMuted && bgmVol > 0 && !(typeof roomLoad !== 'undefined' && !roomLoad.done);   // 로딩 화면 중에는 음악을 틀지 않음 (끝나면 재생)
   if (want) { var p = bgm.play(); if (p && p.catch) p.catch(function () {}); } else bgm.pause();
 }
 // 로드 즉시 재생을 시도하고, 브라우저가 막으면 첫 클릭·키 입력 때 바로 재생
