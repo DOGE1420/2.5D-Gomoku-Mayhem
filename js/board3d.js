@@ -321,21 +321,26 @@ function handleEvent(e) {
     case 'place': addStoneMesh(e.r, e.c, e.p, true); sfx('place'); return 0.3;
     case 'trapHit': m = dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0xb070ff, 18); sfx('boom'); totemPop('trap'); return 2.0;    // 숨겨 둔 함정이 발동: 카드가 튀어나옴
     case 'remove':
+      if (e.why === 'meteor') return fxMeteor(e.r, e.c, function () { dropMesh(e.r, e.c); });
+      if (e.why === 'bomb') return fxBomb(e.r, e.c, function () { dropMesh(e.r, e.c); });
+      if (e.why === 'snipe') return fxSnipe(e.r, e.c, function () { dropMesh(e.r, e.c); });
       m = dropMesh(e.r, e.c);
       burst(cellAt(e.r, e.c), { snipe: 0xff4a3a, melt: 0xff9a3a, tsunami: 0x5aa8ff, zone: 0xb070ff, smash: 0xd0b080 }[e.why] || 0xff8a2a, e.why === 'snipe' ? 14 : 22); sfx(e.why === 'snipe' ? 'place' : 'boom');
       return e.why === 'snipe' ? 0.3 : (e.why === 'zone' || e.why === 'melt' || e.why === 'tsunami') ? 0.15 : 0.45;
     case 'move':
       m = meshes[e.from.r][e.from.c]; if (!m) return 0;
       meshes[e.from.r][e.from.c] = null; meshes[e.to.r][e.to.c] = m;
+      if (e.why === 'teleport') return fxTeleport(m, e.from, e.to);
       burst(cellAt(e.from.r, e.from.c), 0x9ad0ff, 12); sfx('magic');
       arcMove(m, m.position.clone(), cellAt(e.to.r, e.to.c), 0.7);
       return 0.75;
-    case 'convert': m = meshes[e.r][e.c]; if (m) flipMesh(m, e.to); sfx('magic'); return e.why === 'trade' ? 0.05 : 0.15;
+    case 'convert': m = meshes[e.r][e.c]; if (m) flipMesh(m, e.to); sfx('magic'); if (e.why === 'infection') { burst(cellAt(e.r, e.c), 0x6aff5a, 16); fxRing(cellAt(e.r, e.c), 0x6aff5a, 1.6, 0.5); } return e.why === 'trade' ? 0.05 : 0.15;
     case 'flip':
+      if (e.cells.length > 2) return fxReversal(e.cells);                    // 전세 역전: 물결치듯 뒤집힘
       sfx('magic');
       e.cells.forEach(function (q) { var mm = meshes[q.r][q.c]; if (mm) flipMesh(mm, mm.userData.color === BLACK ? WHITE : BLACK); });
       return 0.6;
-    case 'quake': moveMany(e.moves, 3); sfx('boom'); camShake = 0.6; return 0.6;
+    case 'quake': return fxQuake(function () { moveMany(e.moves, 3); sfx('boom'); camShake = 0.6; });   // 판이 흔들린 뒤 돌이 흩어짐
     case 'sandstorm': moveMany(e.moves, 1); sfx('boom'); camShake = 0.5; for (i = 0; i < 18; i++) burst(new THREE.Vector3((Math.random() - 0.5) * 14, 0.4, (Math.random() - 0.5) * 14), 0xd8b070, 2); return 0.65;
     case 'freeze': dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0xbfe4ff, 14); addWallMesh(e.r, e.c, true); sfx('card'); return 0.5;
     case 'thaw': dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0x9ad0ff, 12); addStoneMesh(e.r, e.c, e.owner, true); sfx('place'); return 0.4;
