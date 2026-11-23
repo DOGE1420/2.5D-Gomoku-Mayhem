@@ -15,7 +15,7 @@ var elHint = document.getElementById('legendHint');
 function showLegendHint() {
   var p = viewer(), id = G.lg.card[p]; if (!id) return;
   var info = Rules.legendProgress(G, p), c = Rules.LEGEND_BY_ID[id];
-  elHint.innerHTML = H(info.done ? '이미 사용함' : '조건: ' + c.cond + '  —  현재: ' + info.text + (info.ok ? '  [[check]] 사용 가능' : ''));
+  elHint.innerHTML = H(info.done ? t('hint.used') : t('hint.cond', { cond: lang === 'en' && LEGEND_COND_EN[c.id] ? LEGEND_COND_EN[c.id] : c.cond, now: lang === 'en' && info.en ? info.en.replace(/^card to copy: (\w+)$/, function (_, id) { return 'card to copy: ' + cardText(id).name; }) : info.text }) + (info.ok ? t('hint.ok') : ''));
   elHint.classList.add('show'); elHint.classList.toggle('ok', !!info.ok && !info.done);
 }
 function hideLegendHint() { elHint.classList.remove('show'); }
@@ -24,8 +24,8 @@ function hideLegendHint() { elHint.classList.remove('show'); }
 var counterTimer = null;
 function showCounterBox(holder, user, cardId, cb) {
   var box = document.getElementById('counterBox'), txt = document.getElementById('counterText'), c = Rules.CARD_BY_ID[cardId];
-  var left = 8, who = holder === 1 ? '[[black]] 흑' : '[[white]] 백', other = user === 1 ? '[[black]] 흑' : '[[white]] 백';
-  function render() { txt.innerHTML = H(who + ' — [[zen]] 무소유! ' + other + '이(가) "' + (c ? c.name : cardId) + '" 카드를 씁니다. 막을까요? (내 패 전부 버림) · ' + left + '초'); }
+  var left = 8, who = t(holder === 1 ? 'who.black' : 'who.white'), other = t(user === 1 ? 'who.black' : 'who.white');
+  function render() { txt.innerHTML = H(t('counter.ask', { who: who, other: other, card: c ? cardText(cardId).name : cardId, s: left })); }
   render(); box.classList.add('show');
   function done(yes) { clearInterval(counterTimer); box.classList.remove('show'); cb(yes); }
   document.getElementById('counterYes').onclick = function () { done(true); };
@@ -37,11 +37,11 @@ function showCounterBox(holder, user, cardId, cb) {
 // 🎰 올인: 무엇을 걸지
 function askAllin(cb, maxStones) {
   var box = document.getElementById('choiceBox'), acts = document.getElementById('choiceActions');
-  document.getElementById('choiceText').innerHTML = H('[[slot]] 올인 — 무엇을 거시겠어요? 슬롯 3개가 같으면 2배!');
+  document.getElementById('choiceText').innerHTML = H(t('allin.ask'));
   acts.innerHTML = '';
-  var opts = [['패 전부 걸기 (' + G.hand[viewer()].length + '장)', 'cards']];
-  for (var n = 3; n <= Math.min(maxStones || 3, 6); n++) opts.push(['내 돌 ' + n + '개 걸기', 'stones:' + n]);
-  opts.push(['취소', null]);
+  var opts = [[t('allin.cards', { n: G.hand[viewer()].length }), 'cards']];
+  for (var n = 3; n <= Math.min(maxStones || 3, 6); n++) opts.push([t('allin.stones', { n: n }), 'stones:' + n]);
+  opts.push([t('allin.cancel'), null]);
   opts.forEach(function (o) {
     var b = document.createElement('button'); b.className = 'btn'; b.textContent = o[0];
     b.onclick = function () { box.classList.remove('show'); cb(o[1]); };
@@ -59,7 +59,7 @@ function playSlot(reels, win) {
   [900, 1400, 1900].forEach(function (ms, i) {
     setTimeout(function () {
       clearInterval(timers[i]); els[i].classList.remove('spin'); els[i].innerHTML = ico(reels[i]); sfx('card');
-      if (i === 2) { res.innerHTML = H(win ? '[[party]] 잭팟! 2배로 돌려받아요' : '꽝… 건 것을 잃었어요'); res.className = win ? 'win' : 'lose'; sfx(win ? 'win' : 'boom'); setTimeout(function () { box.classList.remove('show'); }, 1400); }
+      if (i === 2) { res.innerHTML = H(t(win ? 'allin.win' : 'allin.lose')); res.className = win ? 'win' : 'lose'; sfx(win ? 'win' : 'boom'); setTimeout(function () { box.classList.remove('show'); }, 1400); }
     }, ms);
   });
   return 3.4;

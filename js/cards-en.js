@@ -53,3 +53,10 @@ function cardText(id) {
   return en ? { name: en[0], desc: en[1], cat: CAT_EN[c.cat] || c.cat, foot: FOOT_EN[foot] || foot }
             : { name: c.name, desc: c.desc, cat: c.cat, foot: foot };
 }
+
+// 전설 카드 사용 조건 · 맵 한 줄 설명 (영어)
+var LEGEND_COND_EN = { obelisk: '3+ of my stones', nothing: 'the foe plays a card', latebloom: '40+ moves this game', blind: 'none', clown: 'lost 3+ stones to the foe',
+  sloth: '1+ card in hand', mirror: 'the foe has played a card', allin: 'a card in hand or 3+ stones', turtle: 'the foe has 5+ more stones', king: 'a stone of mine on the board' };
+var MAP_SHORT_EN = { classic: 'no disasters', summer: 'every 5 rounds one black and one white stone melt', winter: 'every 5 rounds a stone freezes for 2 rounds',
+  space: 'wormhole: board edges wrap around', desert: 'sandstorm every 4 rounds from round 8', rain: 'slippery flicks · tsunami after earthquakes' };
+function mapShort(mp) { return lang === 'en' && MAP_SHORT_EN[mp.id] ? MAP_SHORT_EN[mp.id] : mp.short; }

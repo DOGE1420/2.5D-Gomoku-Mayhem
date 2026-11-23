@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>증강 오목 3D 프로토타입</title>
+<title>증강 오목</title>
 <style>
   @font-face { font-family: 'GameFont'; src: url('assets/fonts/HeoSangGothicB.ttf') format('truetype'); font-display: block; }
   html, body { margin: 0; height: 100%; background: #07050a; overflow: hidden; font-family: "GameFont", "Noto Sans KR", "Malgun Gothic", sans-serif; }
@@ -61,10 +61,10 @@
 
   /* 메인 화면: 어두운 배경에 흩어진 돌과 카드, 가운데 큰 제목과 글자만 있는 메뉴 */
   #menu, #lobby, #side, #level { background: #050302; overflow: hidden; }
-  #dlg { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(760px, 92vw); min-height: 96px; z-index: 45; display: none; cursor: pointer;
+  #dlg { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(760px, 92vw); min-height: 120px; z-index: 45; display: none; cursor: pointer;
     padding: 16px 22px 18px; background: linear-gradient(180deg, rgba(26,17,9,.94), rgba(12,8,4,.96)); border: 1px solid #8a6a36; border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,.7); color: #f1e2b8; }
-  #dlg.show { display: block; } #dlgWho { position: absolute; top: -15px; left: 18px; padding: 3px 12px; background: #3a2814; border: 1px solid #8a6a36; border-radius: 4px; font-size: 14px; color: #e0b04a; }
-  #dlgText { font-size: 18px; line-height: 1.6; word-break: keep-all; min-height: 1.6em; } #dlgMore { position: absolute; right: 14px; bottom: 8px; font-size: 12px; color: #e0b04a; animation: dlgBlink 1s infinite; }
+  #dlg.show { display: block; } #dlgWho { position: absolute; top: -15px; left: 18px; padding: 3px 12px; background: #3a2814; border: 1px solid #8a6a36; border-radius: 4px; font-size: 17px; color: #e0b04a; }
+  #dlgText { font-size: 24px; line-height: 1.55; word-break: keep-all; min-height: 1.6em; } #dlgMore { position: absolute; right: 14px; bottom: 8px; font-size: 12px; color: #e0b04a; animation: dlgBlink 1s infinite; }
   @keyframes dlgBlink { 50% { opacity: .2; } }
   #menuBg, #menuBg2, #menuBg3, #menuBg4 { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
   #menu::after, #lobby::after, #side::after, #level::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 38% 46% at 50% 50%, rgba(3,2,1,.93) 0%, rgba(3,2,1,.78) 55%, rgba(3,2,1,0) 100%), radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.7) 100%); }
@@ -197,14 +197,14 @@
 
 <div id="vignette"></div>
 <div id="hud"><div id="turn"></div></div>
-<button id="endturn" class="btn">턴 종료</button>
+<button id="endturn" class="btn" data-i18n="endturn">턴 종료</button>
 <select id="mapSel" class="btn"></select>
 <div id="notice"></div>
 <div id="trait"></div>
 <div id="toast"></div>
 <div id="legendHint"></div>
 <div id="draftCap"><div id="draftCapText"></div><button id="reroll" class="btn"></button></div>
-<div id="counterBox" class="box"><div id="counterText"></div><div><button id="counterYes" class="btn" data-ico="zen"> 막기</button><button id="counterNo" class="btn">넘기기</button></div></div>
+<div id="counterBox" class="box"><div id="counterText"></div><div><button id="counterYes" class="btn" data-i18n="counter.yesIco"></button><button id="counterNo" class="btn" data-i18n="counter.no">넘기기</button></div></div>
 <div id="choiceBox" class="box"><div id="choiceText"></div><div id="choiceActions"></div></div>
 <div id="slotBox" class="box"><div class="reels"><span class="reel" data-ico="cherry"></span><span class="reel" data-ico="lemon"></span><span class="reel" data-ico="bell"></span></div><div id="slotResult"></div></div>
 <div id="banner"><div id="bannerText"></div><button class="btn" id="again" data-i18n="btn.again">다시 하기</button><button class="btn" id="bannerMenu" data-i18n="btn.menu">메뉴로</button></div>

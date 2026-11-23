@@ -52,7 +52,7 @@
     });
     G.lastMove = null;
     ev(G, { t: 'sandstorm', dir: d.k, moves: moves });
-    ev(G, { t: 'disaster', kind: 'sandstorm', n: moves.length, dir: DIR_KO[d.k] });
+    ev(G, { t: 'disaster', kind: 'sandstorm', n: moves.length, dir: DIR_KO[d.k], dirKey: d.k });
   }
   // 🌧️ 장마: 지진 뒤 쓰나미가 한쪽 가장자리 3줄의 돌을 쓸어 감
   function tsunami(G) {
@@ -66,7 +66,7 @@
       ev(G, { t: 'remove', r: r, c: c, p: v, why: 'tsunami' });
     }
     C.pruneTraps(G);
-    ev(G, { t: 'disaster', kind: 'tsunami', n: n, dir: DIR_KO[d.k] });
+    ev(G, { t: 'disaster', kind: 'tsunami', n: n, dir: DIR_KO[d.k], dirKey: d.k });
   }
   // ⚡ 자기장: 바깥 한 줄이 닫힘 — 그 줄의 돌은 사라지고 아무도 둘 수 없음
   function zoneShrink(G) {

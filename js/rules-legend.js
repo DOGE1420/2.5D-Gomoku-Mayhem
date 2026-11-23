@@ -33,18 +33,18 @@
     var id = G.lg.card[p]; if (!id) return { id: null, ok: false, text: '' };
     var opp = other(p), lg = G.lg, r;
     switch (id) {
-      case 'obelisk': { var n = countStones(G, p); r = { ok: n >= 3 && countStones(G, opp) > 0, text: '내 돌 ' + Math.min(n, 3) + '/3' }; break; }
-      case 'nothing': r = { ok: false, text: '내 패 ' + G.hand[p].length + '장 · 상대가 카드를 쓸 때 대응' }; break;
-      case 'latebloom': r = { ok: lg.plies >= 40, text: '판에 둔 수 ' + Math.min(lg.plies, 40) + '/40' }; break;
-      case 'blind': r = { ok: !R.isDark(G), text: R.isDark(G) ? '이미 어두운 중' : '조건 없음' }; break;
-      case 'clown': r = { ok: lg.lost[p] >= 3, text: '잃은 돌 ' + Math.min(lg.lost[p], 3) + '/3' }; break;
-      case 'sloth': r = { ok: G.hand[p].length > 0, text: '패 ' + G.hand[p].length + '장' }; break;
-      case 'mirror': { var lc = lg.lastCard[opp]; var cd = lc && R.CARD_BY_ID[lc]; r = { ok: !!lc, text: lc ? '베낄 카드: ' + (cd ? cd.name : lc) : '상대가 아직 카드를 쓰지 않음' }; break; }
-      case 'allin': { var h = G.hand[p].length, st = countStones(G, p); r = { ok: h > 0 || st >= 3, text: '패 ' + h + '장 · 내 돌 ' + st + '개' }; break; }
-      case 'turtle': { var dd = countStones(G, opp) - countStones(G, p); r = { ok: dd >= 5 && !G.winOver[p], text: '돌 차이 ' + clamp(dd, 0, 5) + '/5' }; break; }
+      case 'obelisk': { var n = countStones(G, p); r = { ok: n >= 3 && countStones(G, opp) > 0, text: '내 돌 ' + Math.min(n, 3) + '/3', en: 'my stones ' + Math.min(n, 3) + '/3' }; break; }
+      case 'nothing': r = { ok: false, text: '내 패 ' + G.hand[p].length + '장 · 상대가 카드를 쓸 때 대응', en: G.hand[p].length + ' cards in hand · reacts when the foe plays a card' }; break;
+      case 'latebloom': r = { ok: lg.plies >= 40, text: '판에 둔 수 ' + Math.min(lg.plies, 40) + '/40', en: 'moves played ' + Math.min(lg.plies, 40) + '/40' }; break;
+      case 'blind': r = { ok: !R.isDark(G), text: R.isDark(G) ? '이미 어두운 중' : '조건 없음', en: R.isDark(G) ? 'already dark' : 'no condition' }; break;
+      case 'clown': r = { ok: lg.lost[p] >= 3, text: '잃은 돌 ' + Math.min(lg.lost[p], 3) + '/3', en: 'stones lost ' + Math.min(lg.lost[p], 3) + '/3' }; break;
+      case 'sloth': r = { ok: G.hand[p].length > 0, text: '패 ' + G.hand[p].length + '장', en: G.hand[p].length + ' cards in hand' }; break;
+      case 'mirror': { var lc = lg.lastCard[opp]; var cd = lc && R.CARD_BY_ID[lc]; r = { ok: !!lc, text: lc ? '베낄 카드: ' + (cd ? cd.name : lc) : '상대가 아직 카드를 쓰지 않음', en: lc ? 'card to copy: ' + lc : 'the foe has not played a card yet' }; break; }
+      case 'allin': { var h = G.hand[p].length, st = countStones(G, p); r = { ok: h > 0 || st >= 3, text: '패 ' + h + '장 · 내 돌 ' + st + '개', en: h + ' cards · ' + st + ' stones' }; break; }
+      case 'turtle': { var dd = countStones(G, opp) - countStones(G, p); r = { ok: dd >= 5 && !G.winOver[p], text: '돌 차이 ' + clamp(dd, 0, 5) + '/5', en: 'stone gap ' + clamp(dd, 0, 5) + '/5' }; break; }
       case 'king': {
         var k = lg.king[p];
-        r = k ? { ok: false, text: '왕 생존 ' + Math.min(lg.turnNo - k.start, 20) + '/20턴' } : { ok: countStones(G, p) > 0, text: '왕으로 지정할 돌을 고르세요' };
+        r = k ? { ok: false, text: '왕 생존 ' + Math.min(lg.turnNo - k.start, 20) + '/20턴', en: 'king alive ' + Math.min(lg.turnNo - k.start, 20) + '/20 turns' } : { ok: countStones(G, p) > 0, text: '왕으로 지정할 돌을 고르세요', en: 'pick a stone to crown' };
         break;
       }
       default: r = { ok: false, text: '' };

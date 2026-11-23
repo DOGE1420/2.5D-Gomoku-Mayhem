@@ -73,8 +73,8 @@ function applyMap(m) {
 function buildMapSelect() { document.getElementById('mapSel').style.display = 'none'; }   // 맵은 판마다 무작위 (직접 고르지 않음)
 function showAssetNotice() {
   var t = '';
-  if (blockedPaths.length) t = '이미지 에셋은 웹/로컬 서버에서만 로드돼요 (run.bat · run.sh 로 열기). 지금은 기본 그림으로 표시 중입니다.';
-  else if (failedPaths.length) t = '불러오지 못한 이미지: ' + failedPaths.join(', ');
+  if (blockedPaths.length) t = window.t('note.assetsBlocked');
+  else if (failedPaths.length) t = window.t('note.assetsFailed', { list: failedPaths.join(', ') });
   elNotice.textContent = t; elNotice.style.display = t ? 'block' : 'none';
 }
 function loadCardAssets() {

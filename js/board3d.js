@@ -12,8 +12,8 @@ function updateHUD() {
   var tx = G.alk ? t('turn.alk', { who: who(G.alk.order[G.alk.idx]) }) : t(G.current === BLACK ? 'turn.black' : 'turn.white');
   var b = [];                                   // 작은 상태 표시만
   if (G.next.giant === G.current) b.push('[[rock]]');
-  if (G.winOver[G.current]) b.push('[[turtle]]4목');
-  if (G.winLength === 6) b.push('6목');
+  if (G.winOver[G.current]) b.push(t('hud.win4'));
+  if (G.winLength === 6) b.push(t('hud.win6'));
   elTurn.innerHTML = H(tx + (b.length ? '  ' + b.join(' ') : ''));
   elEnd.style.display = 'none';
 }
@@ -346,14 +346,14 @@ function handleEvent(e) {
     case 'thaw': dropMesh(e.r, e.c); burst(cellAt(e.r, e.c), 0x9ad0ff, 12); addStoneMesh(e.r, e.c, e.owner, true); sfx('place'); return 0.4;
     case 'zone':
       for (var zr = 0; zr < N; zr++) for (var zc = 0; zc < N; zc++) if (Rules.ringOf(zr, zc) === e.zone - 1) { if (meshes[zr][zc]) dropMesh(zr, zc); addWallMesh(zr, zc, true); }
-      sfx('boom'); camShake = 1; toast(e.n ? '[[bolt]] 자기장이 줄어듭니다 — 바깥 줄의 돌 ' + e.n + '개가 사라졌습니다' : '[[bolt]] 자기장이 줄어듭니다 (바깥 줄은 이제 둘 수 없음)', 3000); return 0.8;
-    case 'zoneWarn': toast('[[bolt]] 다음 라운드에 자기장이 줄어듭니다 (바깥 한 줄)', 3000); sfx('card'); return 0.2;
+      sfx('boom'); camShake = 1; toast(e.n ? t('toast.zoneN', { n: e.n }) : t('toast.zone'), 3000); return 0.8;
+    case 'zoneWarn': toast(t('toast.zoneWarn'), 3000); sfx('card'); return 0.2;
     case 'disaster': {
-      var who = e.owner === BLACK ? '흑' : '백';
-      var msg = e.kind === 'melt' ? '[[sun]] 더위로 돌 ' + e.n + '개가 녹아 사라졌습니다'
-        : e.kind === 'freeze' ? '[[snow]] ' + who + '의 돌 하나가 얼어붙었습니다 (2라운드)'
-        : e.kind === 'sandstorm' ? '[[cactus]] 모래폭풍! 돌 ' + e.n + '개가 ' + e.dir + '으로 밀렸습니다'
-        : '[[wave]] 쓰나미! ' + e.dir + ' 가장자리 3줄의 돌 ' + e.n + '개가 휩쓸려 갔습니다';
+      var who = t(e.owner === BLACK ? 'who.b' : 'who.w'), dir = e.dirKey ? t('dir.' + e.dirKey) : e.dir;
+      var msg = e.kind === 'melt' ? t('toast.melt', { n: e.n })
+        : e.kind === 'freeze' ? t('toast.freeze', { who: who })
+        : e.kind === 'sandstorm' ? t('toast.sand', { n: e.n, dir: dir })
+        : t('toast.tsunami', { n: e.n, dir: dir });
       toast(msg, 3000); return 0.2;
     }
     case 'map': applyThemeFor(e.id); rebuildInfo(); return 0;
@@ -375,7 +375,7 @@ function handleEvent(e) {
     case 'blocked': totemPop('blockade'); return 2.0;                                   // 숨겨 둔 봉쇄가 발동
     case 'weather': {
       var mp = Rules.MAP_BY_ID[e.map]; applyThemeFor(e.map); revealInfo('map_');
-      toast('[[weather]] 기상 이변! 맵이 ' + '[[' + mp.icon + ']] ' + mp.name + '(으)로 바뀌었습니다 — ' + mp.short, 3400); sfx('magic'); return 0.8;
+      toast(t('toast.weather', { icon: mp.icon, name: cardText('map_' + mp.id).name, short: mapShort(mp) }), 3400); sfx('magic'); return 0.8;
     }
     case 'gain': case 'overflow': case 'spend': handDirty = true; if (e.t === 'gain') sfx('card'); return 0;
     case 'tradeFirst': tradeFirst = { r: e.r, c: e.c }; sfx('card'); return 0;
@@ -383,19 +383,19 @@ function handleEvent(e) {
     case 'spawn': addStoneMesh(e.r, e.c, e.p, true); sfx('place'); burst(cellAt(e.r, e.c), 0xffe08a, 8); return 0.25;
     case 'legend': {
       var lc = Rules.LEGEND_BY_ID[e.id]; handDirty = true; sfx('magic');
-      toast((lc ? lc.name : '전설 카드') + ' 발동!', 2400); return 0.2;
+      toast(t('toast.legend', { name: lc ? cardText(lc.id).name : t('legend.generic') }), 2400); return 0.2;
     }
     case 'legendPick': sfx('card'); return 0;
-    case 'dark': toast('[[blind]] ' + (e.turns || 5) + '턴 동안 판의 상태를 확인할 수 없습니다', 3000); sfx('magic'); return 0.3;
-    case 'coin': toast(e.win ? '[[coin]] 동전: 앞면! 상대의 가장 긴 줄이 사라집니다' : '[[coin]] 동전: 뒷면… 내 가장 긴 줄이 사라집니다', 2800); sfx('card'); return 0.6;
+    case 'dark': toast(t('toast.dark', { n: e.turns || 5 }), 3000); sfx('magic'); return 0.3;
+    case 'coin': toast(t(e.win ? 'toast.coinWin' : 'toast.coinLose'), 2800); sfx('card'); return 0.6;
     case 'slot': return playSlot(e.reels, e.win);
     case 'handLost': handDirty = true; return 0;
-    case 'counter': toast('[[zen]] 무소유! 카드가 무효가 되었고 패 ' + e.n + '장을 버렸습니다', 3000); handDirty = true; sfx('boom'); return 0.4;
+    case 'counter': toast(t('toast.counter', { n: e.n }), 3000); handDirty = true; sfx('boom'); return 0.4;
     case 'counterAsk': if (botColor && e.holder === botColor) return 0.2; showCounterBox(e.holder, e.user, e.id, answerCounterUI); return 0;
-    case 'king': sfx('magic'); toast('[[crown]] 왕으로 지정! 20턴 살아남으면 귀환합니다', 2600); return 0.3;
-    case 'kingLost': toast('[[crown]] 왕이 쓰러졌습니다…', 2400); return 0.2;
-    case 'kingReturn': handDirty = true; sfx('win'); toast('[[crown]] 왕의 귀환! 패가 가득 차고 새 전설 카드를 받았습니다', 3200); return 0.5;
-    case 'rule': if (e.turtle) toast('[[turtle]] 이제 한쪽은 4목으로도 승리합니다', 2600); else toast('[[eye]] 이제 6목이 되어야 승리합니다', 2600); return 0.2;
+    case 'king': sfx('magic'); toast(t('toast.king'), 2600); return 0.3;
+    case 'kingLost': toast(t('toast.kingLost'), 2400); return 0.2;
+    case 'kingReturn': handDirty = true; sfx('win'); toast(t('toast.kingReturn'), 3200); return 0.5;
+    case 'rule': if (e.turtle) toast(t('toast.turtle'), 2600); else toast(t('toast.six'), 2600); return 0.2;
     case 'slothDone': return 0;
     case 'start': handDirty = true; revealInfo(); return 0;
     case 'legendPicked': case 'ability': handDirty = true; return 0;
